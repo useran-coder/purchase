@@ -42,6 +42,7 @@
   .header-sync-btn.sync-working{opacity:.76;cursor:wait}
   .header-sync-btn.sync-ok{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
   .header-sync-btn.sync-error{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+  .header-sync-btn.sync-retry{background:#fffbeb;border-color:#fcd34d;color:#b45309}
   .header-sync-btn.sync-unconfigured{background:#f8fafc;border-color:#cbd5e1;color:#475569}
   .header-sync-btn .sync-time{color:#94a3b8;font-weight:600}
   .appver{align-self:center;font-size:11px;color:#0f766e;font-weight:800;white-space:nowrap;padding:3px 7px;border:1px solid #99f6e4;border-radius:6px;background:#f0fdfa}
@@ -2799,81 +2800,96 @@ function trendView(){
 }
 
 /* ============================================================
-   Google Sheets sync (Apps Script web app, delta-based)
+   Google Sheets sync (Apps Script web app, sales-compatible v03)
+   - 매출 파일과 같은 /exec URL·비밀키 사용 가능
+   - 삭제값(null)·동시 수정·자동 재시도·저장 확인 지원
+   - 매입 전용 필드를 모두 포함해 기존 단순 동기화의 누락을 보완
    ============================================================ */
-function gsFields(){ return [
-  ['salesSrc',state,'salesSrc'],['pdSalesSrc',state,'pdSalesSrc'],
-  ['mgrOverride',state,'mgrOverride'],['vendorMemo',state,'vendorMemo'],['vendorMemoAt',state,'vendorMemoAt'],
-  ['vendorCat',state,'vendorCat'],['vendorNatureOverride',state,'vendorNatureOverride'],['vendorExcl',state,'vendorExcl'],['priceMemo',state,'priceMemo'],['priceMemoAt',state,'priceMemoAt'],
-  ['itemStd',state,'itemStd'],['monthlySales',state,'monthlySales'],['monthlyPdSales',state,'monthlyPdSales'],['laserSales',state,'laserSales'],
-  ['targetPct',state,'targetPct'],['projectMemo',state,'projectMemo'],['projectCustom',state,'projectCustom'],['projectOverride',state,'projectOverride'],['categoryRename',state,'categoryRename'],['categoryOverride',state,'categoryOverride'],['categoryCustom',state,'categoryCustom'],['outsourcedKindOverride',state,'outsourcedKindOverride'],['syncLog',state,'syncLog'],
-  ['natureCustom',state,'natureCustom'],['natureOverride',state,'natureOverride'],['paretoNat',state,'paretoNat'],['paretoPct',state,'paretoPct'],
-]; }
-function _isO(x){ return x&&typeof x==='object'&&!Array.isArray(x); }
-function gsFullObj(){ const o={}; gsFields().forEach(([n,p,k])=>{ o[n]=p[k]; }); return o; }
-function gsClone(o){ try{ return JSON.parse(JSON.stringify(o)); }catch(_){ return {}; } }
-let _gsBase=null,_gsBusy=false,_gsAutoT=null,_gsApplying=false,_gsPendingPush=false,_gsPushAt=0,_gsTick=null;
-function gsSetBase(){ _gsBase=gsClone(gsFullObj()); }
-function gsDelta(){ if(!_gsBase) return gsFullObj(); const d={}; gsFields().forEach(([n,p,k])=>{ const cur=p[k],old=_gsBase[n];
-  if(_isO(cur)){ let sub=null; for(const kk in cur){ if(JSON.stringify(cur[kk])!==JSON.stringify(old&&old[kk])){ (sub=sub||{})[kk]=cur[kk]; } } if(sub)d[n]=sub; }
-  else { if(JSON.stringify(cur)!==JSON.stringify(old))d[n]=cur; } }); return d; }
-function gsMerge(d,preferLocal){ if(!d)return; _gsApplying=true;
-  gsFields().forEach(([n,p,k])=>{ if(!(n in d))return; const v=d[n];
-    if(n==='syncLog'){ p[k]=Object.assign({},v||{},p[k]||{}); const ks=Object.keys(p[k]); if(ks.length>200){ks.sort();ks.slice(0,ks.length-200).forEach(x=>delete p[k][x]);} return; }
-    if(_isO(v)&&_isO(p[k])){ // timestamp-aware for *Memo pairs; else remote fills gaps
-      for(const kk in v){ if(preferLocal && (kk in p[k])) continue; p[k][kk]=v[kk]; } }
-    else if(!(preferLocal && p[k]!=null && Object.keys(p[k]||{}).length)) { p[k]=v; } });
-  _gsApplying=false; rebuildCUR(); }
-function gsApplyDelta(dl){ if(!dl)return; gsFields().forEach(([n,p,k])=>{ if(!(n in dl))return; const v=dl[n]; if(_isO(v)&&_isO(p[k]))Object.assign(p[k],v); else p[k]=v; }); }
-function gsFmtTime(iso){ if(!iso)return ''; const d=new Date(iso); if(isNaN(d))return ''; const p=n=>String(n).padStart(2,'0'); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
-function gsUpdateBtn(){
-  const b=$('#gsSyncBtn'); if(!b)return;
-  const cfg=!!(state.gsync&&state.gsync.url);
-  const t=state.gsync&&state.gsync.lastSync?gsFmtTime(state.gsync.lastSync):'';
-  let cd=''; if(_gsPushAt&&_gsPushAt>Date.now())cd=' (업로드 '+Math.ceil((_gsPushAt-Date.now())/1000)+'초)';
-  b.className='header-sync-btn '+(!cfg?'sync-unconfigured':(_gsBusy?'sync-working':(state.gsync.lastResult==='error'?'sync-error':(t?'sync-ok':''))));
-  b.innerHTML='<span class="sync-main">🔄 동기화</span><span class="sync-time"> · '+(cfg?(t||'미실행')+cd:'미설정')+'</span>';
-  b.title='구글시트 동기화'+(t?(' (마지막 '+t+')'):' (아직 없음)')+(state.gsync&&state.gsync.auto?' · 자동 ON':' · 자동 OFF');
-  gsRenderHistory();
-}
-function gsRenderHistory(){ const el=$('#gsHistory'); if(!el)return; const log=state.syncLog||{}; const arr=Object.keys(log).map(k=>log[k]).filter(x=>x&&x.at).sort((a,b)=>a.at<b.at?1:-1).slice(0,15); const me=(state.gsync&&state.gsync.user)||''; if(!arr.length){ el.innerHTML='<span class="sub2">아직 동기화 이력이 없습니다.</span>'; return; } el.innerHTML='<div style="font-weight:700;margin-bottom:3px;color:#334155">🕘 동기화 이력</div>'+arr.map(e=>`<div style="padding:1px 0">${(e.by===me?'🟢 ':'👤 ')}<b>${esc(e.by||'(이름없음)')}</b> · ${gsFmtTime(e.at)}${e.act?' · '+esc(e.act):''}</div>`).join(''); }
-function gsAutoPush(){ if(!state.gsync||!state.gsync.auto||!state.gsync.url||_gsBusy||_gsApplying)return; _gsPendingPush=true; _gsPushAt=Date.now()+5000; clearTimeout(_gsAutoT); _gsAutoT=setTimeout(()=>gsSave(true),5000); gsUpdateBtn(); if(!_gsTick)_gsTick=setInterval(()=>{ if(_gsPushAt)gsUpdateBtn(); },1000); }
-async function gsLoad(silent){ const u=(state.gsync&&state.gsync.url)||'',k=(state.gsync&&state.gsync.key)||''; const st=$('#gsStatus');
-  if(!u){ if(!silent&&st){st.style.color='#dc2626';st.textContent='URL을 입력하세요.';} return; }
-  if(!silent&&st){st.style.color='#64748b';st.textContent='불러오는 중…';}
-  const _pend=_gsBase?gsDelta():null; _gsBusy=true;
-  try{ const r=await fetch(u+(u.indexOf('?')>=0?'&':'?')+'action=get&key='+encodeURIComponent(k)+'&_t='+Date.now(),{cache:'no-store'});
-    const tx=await r.text(); let d; try{ d=JSON.parse(tx); }catch(_){ if(st){st.style.color='#dc2626';st.textContent='응답 형식 오류 — 웹앱 액세스를 "모든 사용자"로, URL은 …/exec 인지 확인하세요.';} return; }
-    if(!d.ok){ if(st){st.style.color='#dc2626';st.textContent='오류: '+(d.error||'실패')+' (비밀키 확인)';} return; }
-    gsMerge(d.data||d); gsSetBase(); if(_pend)gsApplyDelta(_pend); state.gsync.lastSync=new Date().toISOString(); state.gsync.syncCount=(state.gsync.syncCount||0)+1; saveSettings(); gsUpdateBtn();
-    if(st){ const ck=o=>o?Object.keys(o).length:0; st.style.color='#0f766e'; st.textContent=`✓ 불러오기 완료 — 담당자배정 ${ck(state.mgrOverride)}·거래처메모 ${ck(state.vendorMemo)}·단가메모 ${ck(state.priceMemo)}·방화문 매출 ${ck(state.monthlySales)}·PD 매출 ${ck(state.monthlyPdSales)} (${gsFmtTime(state.gsync.lastSync)})`; }
-    if(state.act)runAct();
-  }catch(e){ if(st){st.style.color='#dc2626';st.textContent='연결 실패: '+(e.message||e);} }
-  finally{ _gsBusy=false; } }
-async function gsSave(silent){ const u=(state.gsync&&state.gsync.url)||'',k=(state.gsync&&state.gsync.key)||''; const st=$('#gsStatus');
-  if(!u){ if(!silent&&st){st.style.color='#dc2626';st.textContent='URL을 입력하세요.';} return; }
-  if(!silent&&st){st.style.color='#64748b';st.textContent='동기화 중…';}
-  // log entry
-  { const id=Date.now()+'_'+Math.random().toString(36).slice(2,6); state.syncLog=state.syncLog||{}; state.syncLog[id]={by:(state.gsync.user||'(이름없음)'),at:new Date().toISOString(),act:'저장'}; }
-  _gsBusy=true;
-  try{ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'save',key:k,data:gsDelta()})});
-    const tx=await r.text(); let d; try{ d=JSON.parse(tx); }catch(_){ if(st){st.style.color='#dc2626';st.textContent='응답 형식 오류 — 웹앱 배포 설정을 확인하세요.';} return; }
-    if(!d.ok){ if(st){st.style.color='#dc2626';st.textContent='오류: '+(d.error||'실패');} return; }
-    gsMerge(d.data||d,true); gsSetBase(); state.gsync.lastSync=new Date().toISOString(); state.gsync.lastResult='ok'; state.gsync.syncCount=(state.gsync.syncCount||0)+1; saveSettings(); gsUpdateBtn();
-    if(st){st.style.color='#0f766e';st.textContent='✓ 동기화 완료 ('+gsFmtTime(state.gsync.lastSync)+')';}
-  }catch(e){ state.gsync.lastResult='error'; if(st){st.style.color='#dc2626';st.textContent='연결 실패: '+(e.message||e);} }
-  finally{ _gsBusy=false; _gsPendingPush=false; _gsPushAt=0; gsUpdateBtn(); } }
-async function gsTest(){ const u=(state.gsync&&state.gsync.url)||'',k=(state.gsync&&state.gsync.key)||''; const st=$('#gsStatus'); if(!u){st.style.color='#dc2626';st.textContent='URL을 입력하세요.';return;}
-  st.style.color='#64748b';st.textContent='연결 테스트 중…';
-  try{ const r=await fetch(u+(u.indexOf('?')>=0?'&':'?')+'action=get&key='+encodeURIComponent(k)+'&_t='+Date.now(),{cache:'no-store'}); const tx=await r.text(); let d; try{d=JSON.parse(tx);}catch(_){ st.style.color='#dc2626'; st.textContent='응답이 JSON이 아닙니다 — 배포 설정(모든 사용자, …/exec) 확인'; return; }
-    if(d.ok){ st.style.color='#0f766e'; st.textContent='✓ 연결 성공 — 저장/불러오기 사용 가능'; } else { st.style.color='#dc2626'; st.textContent='응답: '+(d.error||'실패')+' (비밀키 확인)'; }
-  }catch(e){ st.style.color='#dc2626'; st.textContent='연결 실패: '+(e.message||e); } }
-function gsGuide(){
-  const gs=`function doGet(e){return handle(e);}\nfunction doPost(e){return handle(e);}\nfunction handle(e){\n  var SECRET='여기에_비밀키';\n  var ss=SpreadsheetApp.getActiveSpreadsheet();\n  var sh=ss.getSheetByName('store')||ss.insertSheet('store');\n  var p=(e&&e.parameter)||{}, body={};\n  try{ if(e&&e.postData&&e.postData.contents) body=JSON.parse(e.postData.contents); }catch(_){}\n  var action=body.action||p.action, key=body.key||p.key;\n  if(key!==SECRET) return out({ok:false,error:'키 불일치'});\n  var cell=sh.getRange(1,1); var cur={}; try{ cur=JSON.parse(cell.getValue()||'{}'); }catch(_){}\n  if(action==='save'){ var data=body.data||{}; deepMerge(cur,data); cell.setValue(JSON.stringify(cur)); return out({ok:true,data:cur}); }\n  return out({ok:true,data:cur});\n}\nfunction deepMerge(t,s){ for(var k in s){ if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){ t[k]=t[k]||{}; deepMerge(t[k],s[k]); } else t[k]=s[k]; } }\nfunction out(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }`;
-  const w=window.open('','_blank'); w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;padding:20px;line-height:1.5">'+
-    '<b>구글시트 동기화 설정 가이드</b>\n\n1) 구글 스프레드시트 새로 만들기 → 확장프로그램 → Apps Script\n2) 아래 코드 붙여넣기 (SECRET을 원하는 비밀키로 변경)\n3) 배포 → 새 배포 → 유형: 웹앱 → 액세스: 모든 사용자 → 배포\n4) 생성된 …/exec URL과 비밀키를 이 도구에 입력\n\n'+
-    esc(gs)+'</pre>');
-}
+(function(){
+  'use strict';
+  const APP_VERSION='purchase_v34_sync_v1';
+  const BASE_KEY='purchase_gsync_base_v1', OLD_BASE_KEYS=['purchase_gsync_base_v0'];
+  const AUTO_DELAY=5000, BUSY_RETRY=1300, MAX_AUTO_RETRY=5;
+  let _gsBase=null,_gsBusy=false,_gsAutoT=null,_gsApplying=false,_gsPendingPush=false,_gsPushAt=0,_gsPollT=null;
+  let _baseReady=null,_autoRetry=0,_uiMode='idle',_uiLabel='',_lastTransient='';
+
+  function gid(x){return document.getElementById(x)}
+  function gclone(v){if(v===undefined)return undefined;try{return JSON.parse(JSON.stringify(v))}catch(_){return v}}
+  function gesc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function pad(n){return String(n).padStart(2,'0')}
+  function nowIso(){return new Date().toISOString()}
+  function fmtShort(iso){const d=new Date(iso||'');return isNaN(d)?'':`${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`}
+  function fmtFull(iso){const d=new Date(iso||'');return isNaN(d)?'':`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`}
+  function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+  function plain(x){return !!x&&typeof x==='object'&&!Array.isArray(x)}
+  function own(o,k){return !!o&&Object.prototype.hasOwnProperty.call(o,k)}
+  function hasPatch(p){return !!(p&&Object.keys(p).length)}
+  function putStatus(msg,color){const e=gid('gsStatus');if(e){e.textContent=msg;e.style.color=color||'#64748b'}}
+
+  function gsFields(){return [
+    ['salesSrc',state,'salesSrc'],['salesFiles',state,'salesFiles'],['monthlySales',state,'monthlySales'],
+    ['pdSalesSrc',state,'pdSalesSrc'],['pdSalesFiles',state,'pdSalesFiles'],['monthlyPdSales',state,'monthlyPdSales'],['laserSales',state,'laserSales'],
+    ['mgrOverride',state,'mgrOverride'],['vendorMemo',state,'vendorMemo'],['vendorMemoAt',state,'vendorMemoAt'],
+    ['vendorCat',state,'vendorCat'],['vendorNatureOverride',state,'vendorNatureOverride'],['vendorExcl',state,'vendorExcl'],
+    ['priceMemo',state,'priceMemo'],['priceMemoAt',state,'priceMemoAt'],['itemStd',state,'itemStd'],['majorProducts',state,'majorProducts'],
+    ['targetPct',state,'targetPct'],['projectMemo',state,'projectMemo'],['projectCustom',state,'projectCustom'],['projectOverride',state,'projectOverride'],
+    ['categoryRename',state,'categoryRename'],['categoryOverride',state,'categoryOverride'],['categoryCustom',state,'categoryCustom'],
+    ['outsourcedKindOverride',state,'outsourcedKindOverride'],['natureCustom',state,'natureCustom'],['natureOverride',state,'natureOverride'],
+    ['syncLog',state,'syncLog']
+  ]}
+  function gsFullObj(){const o={};gsFields().forEach(([n,p,k])=>o[n]=gclone(p[k]));return o}
+  function same(a,b){try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return false}}
+  function deepDelta(cur,old){
+    if(plain(cur)||plain(old)){
+      const out={},keys=new Set([...Object.keys(cur||{}),...Object.keys(old||{})]);
+      keys.forEach(k=>{if(!own(cur,k)){out[k]=null;return}const d=deepDelta(cur[k],old&&old[k]);if(d!==undefined&&(!plain(d)||Object.keys(d).length))out[k]=d});
+      return Object.keys(out).length?out:undefined;
+    }
+    return same(cur,old)?undefined:gclone(cur);
+  }
+  function gsDelta(){if(!_gsBase)return gsFullObj();const d={};gsFields().forEach(([n,p,k])=>{const v=deepDelta(p[k],_gsBase[n]);if(v!==undefined)d[n]=v});return d}
+  function applyValue(cur,patch){
+    if(patch===null)return undefined;
+    if(plain(patch)){const out=plain(cur)?gclone(cur):{};Object.keys(patch).forEach(k=>{const v=applyValue(out[k],patch[k]);if(v===undefined)delete out[k];else out[k]=v});return out}
+    return gclone(patch);
+  }
+  function gsApplyDelta(dl){if(!dl)return;gsFields().forEach(([n,p,k])=>{if(own(dl,n)){const v=applyValue(p[k],dl[n]);p[k]=v===undefined?(Array.isArray(p[k])?[]:{}):v}});rebuildCUR()}
+  function fullDelta(cur,old){const out={};gsFields().forEach(([n])=>{const d=deepDelta(cur[n],old&&old[n]);if(d!==undefined)out[n]=d});return out}
+  function cleanRemote(v){if(Array.isArray(v))return v.map(cleanRemote);if(!plain(v))return v;const o={};Object.keys(v).forEach(k=>{if(v[k]!==null)o[k]=cleanRemote(v[k])});return o}
+  function currentFull(){return gsFullObj()}
+  function responseData(d){if(own(d,'data'))return d.data&&typeof d.data==='object'?gclone(d.data):{};const o=gclone(d)||{};['ok','error','serverTime','jsonChars','revision','schema','retryable','retryAfterMs','requestId'].forEach(k=>delete o[k]);return o}
+  function remoteSnapshot(base,remote){const out=gclone(base||{})||{};remote=remote&&typeof remote==='object'?remote:{};gsFields().forEach(([n])=>{if(own(remote,n))out[n]=cleanRemote(gclone(remote[n]))});return out}
+  function restoreFull(snap){gsFields().forEach(([n,p,k])=>{if(own(snap,n))p[k]=gclone(snap[n])})}
+  function rerender(){try{rebuildCUR();renderSalesSrc();renderDivBtn();renderPerBar();if(state.act)runAct()}catch(e){console.warn('sync render',e)}}
+  async function persistOnly(){_gsApplying=true;try{await saveSettings()}finally{_gsApplying=false}}
+  async function saveBase(snap){_gsBase=gclone(snap||currentFull());try{await idbSet(BASE_KEY,_gsBase)}catch(_){} }
+  function ensureBase(){if(_baseReady)return _baseReady;_baseReady=(async()=>{let saved=null;try{saved=await idbGet(BASE_KEY)}catch(_){}if(!saved){for(const k of OLD_BASE_KEYS){try{saved=await idbGet(k)}catch(_){}if(saved)break}}if(saved&&typeof saved==='object'){_gsBase=gclone(saved);try{await idbSet(BASE_KEY,_gsBase)}catch(_){}}else await saveBase(currentFull());return _gsBase})();return _baseReady}
+  async function applyAndPersist(snap){_gsApplying=true;try{restoreFull(snap);rerender();await saveSettings()}finally{_gsApplying=false}}
+  function setMode(mode,label){_uiMode=mode||'idle';_uiLabel=label||'';gsUpdateBtn()}
+  function setSuccess(op,meta){state.gsync=state.gsync||{};const t=nowIso();state.gsync.lastAttempt=t;state.gsync.lastResult='ok';state.gsync.lastSync=t;state.gsync.lastError='';state.gsync.lastOp=op||'sync';state.gsync.lastServerTime=meta&&meta.serverTime||'';state.gsync.lastRevision=meta&&meta.revision!=null?meta.revision:(state.gsync.lastRevision||'');state.gsync.failStreak=0;state.gsync.syncCount=(state.gsync.syncCount||0)+1;_lastTransient=''}
+  function setFailure(e,op){state.gsync=state.gsync||{};state.gsync.lastAttempt=nowIso();state.gsync.lastResult='error';state.gsync.lastError=String(e||'알 수 없는 오류');state.gsync.lastOp=op||'sync';state.gsync.failStreak=(state.gsync.failStreak||0)+1}
+  function setTransient(e){state.gsync=state.gsync||{};state.gsync.lastAttempt=nowIso();state.gsync.lastTransient=String(e||'일시적 연결 지연');_lastTransient=state.gsync.lastTransient}
+  function gsFmtTime(iso){return fmtShort(iso)}
+  function gsRenderHistory(){const el=gid('gsHistory');if(!el)return;const log=state.syncLog||{},arr=Object.keys(log).map(k=>log[k]).filter(x=>x&&x.at).sort((a,b)=>a.at<b.at?1:-1).slice(0,20),me=state.gsync&&state.gsync.user||'';if(!arr.length){el.innerHTML='<span class="sub2">아직 동기화 이력이 없습니다.</span>';return}el.innerHTML='<div style="font-weight:700;margin-bottom:3px;color:#334155">🕘 동기화 이력</div>'+arr.map(e=>`<div style="padding:1px 0">${e.by===me?'🟢 ':'👤 '}<b>${gesc(e.by||'(이름없음)')}</b> · ${gsFmtTime(e.at)}${e.act?' · '+gesc(e.act):''}</div>`).join('')}
+  function gsUpdateBtn(){const b=gid('gsSyncBtn');if(!b)return;state.gsync=state.gsync||{};const configured=!!String(state.gsync.url||'').trim(),success=fmtShort(state.gsync.lastSync),attempt=fmtShort(state.gsync.lastAttempt),countdown=_gsPushAt&&_gsPushAt>Date.now()?Math.max(1,Math.ceil((_gsPushAt-Date.now())/1000)):0;let main='동기화',time='미실행';if(_uiMode==='working'){main=_uiLabel||'동기화 중…';time=success?'마지막 성공 '+success:'성공 기록 없음'}else if(_uiMode==='retry'){main=_uiLabel||'자동저장 재시도';time=success?'마지막 성공 '+success:'연결 재시도 중'}else if(countdown){main='자동저장 '+countdown+'초';time=success?'마지막 성공 '+success:'저장 대기'}else if(state.gsync.lastResult==='error'){main='동기화 실패';time=(attempt?'실패 '+attempt:'')+(success?' · 마지막 성공 '+success:'')}else if(state.gsync.lastResult==='ok'||success){main='동기화 완료';time=success||'완료'}else if(!configured){main='동기화 설정';time='URL·비밀키 필요'}b.disabled=_uiMode==='working';b.className='header-sync-btn '+(!configured?'sync-unconfigured':(_uiMode==='working'?'sync-working':(_uiMode==='retry'?'sync-retry':(state.gsync.lastResult==='error'?'sync-error':(state.gsync.lastResult==='ok'?'sync-ok':'')))));b.innerHTML='<span class="sync-main">🔄 '+gesc(main)+'</span><span class="sync-time"> · '+gesc(time)+'</span>';b.title=(configured?'구글시트 저장·불러오기':'동기화 설정이 필요합니다')+(success?' · 마지막 성공 '+fmtFull(state.gsync.lastSync):'')+(state.gsync.lastError?' · 최근 오류 '+state.gsync.lastError:'')+(_lastTransient?' · 최근 일시 오류 '+_lastTransient:'')+(state.gsync.auto?' · 자동 ON':' · 자동 OFF');gsRenderHistory()}
+  function config(silent){const u=String(state.gsync&&state.gsync.url||'').trim(),k=String(state.gsync&&state.gsync.key||'').trim();if(!u){if(!silent)putStatus('Apps Script 웹앱 URL을 입력하세요.','#dc2626');const e=new Error('Apps Script URL이 없습니다.');e.retryable=false;throw e}if(!/^https?:\/\//i.test(u)||(!/\/exec(?:\?|$)/i.test(u)&&!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(u))){if(!silent)putStatus('Apps Script 배포 주소(.../exec)를 입력하세요.','#dc2626');const e=new Error('Apps Script /exec URL 형식이 아닙니다.');e.retryable=false;throw e}if(!k){if(!silent)putStatus('비밀키를 입력하세요.','#dc2626');const e=new Error('비밀키가 없습니다.');e.retryable=false;throw e}return{url:u,key:k}}
+  function classify(e){const m=String(e&&e.message||e||'오류');let retry=!!(e&&e.retryable);if(/비밀키|URL이 없습니다|URL 형식|지원하지 않는 action|구버전 응답/i.test(m))retry=false;else if(/시간 초과|network|Failed to fetch|fetch|HTTP 429|HTTP 5\d\d|busy|lock|JSON이 아닙니다/i.test(m))retry=true;const x=e instanceof Error?e:new Error(m);x.retryable=retry;return x}
+  async function requestOnce(url,opt,timeout){const ctl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctl?setTimeout(()=>ctl.abort(),timeout||35000):null;try{const o=Object.assign({cache:'no-store'},opt||{});if(ctl)o.signal=ctl.signal;const r=await fetch(url,o),tx=await r.text();if(!r.ok){const e=new Error('HTTP '+r.status+' '+r.statusText);e.retryable=r.status===429||r.status>=500;throw e}let d;try{d=JSON.parse(tx)}catch(_){const e=new Error('서버 응답이 JSON이 아닙니다. 웹앱 권한을 모든 사용자로 설정하고 /exec URL을 사용하세요.');e.retryable=true;throw e}if(!d||d.ok!==true){const e=new Error(d&&d.error||'Apps Script 처리 실패');e.retryable=!!(d&&d.retryable)||/busy|lock|잠시 후/i.test(e.message);throw e}return d}catch(e){if(e&&e.name==='AbortError'){const x=new Error('응답 시간 초과. 인터넷 연결 또는 Apps Script 실행 상태를 확인하세요.');x.retryable=true;throw x}throw classify(e)}finally{if(timer)clearTimeout(timer)}}
+  async function requestJson(url,opt,timeout,attempts){let last=null;const n=Math.max(1,attempts||1),waits=[650,1400,2800,5000];for(let i=0;i<n;i++){try{return await requestOnce(url,opt,timeout)}catch(e){last=classify(e);if(!last.retryable||i===n-1)throw last;setMode('retry','연결 재시도 '+(i+1)+'/'+(n-1));await wait(waits[Math.min(i,waits.length-1)])}}throw last||new Error('동기화 요청 실패')}
+  function getUrl(c){return c.url+(c.url.includes('?')?'&':'?')+'action=get&key='+encodeURIComponent(c.key)+'&_t='+Date.now()}
+  async function getRemote(c){const d=await requestJson(getUrl(c),{method:'GET'},35000,4);return{data:responseData(d),meta:d}}
+  async function postPatch(c,payload,tag){const body={action:'save',key:c.key,data:gclone(payload)||{},clientId:String(state.gsync.user||'사용자'),clientVersion:APP_VERSION,requestId:(tag||'save')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)};const d=await requestJson(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},50000,4);return{data:responseData(d),meta:d}}
+  function patchSatisfied(full,patch){if(!patch)return true;return Object.keys(patch).every(k=>{const pv=patch[k],fv=full&&full[k];if(pv===null)return fv===null||fv===undefined;if(plain(pv))return plain(fv)&&patchSatisfied(fv,pv);return same(fv,pv)})}
+  function scheduleAuto(delay){if(!state.gsync||!state.gsync.auto||!state.gsync.url||!state.gsync.key){_gsPendingPush=false;_gsPushAt=0;clearTimeout(_gsAutoT);_gsAutoT=null;setMode('idle','');return}clearTimeout(_gsAutoT);_gsPendingPush=true;_gsPushAt=Date.now()+(delay||AUTO_DELAY);setMode('idle','');_gsAutoT=setTimeout(runAutoSave,delay||AUTO_DELAY)}
+  async function runAutoSave(){_gsAutoT=null;_gsPushAt=0;gsUpdateBtn();await ensureBase();if(_gsBusy||_gsApplying){scheduleAuto(BUSY_RETRY);return}if(!hasPatch(gsDelta())){_gsPendingPush=false;_autoRetry=0;return}if(await gsSave(true)){_autoRetry=0;return}if(hasPatch(gsDelta())&&state.gsync&&state.gsync.auto){_autoRetry++;const e=String(state.gsync.lastError||_lastTransient||''),nonRetry=/비밀키|URL이 없습니다|URL 형식/i.test(e);if(nonRetry){_gsPendingPush=true;return}const waits=[2500,5000,10000,20000,30000],w=waits[Math.min(_autoRetry-1,waits.length-1)];putStatus('자동저장 연결 지연 — '+w/1000+'초 후 자동 재시도합니다.','#b45309');setMode('retry','자동저장 재시도');scheduleAuto(_autoRetry<=MAX_AUTO_RETRY?w:30000)}}
+  function gsAutoPush(){if(_gsApplying||!state.gsync||!state.gsync.auto||!state.gsync.url||!state.gsync.key)return;scheduleAuto(AUTO_DELAY)}
+  async function gsLoad(silent){await ensureBase();if(_gsBusy){if(silent)setTimeout(()=>gsLoad(true),BUSY_RETRY);else putStatus('다른 동기화 작업이 진행 중입니다. 잠시 후 다시 시도하세요.','#b45309');return false}let c;try{c=config(!!silent)}catch(e){if(!silent){setFailure(e,'load');await persistOnly()}gsUpdateBtn();return false}const localPatch=gsDelta(),hasLocal=hasPatch(localPatch),oldBase=gclone(_gsBase||currentFull());_gsBusy=true;setMode('working','불러오는 중…');if(!silent)putStatus('서버 최신 자료를 불러오고 로컬 변경사항을 보존합니다.');try{const rr=await getRemote(c),remote=remoteSnapshot(oldBase,rr.data),merged=gclone(remote);restoreFull(merged);_gsBase=gclone(remote);if(hasLocal)gsApplyDelta(localPatch);merged=currentFull();await applyAndPersist(merged);await saveBase(remote);setSuccess('load',rr.meta);await persistOnly();putStatus('✓ 동기화 완료 · 서버 자료 불러오기'+(hasLocal?' · 미전송 변경 보존':'')+' · '+fmtFull(state.gsync.lastSync),'#0f766e');setMode('idle','');if(hasLocal)scheduleAuto(900);else{_gsPendingPush=false;_gsPushAt=0;_autoRetry=0;gsUpdateBtn()}return true}catch(e){e=classify(e);if(silent&&e.retryable){setTransient(e.message);console.warn('background sync retryable:',e.message);setMode('idle','')}else{setFailure(e,'load');await persistOnly();putStatus('동기화 실패: '+e.message,'#dc2626');setMode('idle','')}return false}finally{_gsBusy=false;gsUpdateBtn()}}
+  async function gsSave(silent){await ensureBase();if(_gsBusy){if(silent)scheduleAuto(BUSY_RETRY);else putStatus('다른 동기화 작업이 진행 중입니다. 잠시 후 다시 눌러주세요.','#b45309');return false}clearTimeout(_gsAutoT);_gsAutoT=null;_gsPushAt=0;let c;try{c=config(!!silent)}catch(e){setFailure(e,'save');await persistOnly();gsUpdateBtn();return false}if(!hasPatch(gsDelta()))return gsLoad(!!silent);const histId=Date.now()+'_'+Math.random().toString(36).slice(2,8);state.syncLog=state.syncLog||{};state.syncLog[histId]={by:state.gsync.user||'(이름없음)',at:nowIso(),act:'저장'};const payload=gsDelta(),sentSnapshot=currentFull();_gsBusy=true;setMode('working','저장 중…');if(!silent)putStatus('변경사항을 서버에서 병합 저장하고 결과를 확인합니다.');try{let pr=await postPatch(c,payload,'save'),serverData=pr.data;if(!patchSatisfied(serverData,payload)){setMode('working','저장 확인 중…');await wait(700);const vr=await getRemote(c);serverData=vr.data;pr.meta=vr.meta;if(!patchSatisfied(serverData,payload)){const pr2=await postPatch(c,payload,'confirm');serverData=pr2.data;pr.meta=pr2.meta;if(!patchSatisfied(serverData,payload))throw new Error('서버 저장 응답에서 변경값이 확인되지 않았습니다. Apps Script 코드를 매출 파일과 같은 v03으로 교체해 주세요.')}}const serverFull=remoteSnapshot(_gsBase||{},serverData),duringPatch=fullDelta(currentFull(),sentSnapshot);await applyAndPersist(serverFull);await saveBase(serverFull);if(hasPatch(duringPatch)){gsApplyDelta(duringPatch);await persistOnly()}setSuccess('save',pr.meta);await persistOnly();putStatus('✓ 동기화 완료 · 서버 병합 저장 확인 · '+fmtFull(state.gsync.lastSync),'#0f766e');setMode('idle','');if(hasPatch(gsDelta()))scheduleAuto(1200);else{_gsPendingPush=false;_autoRetry=0;gsUpdateBtn()}return true}catch(e){e=classify(e);if(state.syncLog)delete state.syncLog[histId];if(silent&&e.retryable){setTransient(e.message);state.gsync.lastError=e.message;await persistOnly();putStatus('자동저장 연결 지연: '+e.message,'#b45309');setMode('retry','자동저장 재시도')}else{setFailure(e,'save');await persistOnly();putStatus((silent?'자동저장 실패: ':'동기화 실패: ')+e.message,'#dc2626');setMode('idle','')}_gsPendingPush=hasPatch(gsDelta());return false}finally{_gsBusy=false;gsUpdateBtn()}}
+  async function gsTest(){await ensureBase();if(_gsBusy){putStatus('다른 동기화 작업이 진행 중입니다.','#b45309');return false}let c;try{c=config(false)}catch(e){setFailure(e,'test');await persistOnly();gsUpdateBtn();return false}_gsBusy=true;setMode('working','연결 확인 중…');putStatus('Apps Script 연결·비밀키·서버 응답 형식을 확인합니다.');try{const rr=await getRemote(c),keys=gsFields().map(x=>x[0]).filter(k=>own(rr.data,k));putStatus('✓ 연결 성공 · 동기화 영역 '+keys.length+'개 · 서버 응답 정상'+(rr.meta&&rr.meta.revision!=null?' · revision '+rr.meta.revision:''),'#0f766e');setMode('idle','');return true}catch(e){e=classify(e);setFailure(e,'test');await persistOnly();putStatus('연결 실패: '+e.message,'#dc2626');setMode('idle','');return false}finally{_gsBusy=false;gsUpdateBtn()}}
+  function gsStartPoll(){if(_gsPollT)clearInterval(_gsPollT);_gsPollT=setInterval(()=>{if(!state.gsync||!state.gsync.auto||!state.gsync.url||!state.gsync.key||_gsBusy||_gsPendingPush||document.hidden)return;const a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable))return;gsLoad(true)},60000)}
+  function gsGuide(){const w=window.open('','_blank');if(!w)return;w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;padding:20px;line-height:1.6">'+gesc('구글시트 동기화 설정 가이드\n\n이 매입 분석 파일은 매출 분석 파일에서 사용 중인 Apps Script 웹앱과 호환됩니다.\n\n1) 매출 분석 파일의 Apps Script /exec URL과 비밀키를 그대로 입력합니다.\n2) Apps Script 배포 액세스는 "모든 사용자"여야 합니다.\n3) 매출 파일의 최신 Apps Script(v03)로 배포되어 있는지 확인합니다.\n4) URL과 비밀키를 입력한 뒤 [연결 테스트] → [동기화] 순서로 실행합니다.\n\n자동 동기화는 변경 후 5초 뒤 저장되고, 연결 지연 시 자동 재시도합니다. 동기화 중 다른 화면에서 수정한 값은 저장 완료 후 다시 적용됩니다.')+'</pre>');w.document.close()}
+  window.gsUpdateBtn=gsUpdateBtn;window.gsAutoPush=gsAutoPush;window.gsLoad=gsLoad;window.gsSave=gsSave;window.gsTest=gsTest;window.gsStartPoll=gsStartPoll;window.gsGuide=gsGuide;window.gsFmtTime=gsFmtTime;window.gsRenderHistory=gsRenderHistory;window.ensureBase=ensureBase;
+})();
 
 /* ============================================================
    Routing
@@ -3005,10 +3021,10 @@ function wireFilePanel(){
   $('#gsUrl').oninput=e=>{ state.gsync.url=e.target.value.trim(); saveSettings(); gsUpdateBtn(); };
   $('#gsKey').oninput=e=>{ state.gsync.key=e.target.value.trim(); saveSettings(); };
   $('#gsAuto').onchange=e=>{ state.gsync.auto=e.target.checked; saveSettings(); };
-  $('#gsSave').onclick=()=>gsSave(false); $('#gsLoad').onclick=()=>gsLoad(false); $('#gsTest').onclick=gsTest; $('#gsGuide').onclick=gsGuide;
-  $('#gsSyncBtn').onclick=()=>gsSave(false);
+  $('#gsSave').onclick=()=>window.gsSave(false); $('#gsLoad').onclick=()=>window.gsLoad(false); $('#gsTest').onclick=window.gsTest; $('#gsGuide').onclick=window.gsGuide;
+  $('#gsSyncBtn').onclick=()=>window.gsSave(false);
   // 이름: 파일·관리에서 입력 → 헤더에 표시
-  $('#gsUser').oninput=e=>{ state.gsync.user=e.target.value.trim(); renderUserLbl(); saveSettings(); gsRenderHistory(); };
+  $('#gsUser').oninput=e=>{ state.gsync.user=e.target.value.trim(); renderUserLbl(); saveSettings(); window.gsRenderHistory(); };
   $('#userLbl').onclick=()=>{ $('#filePanel').classList.add('open'); $('#overlay').classList.add('on'); setTimeout(()=>$('#gsUser')&&$('#gsUser').focus(),260); };
   $('#headerElogBtn').onclick=showElog;
   // json backup/restore
@@ -3101,9 +3117,11 @@ async function init(){
   const ds=await idbGet('datasets');
   if(ds&&ds.length){ datasets=ds.map(d=>({...d,uid:uidSeq++})); rebuildCUR(); $('#drop').classList.add('hidden'); renderFileList(); renderDivBtn(); renderPerBar(); state.act=state.act||'home'; runAct(); }
   else { $('#drop').classList.remove('hidden'); }
-  gsSetBase();
+  // 기존 매입 파일의 기준 스냅샷을 덮어쓰지 않고, 저장된 동기화 기준을 먼저 복원합니다.
+  await window.ensureBase();
+  window.gsStartPoll();
   // auto-load from sheet if configured
-  if(state.gsync&&state.gsync.url){ setTimeout(()=>gsLoad(true),400); }
+  if(state.gsync&&state.gsync.url){ setTimeout(()=>window.gsLoad(true),400); }
 }
 init();
 </script>
