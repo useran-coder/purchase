@@ -735,8 +735,22 @@ function itemNatureSelect(o){
   return `<select class="sel itemNat ${esc(cls)} ${manual?'':'is-auto'}" data-k="${esc(key)}" title="품목별 매입구분 지정"><option value="">자동 (${esc(o.nat||r.nat||'기타')})</option>${natureDefs().map(n=>`<option value="${esc(n.key)}" ${manual===n.key?'selected':''}>${esc(n.key)}</option>`).join('')}</select>`;
 }
 function applyNatureUpdate(refresh){
+  const sx=window.scrollX||0, sy=window.scrollY||0;
+  const boxScroll=[...document.querySelectorAll('.tablewrap')].map(el=>({top:el.scrollTop,left:el.scrollLeft}));
+  const active=document.activeElement;
+  const activeType=active&&active.classList?(active.classList.contains('vendorNat')?'vendorNat':active.classList.contains('itemNat')?'itemNat':''):'';
+  const activeKey=activeType?(active.dataset.v||active.dataset.k||''):'';
   rebuildCUR(); saveSettings(); gsAutoPush();
   if(typeof refresh==='function')refresh(); else if(state.act)runAct();
+  const restoreView=()=>{
+    window.scrollTo(sx,sy);
+    document.querySelectorAll('.tablewrap').forEach((el,i)=>{const s=boxScroll[i];if(s){el.scrollTop=s.top;el.scrollLeft=s.left;}});
+    if(activeType&&activeKey){
+      const el=[...document.querySelectorAll('.'+activeType)].find(x=>(x.dataset.v||x.dataset.k||'')===activeKey);
+      if(el)try{el.focus({preventScroll:true});}catch(_){el.focus();}
+    }
+  };
+  requestAnimationFrame(()=>{restoreView();setTimeout(restoreView,0);});
 }
 function bindItemNatureEditors(refresh){
   $$('#content .itemNat').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.natureOverride[key]=val;else delete state.natureOverride[key];applyNatureUpdate(refresh);});
@@ -1118,7 +1132,7 @@ function refreshPurchaseMonthlySync(){
   years.add('2026');
   years.forEach(y=>{ for(let m=1;m<=12;m++)out[`${y}-${String(m).padStart(2,'0')}`]=0; });
   CUR.forEach(r=>{
-    if(!r.ym||(!state.inclOverhead&&r.natCls==='ovh'))return;
+    if(!r.ym||r.div!=='방화문부자재'||(!state.inclOverhead&&r.natCls==='ovh'))return;
     out[r.ym]=(out[r.ym]||0)+amtOf(r);
   });
   state.purchaseMonthlySync=out;
@@ -2900,7 +2914,7 @@ function trendView(){
   function responseData(d){if(own(d,'data'))return d.data&&typeof d.data==='object'?gclone(d.data):{};const o=gclone(d)||{};['ok','error','serverTime','jsonChars','revision','schema','retryable','retryAfterMs','requestId'].forEach(k=>delete o[k]);return o}
   function remoteSnapshot(base,remote){const out=gclone(base||{})||{};remote=remote&&typeof remote==='object'?remote:{};gsFields().forEach(([n])=>{if(own(remote,n))out[n]=cleanRemote(gclone(remote[n]))});return out}
   function restoreFull(snap){gsFields().forEach(([n,p,k])=>{if(own(snap,n))p[k]=gclone(snap[n])})}
-  function rerender(){try{rebuildCUR();renderSalesSrc();renderDivBtn();renderPerBar();if(state.act)runAct()}catch(e){console.warn('sync render',e)}}
+  function rerender(){const sx=window.scrollX||0,sy=window.scrollY||0,boxScroll=[...document.querySelectorAll('.tablewrap')].map(el=>({top:el.scrollTop,left:el.scrollLeft}));try{rebuildCUR();renderSalesSrc();renderDivBtn();renderPerBar();if(state.act)runAct()}catch(e){console.warn('sync render',e)}requestAnimationFrame(()=>{window.scrollTo(sx,sy);document.querySelectorAll('.tablewrap').forEach((el,i)=>{const s=boxScroll[i];if(s){el.scrollTop=s.top;el.scrollLeft=s.left;}})})}
   async function persistOnly(){_gsApplying=true;try{await saveSettings()}finally{_gsApplying=false}}
   async function saveBase(snap){_gsBase=gclone(snap||currentFull());try{await idbSet(BASE_KEY,_gsBase)}catch(_){} }
   function ensureBase(){if(_baseReady)return _baseReady;_baseReady=(async()=>{let saved=null;try{saved=await idbGet(BASE_KEY)}catch(_){}if(!saved){for(const k of OLD_BASE_KEYS){try{saved=await idbGet(k)}catch(_){}if(saved)break}}if(saved&&typeof saved==='object'){_gsBase=gclone(saved);try{await idbSet(BASE_KEY,_gsBase)}catch(_){}}else await saveBase(currentFull());return _gsBase})();return _baseReady}
