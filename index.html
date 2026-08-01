@@ -720,6 +720,7 @@ function bindCategoryAssignEditors(refresh,root=null){
     if(l==='big'&&v&&!bigEditValues().includes(v)){ alert('대분류는 매입구분('+bigEditValues().join(', ')+')으로만 지정할 수 있습니다.'); e.target.value=(state.categoryOverride[k]&&state.categoryOverride[k].big)||''; return; }
     const next={...(state.categoryOverride[k]||{})}; next[l]=v||categoryEmptyName(l);
     if(Object.keys(next).length) state.categoryOverride[k]=next; else delete state.categoryOverride[k];
+    logEdit('품목분류',`${k} · ${l}을 '${v||categoryEmptyName(l)}'(으)로 변경`);
     rebuildCUR(); saveSettings(); gsAutoPush(); if(refresh) refresh();
     };
   });
@@ -753,7 +754,7 @@ function applyNatureUpdate(refresh){
   requestAnimationFrame(()=>{restoreView();setTimeout(restoreView,0);});
 }
 function bindItemNatureEditors(refresh){
-  $$('#content .itemNat').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.natureOverride[key]=val;else delete state.natureOverride[key];applyNatureUpdate(refresh);});
+  $$('#content .itemNat').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.natureOverride[key]=val;else delete state.natureOverride[key];logEdit('매입구분',`${key} · ${val||'자동 분류'}로 변경`);applyNatureUpdate(refresh);});
 }
 /* ---------- division classification (사업부) via project ---------- */
 function divisionOf(project,mgmt){
@@ -819,7 +820,7 @@ function outsourcedKindSelect(o){
   return `<select class="sel outsourcedKindSel" data-k="${esc(key)}" title="외주가공 품목구분"><option value="" ${manual?'':'selected'}>자동 (${esc(value)})</option>${['분체','도금','기타'].map(k=>`<option value="${k}" ${manual===k?'selected':''}>${k}</option>`).join('')}</select>`;
 }
 function bindOutsourcedKindEditors(refresh){
-  $$('#content .outsourcedKindSel').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.outsourcedKindOverride[key]=val;else delete state.outsourcedKindOverride[key];saveSettings();gsAutoPush();if(refresh)refresh();else runAct();});
+  $$('#content .outsourcedKindSel').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.outsourcedKindOverride[key]=val;else delete state.outsourcedKindOverride[key];logEdit('외주 품목구분',`${key} · ${val||'자동 분류'}로 변경`);saveSettings();gsAutoPush();if(refresh)refresh();else runAct();});
 }
 
 /* ---------- state ---------- */
@@ -862,6 +863,8 @@ let state = {
   categoryCustom:{big:[],mid:[],small:[]}, // 사용자 추가 분류명
   outsourcedKindOverride:{}, // 외주가공 품번|품명|규격 → 분체/도금/기타 수동 지정
   syncLog:{},            // 동기화 이력 (syncable)
+  editLog:[],            // 화면·기준정보 수정 이력 (syncable)
+  elogSeenTs:0,          // 현재 사용자별 수정이력 확인 시각 (local)
   /* 월별 매출·매입 동기화 값은 주석 처리된 기존 장문 설명과 분리해 실제 state 속성으로 유지합니다. */
   salesMonthlySync:{}, salesMonthlyManual:{},
   laserSales:{}, laserMonthlySync:{}, laserMonthlyManual:{},
@@ -1009,7 +1012,7 @@ async function idbGet(k){ try{ const db=await idb(); return new Promise((res)=>{
 async function idbClear(){ try{ const db=await idb(); return new Promise((res)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=()=>res(); }); }catch(e){} }
 async function persistData(){ const slim=datasets.map(d=>({uid:d.uid,fileName:d.fileName,sheetName:d.sheetName,sheetNames:d.sheetNames,recs:d.recs})); await idbSet('datasets',slim); }
 async function saveSettings(){ const s={}; SETTING_KEYS.forEach(k=>s[k]=state[k]); await idbSet('settings',s); }
-const SETTING_KEYS=['basis','inclOverhead','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','paretoNat','paretoPct','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','targetPct','projectMemo','projectCustom','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','gsync'];
+const SETTING_KEYS=['basis','inclOverhead','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','paretoNat','paretoPct','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','targetPct','projectMemo','projectCustom','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','editLog','elogSeenTs','gsync'];
 
 /* ============================================================
    File handling (SheetJS)
@@ -1388,13 +1391,44 @@ function render(title, meta, data, cols, defSortKey, note, opts={}){
 
 /* ---------- 수정이력 모달 ---------- */
 function showElog(){
-  const log=state.syncLog||{};
-  const arr=Object.keys(log).map(k=>log[k]).filter(x=>x&&x.at).sort((a,b)=>a.at<b.at?1:-1).slice(0,50);
-  const me=(state.gsync&&state.gsync.user)||'';
-  const body=arr.length? arr.map(e=>`<div style="padding:5px 0;border-bottom:1px solid var(--line);font-size:13px">${(e.by===me?'🟢 ':'👤 ')}<b>${esc(e.by||'(이름없음)')}</b> · ${gsFmtTime(e.at)}${e.act?' · '+esc(e.act):''}</div>`).join('')
-    : '<div class="sub2" style="padding:12px 0">아직 수정 이력이 없습니다. 구글시트 동기화를 설정하면 담당자별 변경 이력이 기록됩니다.</div>';
-  $('#elogBody').innerHTML=body;
-  $('#elogModal').classList.add('on');
+  if(typeof elogMarkSeen==='function')elogMarkSeen();
+  if(typeof openEditLog==='function')openEditLog();
+}
+function mergeEditLog(localArr,remoteArr){
+  const map=new Map();
+  (localArr||[]).concat(remoteArr||[]).forEach(e=>{
+    if(!e)return;
+    const k=(e.t||'')+'|'+(e.u||'')+'|'+(e.c||'')+'|'+(e.d||'');
+    if(!map.has(k))map.set(k,e);
+  });
+  return [...map.values()].sort((a,b)=>new Date(b.t||0)-new Date(a.t||0)).slice(0,1000);
+}
+function logEdit(cat,detail){
+  state.editLog=Array.isArray(state.editLog)?state.editLog:[];
+  state.editLog.unshift({t:Date.now(),u:(state.gsync&&state.gsync.user)||'관리자',c:String(cat||'기타'),d:String(detail||'')});
+  if(state.editLog.length>1000)state.editLog.length=1000;
+  if(typeof refreshElogBtns==='function')refreshElogBtns();
+}
+function elogMe(){return (state.gsync&&state.gsync.user)||'관리자';}
+function elogUnseen(){const me=elogMe(),ts=+state.elogSeenTs||0;return (state.editLog||[]).filter(e=>e&&e.u&&e.u!==me&&(+e.t||0)>ts).length;}
+function elogMarkSeen(){let mx=+state.elogSeenTs||0;(state.editLog||[]).forEach(e=>{if(e&&(+e.t||0)>mx)mx=+e.t;});state.elogSeenTs=Math.max(mx,Date.now());saveSettings();refreshElogBtns();}
+function refreshElogBtns(){
+  const b=document.getElementById('headerElogBtn');if(!b)return;
+  const n=elogUnseen(),log=state.editLog||[],label='🕘 수정이력'+(n?' ('+n+'건)':'');
+  b.textContent=label;b.classList.toggle('has-unseen',n>0);
+  if(log.length){const ts=log.map(e=>+e.t||0).filter(Boolean);if(ts.length)b.title='전체 '+log.length+'건 · '+new Date(Math.min(...ts)).toLocaleDateString('ko-KR')+' ~ '+new Date(Math.max(...ts)).toLocaleDateString('ko-KR')+(n?' · 미확인 '+n+'건':' · 모두 확인함');}
+  if(n){b.style.background='#fee2e2';b.style.borderColor='#fecaca';b.style.color='#b91c1c';}else{b.style.background='';b.style.borderColor='';b.style.color='';}
+}
+function openEditLog(){
+  const log=state.editLog||[],old=document.getElementById('elogOvl');if(old)old.remove();
+  const time=v=>{const d=new Date(v);if(isNaN(d))return '-';const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
+  const rows=log.length?log.map(e=>{const search=[time(e.t),e.u,e.c,e.d].join(' ').toLowerCase();return `<tr class="elog-row" data-search="${esc(search)}"><td style="white-space:nowrap;color:#64748b">${time(e.t)}</td><td style="white-space:nowrap"><b>${esc(e.u||'-')}</b></td><td style="text-align:center"><span style="display:inline-block;padding:2px 7px;border-radius:7px;background:#eef2f8;color:#1e3a5f;font-size:10.5px;font-weight:700">${esc(e.c||'')}</span></td><td style="text-align:left;white-space:pre-wrap;word-break:break-word;line-height:1.55;min-width:520px">${esc(e.d||'')}</td></tr>`;}).join(''):'<tr><td colspan="4" style="text-align:center;padding:18px;color:#94a3b8">수정 이력이 없습니다.</td></tr>';
+  const ov=document.createElement('div');ov.id='elogOvl';ov.style.cssText='position:fixed;inset:0;z-index:100001;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#fff;border-radius:14px;width:min(1180px,96vw);max-height:84vh;display:flex;flex-direction:column;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.3)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:15px">🕘 수정 이력 <span id="elogTotal" style="font-size:11px;color:#64748b">(${log.length}건)</span></div><div style="display:flex;gap:8px"><button id="elogClear" type="button" style="border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:7px;cursor:pointer;font-size:12px;padding:5px 12px">전체 지우기</button><button id="elogClose" type="button" style="border:1px solid #cbd5e1;background:#fff;border-radius:7px;cursor:pointer;font-size:12px;padding:5px 14px">닫기</button></div></div><div style="display:flex;align-items:center;gap:7px;margin-bottom:10px"><span style="font-size:12px;font-weight:700;color:#475569">검색</span><input id="elogSearch" type="search" placeholder="일시 · 작성자 · 구분 · 수정 내용 검색" style="flex:1;min-width:180px;border:1px solid #cbd5e1;border-radius:7px;padding:7px 10px;font:inherit;font-size:12px;outline:none"><button id="elogSearchClear" type="button" style="border:1px solid #cbd5e1;background:#fff;border-radius:7px;cursor:pointer;font-size:12px;padding:6px 10px">초기화</button></div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>일시</th><th>작성자</th><th style="text-align:center">구분</th><th style="text-align:left">수정 내용</th></tr></thead><tbody>${rows}<tr id="elogNoResult" style="display:none"><td colspan="4" style="text-align:center;padding:18px;color:#94a3b8">검색 결과가 없습니다.</td></tr></tbody></table></div></div>`;
+  document.body.appendChild(ov);const close=()=>ov.remove();ov.addEventListener('click',e=>{if(e.target===ov)close();});ov.querySelector('#elogClose').onclick=close;ov.querySelector('#elogClear').onclick=async()=>{if(!confirm('수정 이력을 전체 삭제할까요?'))return;state.editLog=[];await saveSettings();refreshElogBtns();close();};
+  const search=ov.querySelector('#elogSearch'),clear=ov.querySelector('#elogSearchClear'),none=ov.querySelector('#elogNoResult'),total=ov.querySelector('#elogTotal');
+  const applySearch=()=>{const q=String(search&&search.value||'').trim().toLowerCase();let n=0;ov.querySelectorAll('.elog-row').forEach(row=>{const show=!q||(row.dataset.search||'').includes(q);row.style.display=show?'':'none';if(show)n++;});if(none)none.style.display=log.length&&n===0?'':'none';if(total)total.textContent=q?`(검색 ${n}건 / 전체 ${log.length}건)`:`(${log.length}건)`;};
+  search&&search.addEventListener('input',applySearch);clear&&clear.addEventListener('click',()=>{if(search){search.value='';search.focus();}applySearch();});
 }
 function barCell(v,max,color){ const w=max?Math.max(1,v/max*100):0; return `<div class="bar"><i style="width:${w}%;background:${color||'var(--accent)'}"></i></div>`; }
 let _toastT;
@@ -1707,8 +1741,8 @@ function rankVendor(){
 function wireVendorRows(){
   $$('#content .vendorNatFilter').forEach(btn=>btn.onclick=()=>{state.vendorNatureFilter=btn.dataset.nat;state.sortKey='amt';state.sortDir=-1;rankVendor();});
   $$('#content .vlink').forEach(a=>a.onclick=e=>{ e.preventDefault(); vendorDetail(a.dataset.v); });
-  $$('#content .vmemo').forEach(inp=>inp.onchange=e=>{ const v=e.target.dataset.v; state.vendorMemo[v]=e.target.value; state.vendorMemoAt[v]={t:Date.now(),u:state.gsync.user}; saveSettings(); gsAutoPush(); });
-  $$('#content .vendorNat').forEach(sel=>sel.onchange=e=>{ const v=e.target.dataset.v,n=e.target.value; if(n)state.vendorNatureOverride[v]=n; else delete state.vendorNatureOverride[v]; applyNatureUpdate(rankVendor); });
+  $$('#content .vmemo').forEach(inp=>inp.onchange=e=>{ const v=e.target.dataset.v; state.vendorMemo[v]=e.target.value; state.vendorMemoAt[v]={t:Date.now(),u:state.gsync.user}; logEdit('거래처 메모',`${v} 메모를 ${e.target.value?'수정':'삭제'}`); saveSettings(); gsAutoPush(); });
+  $$('#content .vendorNat').forEach(sel=>sel.onchange=e=>{ const v=e.target.dataset.v,n=e.target.value; if(n)state.vendorNatureOverride[v]=n; else delete state.vendorNatureOverride[v]; logEdit('거래처 매입구분',`${v} · ${n||'자동 분류'}로 변경`); applyNatureUpdate(rankVendor); });
   $('#vendorNatureManage').onclick=openNatureManager;
 }
 function patchTotals(pairs){ /* best-effort: totals handled via cols.total normally; noop kept for clarity */ }
@@ -1970,9 +2004,10 @@ function reassignCat(level,ctx,to){
   const keys=[...new Set(CUR.filter(match).map(r=>productKey(r)))];
   if(!keys.length)return false;
   keys.forEach(k=>{const o={...(state.categoryOverride[k]||{})};o[level]=next;state.categoryOverride[k]=o;});
-  rebuildCUR(); state.sortKey=null; saveSettings(); gsAutoPush(); rankCat();
   const who=(level==='big'?(ctx.small??ctx.mid??ctx.big):ctx[level]);
   const lbl={big:'매입구분(대분류)',mid:'중분류',small:'소분류'}[level];
+  logEdit('품목분류',`${who||'선택 분류'} → ${next} ${lbl} 변경 (${keys.length}개 품목)`);
+  rebuildCUR(); state.sortKey=null; saveSettings(); gsAutoPush(); rankCat();
   toast(level==='big'
     ? `'${who}' → '${next}' ${lbl}(으)로 이동 (${keys.length}개 품목) · 현재 목록에서는 빠집니다`
     : `'${who}' → '${next}' ${lbl} 변경 (${keys.length}개 품목)`);
@@ -1981,11 +2016,13 @@ function reassignCat(level,ctx,to){
 function updateCategoryLabel(level,from,to){
   const next=String(to||'').trim();
   if(!next||next===from)return false;
+  const labels={big:'대분류',mid:'중분류',small:'소분류'};
   const map=state.categoryRename[level]||(state.categoryRename[level]={});
   Object.keys(map).forEach(k=>{if(map[k]===from)map[k]=next;});
   map[from]=next;
   if(level==='big'&&state.catDrill===from)state.catDrill=next;
   if(level==='mid'&&state.catDrill2===from)state.catDrill2=next;
+  logEdit('분류명칭',`${labels[level]} '${from}'을 '${next}'로 변경`);
   rebuildCUR(); state.sortKey=null; saveSettings(); gsAutoPush(); rankCat();
   return true;
 }
@@ -2408,10 +2445,10 @@ function openNatureManager(){
     const opts=o=>`<option value="">자동 분류 (${esc(o.auto)})</option>`+defs.map(d=>`<option value="${esc(d.key)}" ${(state.natureOverride[o.key]||'')===d.key?'selected':''}>${esc(d.key)}</option>`).join('');
     const rowHtml=shown=>shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td><td class="l"><select class="sel natureAssign" data-k="${esc(o.key)}">${opts(o)}</select></td><td class="l"><input class="catAssign natureCatAssign" data-k="${esc(o.key)}" data-l="mid" value="${esc(o.mid)}" list="natureMidList" placeholder="중분류"></td><td class="l"><input class="catAssign natureCatAssign" data-k="${esc(o.key)}" data-l="small" value="${esc(o.small)}" list="natureSmallList" placeholder="소분류"></td></tr>`).join('')||'<tr><td colspan="7" class="l sub2" style="padding:16px">검색 결과가 없습니다.</td></tr>';
     body.innerHTML=`<div class="note">새 매입구분을 추가한 뒤, 아래 제품별 선택란에서 수동 지정할 수 있습니다. 수동 지정값은 자동 분류보다 우선하며 자동 저장·동기화됩니다.</div><div class="ctrlbar"><input id="newNature" type="text" placeholder="새 매입구분명 입력" style="height:32px;border:1px solid var(--line);border-radius:7px;padding:0 9px;font-family:inherit"><button class="btn sm" id="addNature">＋ 구분 추가</button></div><div style="margin:4px 0 12px;display:flex;gap:6px;flex-wrap:wrap">${(state.natureCustom||[]).map(n=>`<span class="tag custom">${esc(n.key)} <button class="delNature" data-k="${esc(n.key)}" style="border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></span>`).join('')||'<span class="sub2">추가한 사용자 매입구분이 없습니다. 기본 구분은 삭제되지 않습니다.</span>'}</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0"><input id="natureProductSearch" value="${esc(initialQuery)}" placeholder="품번·품명·규격 검색" style="flex:1;height:34px;border:1px solid var(--line);border-radius:7px;padding:0 9px;font-family:inherit"><span class="sub2" id="natureProductCount"></span></div><datalist id="natureMidList">${categoryValues('mid').map(v=>`<option value="${esc(categoryDisplayLabel('mid',v))}"></option>`).join('')}</datalist><datalist id="natureSmallList">${categoryValues('small').map(v=>`<option value="${esc(categoryDisplayLabel('small',v))}"></option>`).join('')}</datalist><div class="tablewrap" style="max-height:48vh"><table><thead><tr><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th>매입액</th><th class="l">매입구분 지정</th><th class="l">중분류</th><th class="l">소분류</th></tr></thead><tbody id="natureProductRows"></tbody></table></div>`;
-    const bindAssign=()=>{$$('#natureModal .natureAssign').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.natureOverride[key]=val;else delete state.natureOverride[key];applyNatureUpdate();});bindCategoryAssignEditors(()=>{},$('#natureModal'));};
+    const bindAssign=()=>{$$('#natureModal .natureAssign').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.natureOverride[key]=val;else delete state.natureOverride[key];logEdit('매입구분',`${key} · ${val||'자동 분류'}로 변경`);applyNatureUpdate();});bindCategoryAssignEditors(()=>{},$('#natureModal'));};
     const applySearch=query=>{const q=query.trim(),shown=products.filter(o=>matchesSearchText(`${o.code} ${o.name} ${o.spec}`,q,o.spec)).slice(0,350);$('#natureProductCount').textContent=q?`${shown.length}건 표시`:`상위 ${shown.length}개 표시 (검색 가능)`;$('#natureProductRows').innerHTML=rowHtml(shown);bindAssign();};
-    $('#addNature').onclick=()=>{ const inp=$('#newNature'), key=inp.value.trim(); if(!key)return; if(natureDefs().some(n=>n.key===key)){alert('같은 매입구분이 이미 있습니다.');return;} state.natureCustom.push({key,cls:'custom',match:[]}); applyNatureUpdate(); draw($('#natureProductSearch').value); };
-    $$('#natureModal .delNature').forEach(b=>b.onclick=()=>{const key=b.dataset.k;if(!confirm(`'${key}' 매입구분을 삭제할까요? 지정된 품목·거래처는 자동분류로 돌아갑니다.`))return;state.natureCustom=state.natureCustom.filter(n=>n.key!==key);Object.keys(state.natureOverride).forEach(k=>{if(state.natureOverride[k]===key)delete state.natureOverride[k];});Object.keys(state.vendorNatureOverride).forEach(k=>{if(state.vendorNatureOverride[k]===key)delete state.vendorNatureOverride[k];});applyNatureUpdate();draw($('#natureProductSearch').value);});
+    $('#addNature').onclick=()=>{ const inp=$('#newNature'), key=inp.value.trim(); if(!key)return; if(natureDefs().some(n=>n.key===key)){alert('같은 매입구분이 이미 있습니다.');return;} state.natureCustom.push({key,cls:'custom',match:[]}); logEdit('매입구분 관리',`사용자 매입구분 '${key}' 추가`); applyNatureUpdate(); draw($('#natureProductSearch').value); };
+    $$('#natureModal .delNature').forEach(b=>b.onclick=()=>{const key=b.dataset.k;if(!confirm(`'${key}' 매입구분을 삭제할까요? 지정된 품목·거래처는 자동분류로 돌아갑니다.`))return;state.natureCustom=state.natureCustom.filter(n=>n.key!==key);Object.keys(state.natureOverride).forEach(k=>{if(state.natureOverride[k]===key)delete state.natureOverride[k];});Object.keys(state.vendorNatureOverride).forEach(k=>{if(state.vendorNatureOverride[k]===key)delete state.vendorNatureOverride[k];});logEdit('매입구분 관리',`사용자 매입구분 '${key}' 삭제`);applyNatureUpdate();draw($('#natureProductSearch').value);});
     const search=$('#natureProductSearch');bindSearchInput(search,()=>applySearch(search.value));
     applySearch(initialQuery);
   };
@@ -2454,7 +2491,7 @@ function paretoView(){
     {totals:true, tableClass:'pareto-table', searchFields:['vendor','mainNat'], noteWarn:nTarget>0&&nTarget<=5, controlsHtml:natControls,
      afterRender:()=>{
        $$('#content #paretoNatSeg button').forEach(b=>b.onclick=()=>{state.paretoNat=b.dataset.v;state.sortKey=null;saveSettings();paretoView();});
-       const pi=$('#paretoPct'); if(pi)pi.onchange=()=>{state.paretoPct=Math.max(1,Math.min(100,+pi.value||80));state.sortKey=null;saveSettings();gsAutoPush();paretoView();};
+       const pi=$('#paretoPct'); if(pi)pi.onchange=()=>{state.paretoPct=Math.max(1,Math.min(100,+pi.value||80));logEdit('파레토 설정',`누적 기준을 ${state.paretoPct}%로 변경`);state.sortKey=null;saveSettings();gsAutoPush();paretoView();};
        $$('#content .pareto-vlink').forEach(a=>a.onclick=e=>{e.preventDefault(); vendorTxnDetail(a.dataset.v, rows, '파레토 목록', ()=>{state.sortKey=null;paretoView();});});
      }});
 }
@@ -2584,7 +2621,7 @@ function priceAlert(){
     '품목별로 최근월 가중평균 단가를 직전월까지의 평균과 비교합니다. 인상 품목은 협상·대체공급처, 인하 품목은 추가발주 검토 대상입니다.',
      {searchFields:['name','code','spec'], chips, chipDefault:'up', controlsHtml:palertControls, monthlyHideCode:true, monthlyHideHeaders:['메모'], monthlyKeepHeaders:['매입구분','품명','규격'], monthlyExpandHeaders:['품명','규격'],
      chipFilter:(o,v)=>v==='all'?true:(v==='up'?o.chg>=1:o.chg<=-1),
-     afterRender:()=>{ const ns=$('#palertNatSeg'); if(ns)ns.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.priceAlertNat=b.dataset.v;state.sortKey=null;priceAlert();}); bindItemNatureEditors(()=>priceAlert()); $$('#content .palertMemo').forEach(inp=>inp.onchange=e=>{ const c=e.target.dataset.c; state.priceMemo[c]=e.target.value; state.priceMemoAt[c]={t:Date.now(),u:state.gsync.user}; saveSettings(); gsAutoPush(); }); $$('#content .palertItem').forEach(a=>a.onclick=e=>{e.preventDefault();const code=a.dataset.code,name=a.dataset.name,spec=a.dataset.spec;const sub=CUR.filter(r=>(state.division==='전체'||r.div===state.division)&&(state.inclOverhead||r.natCls!=='ovh')&&(r.code||'')===code&&r.name===name&&r.spec===spec);txnListDetail(`🧾 ${name}${spec?' ('+spec+')':''} · 이전 입고 리스트`,`${code?code+' · ':''}단가 변동 품목의 전체 입고 이력`,sub,'단가 변동 감지',()=>priceAlert());}); }});
+     afterRender:()=>{ const ns=$('#palertNatSeg'); if(ns)ns.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.priceAlertNat=b.dataset.v;state.sortKey=null;priceAlert();}); bindItemNatureEditors(()=>priceAlert()); $$('#content .palertMemo').forEach(inp=>inp.onchange=e=>{ const c=e.target.dataset.c; state.priceMemo[c]=e.target.value; state.priceMemoAt[c]={t:Date.now(),u:state.gsync.user}; logEdit('단가 메모',`${c} 협상 메모를 ${e.target.value?'수정':'삭제'}`); saveSettings(); gsAutoPush(); }); $$('#content .palertItem').forEach(a=>a.onclick=e=>{e.preventDefault();const code=a.dataset.code,name=a.dataset.name,spec=a.dataset.spec;const sub=CUR.filter(r=>(state.division==='전체'||r.div===state.division)&&(state.inclOverhead||r.natCls!=='ovh')&&(r.code||'')===code&&r.name===name&&r.spec===spec);txnListDetail(`🧾 ${name}${spec?' ('+spec+')':''} · 이전 입고 리스트`,`${code?code+' · ':''}단가 변동 품목의 전체 입고 이력`,sub,'단가 변동 감지',()=>priceAlert());}); }});
 }
 
 /* ---------- 전월/전년 대비 (증감분석) ---------- */
@@ -2703,7 +2740,7 @@ function projectView(){
   render('🏗️ 프로젝트·현장별 매입', `${arr.length}개 프로젝트 · 합계 ${wonM(tot)}`, arr, cols, 'amt',
     '프로젝트명(📋)을 클릭하면 투입 품목, 거래처수를 클릭하면 공급처별 내역이 나옵니다. 「프로젝트·품목 지정」에서 프로젝트/현장명을 만들고 품목별로 지정할 수 있습니다.',
      {totals:true, searchFields:['project'], monthlyHideHeaders:['그래프','메모'], monthlyKeepHeaders:['프로젝트/현장','거래처수'], monthlyExpandHeaders:['프로젝트/현장','거래처수'], headExtra:'<button class="btn ghost sm" id="projectManage">⚙️ 프로젝트·품목 지정</button>',
-     afterRender:()=>{ $$('#content .pjmemo').forEach(inp=>inp.onchange=e=>{ state.projectMemo[e.target.dataset.p]=e.target.value; saveSettings(); gsAutoPush(); });
+     afterRender:()=>{ $$('#content .pjmemo').forEach(inp=>inp.onchange=e=>{ state.projectMemo[e.target.dataset.p]=e.target.value; logEdit('프로젝트 메모',`${e.target.dataset.p} 메모를 ${e.target.value?'수정':'삭제'}`); saveSettings(); gsAutoPush(); });
        $$('#content .pjlink').forEach(a=>a.onclick=e=>{e.preventDefault(); const p=a.dataset.p; const sub=rows.filter(r=>r.project===p);
          itemListDetail(`📦 ${p} · 투입 품목`, `품목 ${new Set(sub.map(r=>(r.code||'')+r.name)).size}종 · 합계 ${wonM(sub.reduce((a,r)=>a+amtOf(r),0))}`, sub, '프로젝트·현장별', ()=>projectView()); });
        $$('#content .pjvlink').forEach(a=>a.onclick=e=>{e.preventDefault(); const p=a.dataset.p; const sub=rows.filter(r=>r.project===p);
@@ -2720,10 +2757,10 @@ function openProjectManager(){
     const q=query.trim(),shown=products.filter(o=>matchesSearchText(`${o.code} ${o.name} ${o.spec}`,q,o.spec)).slice(0,350);
     const projectOpts=o=>`<option value="">원본 프로젝트 (${esc(o.auto||'미지정')})</option>`+opts.map(p=>`<option value="${esc(p)}" ${state.projectOverride[o.key]===p?'selected':''}>${esc(p)}</option>`).join('');
     body.innerHTML=`<div class="note">새 프로젝트·현장명을 만든 후 아래 품목별 선택란에서 지정할 수 있습니다. 지정값은 원본 프로젝트명보다 우선하며 자동 저장·동기화됩니다.</div><div class="ctrlbar"><input id="newProject" type="text" placeholder="새 프로젝트·현장명 입력" style="height:32px;border:1px solid var(--line);border-radius:7px;padding:0 9px;font-family:inherit"><button class="btn sm" id="addProject">＋ 프로젝트·현장 추가</button></div><div style="margin:4px 0 12px;display:flex;gap:6px;flex-wrap:wrap">${(state.projectCustom||[]).map(p=>`<span class="tag custom">${esc(p)} <button class="delProject" data-p="${esc(p)}" style="border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></span>`).join('')||'<span class="sub2">추가한 프로젝트·현장이 없습니다. 원본 프로젝트명도 선택할 수 있습니다.</span>'}</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0"><input id="projectProductSearch" value="${esc(query)}" placeholder="품번·품명·규격 검색" style="flex:1;height:34px;border:1px solid var(--line);border-radius:7px;padding:0 9px;font-family:inherit"><span class="sub2">${q?shown.length+'건 표시':'상위 '+shown.length+'개 표시 (검색 가능)'}</span></div><div class="tablewrap" style="max-height:48vh"><table><thead><tr><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th>매입액</th><th class="l">프로젝트·현장 지정</th></tr></thead><tbody>${shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td><td class="l"><select class="sel projectAssign" data-k="${esc(o.key)}">${projectOpts(o)}</select></td></tr>`).join('')||'<tr><td colspan="5" class="l sub2" style="padding:16px">검색 결과가 없습니다.</td></tr>'}</tbody></table></div>`;
-    $('#addProject').onclick=()=>{const inp=$('#newProject'),p=inp.value.trim();if(!p)return;if(opts.includes(p)){alert('같은 프로젝트·현장명이 이미 있습니다.');return;}state.projectCustom.push(p);saveSettings();gsAutoPush();draw(query);};
-    $$('#projectModal .delProject').forEach(b=>b.onclick=()=>{const p=b.dataset.p;if(!confirm(`'${p}' 프로젝트·현장을 삭제할까요? 지정 품목은 원본 프로젝트명으로 돌아갑니다.`))return;state.projectCustom=state.projectCustom.filter(x=>x!==p);Object.keys(state.projectOverride).forEach(k=>{if(state.projectOverride[k]===p)delete state.projectOverride[k];});rebuildCUR();saveSettings();gsAutoPush();draw(query);});
+    $('#addProject').onclick=()=>{const inp=$('#newProject'),p=inp.value.trim();if(!p)return;if(opts.includes(p)){alert('같은 프로젝트·현장명이 이미 있습니다.');return;}state.projectCustom.push(p);logEdit('프로젝트 관리',`프로젝트·현장 '${p}' 추가`);saveSettings();gsAutoPush();draw(query);};
+    $$('#projectModal .delProject').forEach(b=>b.onclick=()=>{const p=b.dataset.p;if(!confirm(`'${p}' 프로젝트·현장을 삭제할까요? 지정 품목은 원본 프로젝트명으로 돌아갑니다.`))return;state.projectCustom=state.projectCustom.filter(x=>x!==p);Object.keys(state.projectOverride).forEach(k=>{if(state.projectOverride[k]===p)delete state.projectOverride[k];});logEdit('프로젝트 관리',`프로젝트·현장 '${p}' 삭제`);rebuildCUR();saveSettings();gsAutoPush();draw(query);});
     bindPopupSearch('#projectProductSearch',draw);
-    $$('#projectModal .projectAssign').forEach(s=>s.onchange=e=>{const k=e.target.dataset.k,p=e.target.value;if(p)state.projectOverride[k]=p;else delete state.projectOverride[k];rebuildCUR();saveSettings();gsAutoPush();});
+    $$('#projectModal .projectAssign').forEach(s=>s.onchange=e=>{const k=e.target.dataset.k,p=e.target.value;if(p)state.projectOverride[k]=p;else delete state.projectOverride[k];logEdit('프로젝트 지정',`${k} · ${p||'원본 프로젝트'}로 변경`);rebuildCUR();saveSettings();gsAutoPush();});
   };
   draw();modal.classList.add('on');
 }
@@ -2782,7 +2819,7 @@ function costRatio(){
   const s=ms.reduce((a,m)=>a+(+salesFor(m)||0),0); const p=totRow.reduce((a,b)=>a+b,0); const r=s?p/s*100:0;
   html+=`<div class="panel" style="margin-top:14px"><h3>💡 원가율 진단</h3><div class="sub2" style="line-height:1.7">전체 매출대비 매입비율은 <b>${r.toFixed(1)}%</b>입니다. ${r>=65?'원가율이 높습니다. 원자재 kg단가·외주 단가 협상과 복수구매선 확보로 개선 여지를 점검하세요.':r>=50?'원가율이 통상 범위입니다. 매입구분별 비중 변화를 지속 모니터링하세요.':'원가율이 양호합니다.'} 원자재 비중이 큰 만큼 EGI 등 강재 시세 변동을 단가추이로 추적하는 것이 중요합니다.</div></div>`;
   $('#content').innerHTML=html; clearActiveMenu(); fitRatioChartText();
-  $$('#content .salesIn').forEach(inp=>inp.onchange=e=>{ const ym=e.target.dataset.ym; const v=toNum(e.target.value); if(state.division==='PD사업부'){ state.monthlyPdSales[ym]=v||''; } else { state.monthlySales[ym]=v||''; state.salesMonthlyManual=state.salesMonthlyManual||{}; if(v)state.salesMonthlyManual[ym]=true;else delete state.salesMonthlyManual[ym]; } saveSettings(); gsAutoPush(); costRatio(); });
+  $$('#content .salesIn').forEach(inp=>inp.onchange=e=>{ const ym=e.target.dataset.ym; const v=toNum(e.target.value); if(state.division==='PD사업부'){ state.monthlyPdSales[ym]=v||''; } else { state.monthlySales[ym]=v||''; state.salesMonthlyManual=state.salesMonthlyManual||{}; if(v)state.salesMonthlyManual[ym]=true;else delete state.salesMonthlyManual[ym]; } logEdit('월매출 입력',`${ym} ${state.division==='PD사업부'?'PD':'방화문부자재'} 월매출을 ${v?won(v):'삭제'}으로 변경`); saveSettings(); gsAutoPush(); costRatio(); });
   $('#csExport').onclick=()=>{ const aoa=[['구분',...ms,'합계']]; aoa.push(['월매출',...ms.map(m=>+salesFor(m)||0),ms.reduce((a,m)=>a+(+salesFor(m)||0),0)]); natOrder.forEach(nat=>aoa.push([nat,...ms.map(m=>cell(m,nat)),ms.reduce((a,m)=>a+cell(m,nat),0)])); aoa.push(['매입합계',...totRow,totRow.reduce((a,b)=>a+b,0)]); const ws=XLSX.utils.aoa_to_sheet(aoa);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'원가율');XLSX.writeFile(wb,'cost_ratio.xlsx'); };
 }
 
@@ -2817,6 +2854,7 @@ function laserRatio(){
     state.laserSales[ym]=v||'';
     state.laserMonthlyManual=state.laserMonthlyManual||{};
     if(v)state.laserMonthlyManual[ym]=true; else delete state.laserMonthlyManual[ym];
+    logEdit('레이저 월매출',`${ym} 레이저 월매출을 ${v?won(v):'삭제'}으로 변경`);
     saveSettings(); gsAutoPush(); laserRatio();
   });
 }
@@ -2889,7 +2927,7 @@ function trendView(){
     ['targetPct',state,'targetPct'],['projectMemo',state,'projectMemo'],['projectCustom',state,'projectCustom'],['projectOverride',state,'projectOverride'],
     ['categoryRename',state,'categoryRename'],['categoryOverride',state,'categoryOverride'],['categoryCustom',state,'categoryCustom'],
     ['outsourcedKindOverride',state,'outsourcedKindOverride'],['natureCustom',state,'natureCustom'],['natureOverride',state,'natureOverride'],
-    ['syncLog',state,'syncLog']
+    ['editLog',state,'editLog'],['syncLog',state,'syncLog']
   ]}
   function gsFullObj(){refreshPurchaseMonthlySync();const o={};gsFields().forEach(([n,p,k])=>o[n]=gclone(p[k]));return o}
   function same(a,b){try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return false}}
@@ -2907,13 +2945,13 @@ function trendView(){
     if(plain(patch)){const out=plain(cur)?gclone(cur):{};Object.keys(patch).forEach(k=>{const v=applyValue(out[k],patch[k]);if(v===undefined)delete out[k];else out[k]=v});return out}
     return gclone(patch);
   }
-  function gsApplyDelta(dl){if(!dl)return;gsFields().forEach(([n,p,k])=>{if(own(dl,n)){const v=applyValue(p[k],dl[n]);p[k]=v===undefined?(Array.isArray(p[k])?[]:{}):v}});rebuildCUR()}
+  function gsApplyDelta(dl){if(!dl)return;gsFields().forEach(([n,p,k])=>{if(!own(dl,n))return;if(n==='editLog'){p[k]=mergeEditLog(p[k]||[],Array.isArray(dl[n])?dl[n]:[]);refreshElogBtns();return}const v=applyValue(p[k],dl[n]);p[k]=v===undefined?(Array.isArray(p[k])?[]:{}):v});rebuildCUR()}
   function fullDelta(cur,old){const out={};gsFields().forEach(([n])=>{const d=deepDelta(cur[n],old&&old[n]);if(d!==undefined)out[n]=d});return out}
   function cleanRemote(v){if(Array.isArray(v))return v.map(cleanRemote);if(!plain(v))return v;const o={};Object.keys(v).forEach(k=>{if(v[k]!==null)o[k]=cleanRemote(v[k])});return o}
   function currentFull(){return gsFullObj()}
   function responseData(d){if(own(d,'data'))return d.data&&typeof d.data==='object'?gclone(d.data):{};const o=gclone(d)||{};['ok','error','serverTime','jsonChars','revision','schema','retryable','retryAfterMs','requestId'].forEach(k=>delete o[k]);return o}
   function remoteSnapshot(base,remote){const out=gclone(base||{})||{};remote=remote&&typeof remote==='object'?remote:{};gsFields().forEach(([n])=>{if(own(remote,n))out[n]=cleanRemote(gclone(remote[n]))});return out}
-  function restoreFull(snap){gsFields().forEach(([n,p,k])=>{if(own(snap,n))p[k]=gclone(snap[n])})}
+  function restoreFull(snap){gsFields().forEach(([n,p,k])=>{if(!own(snap,n))return;if(n==='editLog'){p[k]=mergeEditLog(p[k]||[],Array.isArray(snap[n])?snap[n]:[]);refreshElogBtns();return}p[k]=gclone(snap[n])})}
   function rerender(){const sx=window.scrollX||0,sy=window.scrollY||0,boxScroll=[...document.querySelectorAll('.tablewrap')].map(el=>({top:el.scrollTop,left:el.scrollLeft}));try{rebuildCUR();renderSalesSrc();renderDivBtn();renderPerBar();if(state.act)runAct()}catch(e){console.warn('sync render',e)}requestAnimationFrame(()=>{window.scrollTo(sx,sy);document.querySelectorAll('.tablewrap').forEach((el,i)=>{const s=boxScroll[i];if(s){el.scrollTop=s.top;el.scrollLeft=s.left;}})})}
   async function persistOnly(){_gsApplying=true;try{await saveSettings()}finally{_gsApplying=false}}
   async function saveBase(snap){_gsBase=gclone(snap||currentFull());try{await idbSet(BASE_KEY,_gsBase)}catch(_){} }
@@ -3060,7 +3098,7 @@ function wireFilePanel(){
   // 사업부 + 금액기준 + 관리비 popover (헤더)
   $('#divBtn').onclick=e=>{ e.stopPropagation(); $('#divWrap').classList.toggle('open'); };
   $('#divPop').onclick=e=>e.stopPropagation();
-  $('#divRow').querySelectorAll('button').forEach(b=>b.onclick=()=>{ state.division=b.dataset.v; $('#divWrap').classList.remove('open'); saveSettings(); renderDivBtn(); runAct(); });
+  $('#divRow').querySelectorAll('button').forEach(b=>b.onclick=()=>{ state.division=b.dataset.v; logEdit('사업부 선택',`분석 사업부를 '${state.division}'로 변경`); $('#divWrap').classList.remove('open'); saveSettings(); renderDivBtn(); runAct(); });
   document.addEventListener('click',()=>$('#divWrap')&&$('#divWrap').classList.remove('open'));
   // modal
   $('#elogClose').onclick=()=>$('#elogModal').classList.remove('on');
@@ -3078,16 +3116,16 @@ function wireFilePanel(){
   $('#gsSave').onclick=()=>window.gsSave(false); $('#gsLoad').onclick=()=>window.gsLoad(false); $('#gsTest').onclick=window.gsTest; $('#gsGuide').onclick=window.gsGuide;
   $('#gsSyncBtn').onclick=()=>window.gsSave(false);
   // 이름: 파일·관리에서 입력 → 헤더에 표시
-  $('#gsUser').oninput=e=>{ state.gsync.user=e.target.value.trim(); renderUserLbl(); saveSettings(); window.gsRenderHistory(); };
+  $('#gsUser').oninput=e=>{ state.gsync.user=e.target.value.trim(); renderUserLbl(); saveSettings(); window.gsRenderHistory(); refreshElogBtns(); };
   $('#userLbl').onclick=()=>{ $('#filePanel').classList.add('open'); $('#overlay').classList.add('on'); setTimeout(()=>$('#gsUser')&&$('#gsUser').focus(),260); };
-  $('#headerElogBtn').onclick=showElog;
+  $('#headerElogBtn').onclick=()=>{ elogMarkSeen(); openEditLog(); refreshElogBtns(); };
   // json backup/restore
   $('#expJson').onclick=()=>{ const o={}; SETTING_KEYS.forEach(k=>o[k]=state[k]); const blob=new Blob([JSON.stringify(o,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='purchase_settings_backup.json'; a.click(); };
   $('#impJson').onclick=()=>$('#jsonInput').click();
   $('#jsonInput').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); SETTING_KEYS.forEach(k=>{ if(k in o)state[k]=o[k]; }); saveSettings(); rebuildCUR(); syncUIFromState(); runAct(); alert('기준정보를 복원했습니다.'); }catch(err){ alert('복원 실패: '+err.message); } }; r.readAsText(f); e.target.value=''; };
 }
-function setBasis(v){ state.basis=v; $('#basisSeg')&&$('#basisSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===v)); saveSettings(); rebuildCUR(); runAct(); }
-function setOverhead(v){ state.inclOverhead=v; if($('#ovhChk'))$('#ovhChk').checked=v; $('#ovhPill')&&$('#ovhPill').classList.toggle('on',v); saveSettings(); runAct(); }
+function setBasis(v){ state.basis=v; logEdit('금액 기준',`금액 기준을 '${v==='total'?'합계액':'공급가'}'로 변경`); $('#basisSeg')&&$('#basisSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===v)); saveSettings(); rebuildCUR(); runAct(); }
+function setOverhead(v){ state.inclOverhead=v; logEdit('관리비 포함',`관리비·기타를 ${v?'포함':'제외'}하도록 변경`); if($('#ovhChk'))$('#ovhChk').checked=v; $('#ovhPill')&&$('#ovhPill').classList.toggle('on',v); saveSettings(); runAct(); }
 function renderSalesSrc(){
   const el=$('#salesSrcInfo'); if(!el)return;
   const setInfo=(target,src,monthly,label,type)=>{ if(!target)return; const nM=Object.keys(monthly||{}).filter(k=>+monthly[k]>0).length; const list=Array.isArray(state[type==='pd'?'pdSalesFiles':'salesFiles'])?state[type==='pd'?'pdSalesFiles':'salesFiles']:[];
@@ -3166,7 +3204,7 @@ async function init(){
   const periodDefaultVersion='current-year-v1';
   if(state.periodDefaultVersion!==periodDefaultVersion){ const d=new Date(),y=String(d.getFullYear());state.period={mode:'year',year:y,month:null,key:y,from:'',to:''};state.periodDefaultVersion=periodDefaultVersion;await saveSettings(); }
   if(!state.period||typeof state.period!=='object'){ const d=new Date(),y=String(d.getFullYear());state.period={mode:'year',year:y,month:null,key:y,from:'',to:''}; }
-  syncUIFromState(); gsUpdateBtn();
+  syncUIFromState(); gsUpdateBtn(); refreshElogBtns();
   // load data
   const ds=await idbGet('datasets');
   if(ds&&ds.length){ datasets=ds.map(d=>({...d,uid:uidSeq++})); rebuildCUR(); $('#drop').classList.add('hidden'); renderFileList(); renderDivBtn(); renderPerBar(); state.act=state.act||'home'; runAct(); }
