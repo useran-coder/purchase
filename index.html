@@ -834,7 +834,9 @@ let state = {
   pdSalesSrc:null,       // PD 매출 원본 파일 정보 (syncable)
   pdSalesFiles:[],       // PD 매출 파일별 월별 기여액 (syncable)
   monthlyPdSales:{},     // PD 월매출 (매출파일 자동산출/수동입력, syncable) YYYY-MM → 매출액
-  laserSales:{},         // 레이저 월매출 (syncable)
+  laserSales:{},         // 레이저 월매출 (기존값/수동입력, syncable)
+  laserMonthlySync:{},   // 영업분석도구에서 동기화된 레이저 월매출 YYYY-MM → 매출액
+  laserMonthlyManual:{}, // 사용자가 매입분석도구에서 직접 덮어쓴 레이저 월 YYYY-MM
   targetPct:{},          // 매입구분 목표비율 (syncable)
   natureCustom:[],       // 사용자가 만든 매입구분
   natureOverride:{},     // 품번|품명|규격 → 수동 매입구분
@@ -846,6 +848,10 @@ let state = {
   categoryCustom:{big:[],mid:[],small:[]}, // 사용자 추가 분류명
   outsourcedKindOverride:{}, // 외주가공 품번|품명|규격 → 분체/도금/기타 수동 지정
   syncLog:{},            // 동기화 이력 (syncable)
+  /* 월별 매출·매입 동기화 값은 주석 처리된 기존 장문 설명과 분리해 실제 state 속성으로 유지합니다. */
+  salesMonthlySync:{}, salesMonthlyManual:{},
+  laserSales:{}, laserMonthlySync:{}, laserMonthlyManual:{},
+  purchaseMonthlySync:{},
   gsync:{url:'',key:'',auto:false,lastSync:'',user:'',syncCount:0},
   // view-local
   priceCompItem:null, priceCompMonth:null, priceTrendItem:null, priceTrendBack:null, priceTrendBackLabel:'품목 리스트', priceTrendBig:'전체', priceTrendMid:'전체', yoyMonth:null, yoySpan:6, natureFilter:null, catDrill:null, catDrill2:null, matGrp:'grade', matForm:'all', matGradeFilter:'all', matThickFilter:'all', matGradeSelected:null, purchaseCycleNat:'원자재', purchaseCycleMetric:'kg', purchaseCycleStatus:'all', paretoNat:'all', paretoPct:80,
@@ -989,7 +995,7 @@ async function idbGet(k){ try{ const db=await idb(); return new Promise((res)=>{
 async function idbClear(){ try{ const db=await idb(); return new Promise((res)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=()=>res(); }); }catch(e){} }
 async function persistData(){ const slim=datasets.map(d=>({uid:d.uid,fileName:d.fileName,sheetName:d.sheetName,sheetNames:d.sheetNames,recs:d.recs})); await idbSet('datasets',slim); }
 async function saveSettings(){ const s={}; SETTING_KEYS.forEach(k=>s[k]=state[k]); await idbSet('settings',s); }
-const SETTING_KEYS=['basis','inclOverhead','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','paretoNat','paretoPct','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','monthlySales','monthlyPdSales','laserSales','targetPct','projectMemo','projectCustom','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','gsync'];
+const SETTING_KEYS=['basis','inclOverhead','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','paretoNat','paretoPct','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','targetPct','projectMemo','projectCustom','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','gsync'];
 
 /* ============================================================
    File handling (SheetJS)
@@ -1098,11 +1104,25 @@ async function addOneFile(file,quiet,salesType='bf'){
   else { const uid=uidSeq++; RAWMEM[uid]=sheets; datasets.push({uid,fileName:file.name,sheetName:chosen,sheetNames,recs}); }
 }
 function afterDataChanged(){
-  rebuildCUR(); persistData();
+  rebuildCUR(); refreshPurchaseMonthlySync(); persistData(); if(typeof gsAutoPush==='function')gsAutoPush();
   if(!CUR.length){ $('#drop').classList.remove('hidden'); $('#content').innerHTML=''; renderFileList(); return; }
   $('#drop').classList.add('hidden');
   renderFileList(); gsUpdateBtn(); renderDivBtn(); renderPerBar();
   if(state.act) runAct(); else { state.act='home'; runAct(); }
+}
+/* 매입 원본 전체를 기간·사업부 화면 필터와 무관하게 월별로 집계해 영업분석도구로 보냅니다. */
+function refreshPurchaseMonthlySync(){
+  if(!CUR||!CUR.length)return state.purchaseMonthlySync||{};
+  const out={};
+  const years=new Set(CUR.map(r=>String(r.ym||'').slice(0,4)).filter(Boolean));
+  years.add('2026');
+  years.forEach(y=>{ for(let m=1;m<=12;m++)out[`${y}-${String(m).padStart(2,'0')}`]=0; });
+  CUR.forEach(r=>{
+    if(!r.ym||(!state.inclOverhead&&r.natCls==='ovh'))return;
+    out[r.ym]=(out[r.ym]||0)+amtOf(r);
+  });
+  state.purchaseMonthlySync=out;
+  return out;
 }
 function renderFileList(){
   const el=$('#fileList');
@@ -1601,7 +1621,15 @@ function salesForDivision(ym,division='방화문부자재'){
 function salesFor(ym){ return salesForDivision(ym,state.division); }
 function salesLabel(){ return state.division==='PD사업부'?'PD 매출':state.division==='전체'?'통합 매출':'방화문부자재 매출'; }
 function salesSourceFor(){ return state.division==='PD사업부'?state.pdSalesSrc:state.salesSrc; }
-function laserSalesFor(ym){ if(state.laserSales[ym]!=null&&state.laserSales[ym]!=='') return state.laserSales[ym]; return SEED_LASER[ym]!=null?SEED_LASER[ym]:''; }
+function laserSalesFor(ym){
+  const manual=state.laserMonthlyManual&&state.laserMonthlyManual[ym];
+  const local=state.laserSales&&state.laserSales[ym]!=null&&state.laserSales[ym]!==''?state.laserSales[ym]:null;
+  const synced=state.laserMonthlySync&&state.laserMonthlySync[ym]!=null&&state.laserMonthlySync[ym]!==''?state.laserMonthlySync[ym]:null;
+  if(manual&&local!=null)return local;
+  if(synced!=null)return synced;
+  if(local!=null)return local;
+  return SEED_LASER[ym]!=null?SEED_LASER[ym]:'';
+}
 
 /* price volatility helper: last-month vs prior avg per code */
 function priceVolatility(rows){
@@ -2755,7 +2783,8 @@ function laserRatio(){
   const laserNatureRows=rows.filter(r=>/레이저/.test(String(r.nat||'')));
   const laserRows=laserNatureRows.length?laserNatureRows:rows.filter(r=>/레이저/.test(r.big||'')||/질소|산소|가스/.test(r.name||'')|| (r.natCls==='raw'));
   let html=`<div class="rhead"><span class="title">🔶 레이저 매출대비 매입비율</span><span class="meta">${ms[0]}~${ms[ms.length-1]} · 레이저 가스·소모품 매입 vs 레이저 매출</span><span class="spacer"></span></div>`;
-  html+=`<div class="note">레이저 가공 매출 대비 레이저 가스·소모품 매입 비중입니다. 레이저 월매출을 입력하면 비율이 계산됩니다.</div>`;
+  const laserSyncCount=Object.keys(state.laserMonthlySync||{}).filter(k=>/^\d{4}-\d{2}$/.test(k)).length;
+  html+=`<div class="note">레이저 가공 매출 대비 레이저 가스·소모품 매입 비중입니다. ${laserSyncCount&&!Object.keys(state.laserMonthlyManual||{}).length?`현재 <b>영업분석도구 레이저 매출 ${laserSyncCount}개월</b>이 동기화되어 반영됩니다.`:`레이저 월매출을 직접 입력할 수 있습니다.`} 입력값을 지우면 영업분석도구 동기화값으로 돌아갑니다.</div>`;
   const cell=(ym)=>laserRows.filter(r=>r.ym===ym).reduce((a,r)=>a+amtOf(r),0);
   const pr=ms.map(m=>cell(m));
   const laserSeries=ms.map((m,i)=>{ const sales=+laserSalesFor(m)||0, purchase=pr[i]||0; return {label:m.slice(2), sales, purchase, ratio:sales?purchase/sales*100:null}; });
@@ -2769,7 +2798,13 @@ function laserRatio(){
   html+=`</tbody></table></div>`;
   html+=`<div class="sub2" style="margin-top:8px">※ 레이저 가스·소모품 매입은 관련 원자재(EGI·PO 등)와 레이저가스(질소·산소)를 기준으로 집계했습니다. 필요 시 파일·관리에서 분류를 조정하세요.</div>`;
   $('#content').innerHTML=html; clearActiveMenu(); fitRatioChartText();
-  $$('#content .lsIn').forEach(inp=>inp.onchange=e=>{ state.laserSales[e.target.dataset.ym]=toNum(e.target.value)||''; saveSettings(); gsAutoPush(); laserRatio(); });
+  $$('#content .lsIn').forEach(inp=>inp.onchange=e=>{
+    const ym=e.target.dataset.ym,v=toNum(e.target.value);
+    state.laserSales[ym]=v||'';
+    state.laserMonthlyManual=state.laserMonthlyManual||{};
+    if(v)state.laserMonthlyManual[ym]=true; else delete state.laserMonthlyManual[ym];
+    saveSettings(); gsAutoPush(); laserRatio();
+  });
 }
 
 /* ---------- 월별 매입추이 ---------- */
@@ -2833,7 +2868,7 @@ function trendView(){
 
   function gsFields(){return [
     ['salesSrc',state,'salesSrc'],['salesFiles',state,'salesFiles'],['monthlySales',state,'monthlySales'],['salesMonthlySync',state,'salesMonthlySync'],
-    ['pdSalesSrc',state,'pdSalesSrc'],['pdSalesFiles',state,'pdSalesFiles'],['monthlyPdSales',state,'monthlyPdSales'],['laserSales',state,'laserSales'],
+    ['pdSalesSrc',state,'pdSalesSrc'],['pdSalesFiles',state,'pdSalesFiles'],['monthlyPdSales',state,'monthlyPdSales'],['laserSales',state,'laserSales'],['laserMonthlySync',state,'laserMonthlySync'],['purchaseMonthlySync',state,'purchaseMonthlySync'],
     ['mgrOverride',state,'mgrOverride'],['vendorMemo',state,'vendorMemo'],['vendorMemoAt',state,'vendorMemoAt'],
     ['vendorCat',state,'vendorCat'],['vendorNatureOverride',state,'vendorNatureOverride'],['vendorExcl',state,'vendorExcl'],
     ['priceMemo',state,'priceMemo'],['priceMemoAt',state,'priceMemoAt'],['itemStd',state,'itemStd'],['majorProducts',state,'majorProducts'],
@@ -2842,7 +2877,7 @@ function trendView(){
     ['outsourcedKindOverride',state,'outsourcedKindOverride'],['natureCustom',state,'natureCustom'],['natureOverride',state,'natureOverride'],
     ['syncLog',state,'syncLog']
   ]}
-  function gsFullObj(){const o={};gsFields().forEach(([n,p,k])=>o[n]=gclone(p[k]));return o}
+  function gsFullObj(){refreshPurchaseMonthlySync();const o={};gsFields().forEach(([n,p,k])=>o[n]=gclone(p[k]));return o}
   function same(a,b){try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return false}}
   function deepDelta(cur,old){
     if(plain(cur)||plain(old)){
