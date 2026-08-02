@@ -102,11 +102,13 @@
   .btn.danger{background:#fff;color:var(--red);border:1px solid #f0caca}
   .btn.danger:hover{background:var(--red);color:#fff}
   .btn.sm{padding:5px 11px;font-size:12px;border-radius:7px}
+  .nature-manage-btn{background:#0f766e!important;color:#fff!important;border-color:#0f766e!important}
+  .nature-manage-btn:hover{background:#0b5f59!important;border-color:#0b5f59!important}
   /* ---------- cards / kpi ---------- */
   .divcard{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff;transition:.12s}
   .divcard:hover{border-color:#93c5fd;background:#f8fbff}
   .divcard.on{background:#eff6ff;border-color:#bfdbfe;box-shadow:0 0 0 1px #bfdbfe inset}
-  .kpigrid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important;gap:8px;margin:6px 0 16px;overflow:hidden!important;width:100%;max-width:100%}
+  .kpigrid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important;gap:8px;margin:6px 0 16px;overflow:visible!important;width:100%;max-width:100%}
   .kpi{background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 12px;position:relative;overflow:hidden;min-width:0!important;width:auto!important;max-width:100%;box-sizing:border-box}
   .kpi.action{cursor:pointer;transition:box-shadow .14s,border-color .14s,background .14s}
   .kpi.action:hover{border-color:var(--accent);box-shadow:0 5px 14px rgba(15,118,110,.12);background:#f8fffd}
@@ -116,6 +118,12 @@
   .kpi.nature-card.mold{background:#fff7ed;border-color:#fed7aa}
   .kpi.nature-card.ovh,.kpi.nature-card.custom,.kpi.nature-card[data-nat="유통/OEM"]{background:#fdf2f8;border-color:#fbcfe8}
   .kpi.nature-card[data-nat="기타"]{background:#f8fafc;border-color:#e2e8f0}
+  .kpi.nature-card{position:relative;isolation:isolate}
+  .kpi.nature-card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--nat-fill,0%);background:var(--nat-fill-color,#0f766e);opacity:.22;pointer-events:none;z-index:0}
+  .kpi.nature-card>*{position:relative;z-index:1}
+  .kpi.nature-card.action{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+  .kpi.nature-card.action:hover{transform:translateY(-5px) scale(1.015);border-color:var(--nat-fill-color,#0f766e);box-shadow:0 10px 22px rgba(15,118,110,.16);z-index:2}
+  .kpi.nature-card.action:hover::after{opacity:.3}
   .kpi .k-label{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:6px;white-space:nowrap}
   .kpi .k-val{font-size:20px;font-weight:800;color:var(--navy);letter-spacing:-.5px;line-height:1.15;white-space:nowrap}
   .kpi .k-sub{font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.35}
@@ -194,7 +202,7 @@
   .amt-with-kg{line-height:1.18}
   .amt-with-kg .kg{display:block;margin-top:3px;font-size:10.5px;color:var(--muted);font-weight:500}
   .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
-  .tag.raw{background:#ccfbf1;color:#0f766e}.tag.dist{background:#fce7f3;color:#be185d}.tag.out{background:#ede9fe;color:#6d28d9}.tag.part{background:#dbeafe;color:#1d4ed8}.tag.mold{background:#ffedd5;color:#c2410c}.tag.ovh{background:#f1f5f9;color:#64748b}
+  .tag.raw{background:#ccfbf1;color:#0f766e}.tag.dist{background:#fce7f3;color:#be185d}.tag.out{background:#ede9fe;color:#6d28d9}.tag.part{background:#dbeafe;color:#1d4ed8}.tag.mold{background:#ffedd5;color:#c2410c}.tag.ovh{background:#f1f5f9;color:#64748b}.tag.unclassified{background:#f8fafc;color:#64748b}
   .tag.custom{background:#fce7f3;color:#be185d}
   .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(6px);background:#0f172a;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,.28);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:92vw;text-align:center}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -219,6 +227,8 @@
   .mat-filter-list{display:flex;flex-wrap:wrap;gap:5px;max-height:96px;overflow:auto;padding:1px 5px 1px 1px}
   .mat-filter-btn{border:1px solid var(--line);background:#fff;color:#475569;border-radius:8px;padding:5px 9px;font:600 12px inherit;cursor:pointer;white-space:nowrap}
   .mat-filter-btn.on{background:#e6fffb;border-color:#5eead4;color:#0f766e;box-shadow:inset 0 0 0 1px #5eead4}
+  .mat-filter-count{font-size:11px;color:#94a3b8;font-weight:700}.mat-filter-btn.on .mat-filter-count{color:#0f766e}
+  .category-product-search::placeholder{font-size:13px;color:#94a3b8}
   .tablewrap.monthly-view table.monthly-purchase-table,.tablewrap.monthly-view table.material-item-table,.tablewrap table.monthly-purchase-table{font-size:13px}
   .tablewrap.monthly-view table.material-item-table th.col-material-name,.tablewrap.monthly-view table.material-item-table td.col-material-name{width:136px!important;min-width:136px!important;max-width:136px!important}
   .tablewrap.monthly-view table.material-item-table th.col-material-spec,.tablewrap.monthly-view table.material-item-table td.col-material-spec{width:204px!important;min-width:204px!important;max-width:204px!important}
@@ -369,6 +379,20 @@
     opacity:1!important;
     font-weight:400!important;
   }
+  /* 메인 월별 비교 그래프: 인디고·청록·앰버의 간결한 3색 팔레트 */
+  .home-chart .home-chart-month .home-chart-bar-slot:nth-child(1) .home-chart-bar{background:#5b7cf0!important}
+  .home-chart .home-chart-month .home-chart-bar-slot:nth-child(1) .home-chart-bar-value{background:transparent!important;color:#5b7cf0!important}
+  .home-chart .home-chart-month .home-chart-bar-slot:nth-child(2) .home-chart-bar{background:#2a9d8f!important}
+  .home-chart .home-chart-month .home-chart-bar-slot:nth-child(2) .home-chart-bar-value{background:transparent!important;color:#2a9d8f!important}
+  .home-chart .home-chart-month .home-chart-bar-slot:nth-child(3) .home-chart-bar{background:#e9a23b!important}
+  .home-chart .home-chart-month .home-chart-bar-slot:nth-child(3) .home-chart-bar-value{background:transparent!important;color:#e9a23b!important}
+  .home-chart .home-chart-legend span:nth-child(1) i{background:#5b7cf0!important}
+  .home-chart .home-chart-legend span:nth-child(2) i{background:#2a9d8f!important}
+  .home-chart .home-chart-legend span:nth-child(3) i{background:#e9a23b!important}
+  .home-chart .home-chart-avgline{border-top-color:#2a9d8f}
+  .home-chart .home-chart-avgval{color:#2a9d8f}
+  .home-chart .home-chart-avgline-sales{border-top-color:#5b7cf0}
+  .home-chart .home-chart-avgval-sales{color:#5b7cf0}
   /* ---------- 모든 표 공통 월별 매입현황 ---------- */
   .monthly-toggle{height:34px;padding:0 13px;border:1px solid #cfddec;border-radius:9px;background:#fff;color:#173b67;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,40,70,.04)}
   .monthly-toggle:hover,.monthly-toggle.on{background:#173b67;color:#fff;border-color:#173b67}
@@ -566,9 +590,12 @@
 </div>
 
 <div class="modal" id="categoryModal">
-  <div class="modal-box" style="max-width:1440px;width:98vw;max-height:90vh">
+  <div class="modal-box" style="max-width:1440px;width:98vw;max-height:90vh;box-sizing:border-box">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <h3 style="margin:0;flex:1">🗂️ 품목분류 · 품목별 지정</h3>
+      <button class="btn sm" id="categorySave">⬇ 저장</button>
+      <button class="btn ghost sm" id="categoryLoad">⬆ 불러오기</button>
+      <input type="file" id="categoryFileInput" accept=".json" style="display:none">
       <button class="btn ghost sm" id="categoryModalClose">닫기</button>
     </div>
     <div id="categoryModalBody"></div>
@@ -690,21 +717,45 @@ const COLMAP = {
 function resolveCols(headers){ const idx={}; for(const k in COLMAP){ idx[k]=headers.findIndex(h=>COLMAP[k].some(c=>h===c)); } return idx; }
 
 /* ---------- purchase-nature classification (구매성격) ---------- */
+const UNCLASSIFIED_NATURE='구분없음';
 const NATURE_MAP=[
   {key:'원자재',   cls:'raw',  match:['EGI','PO','STS','GA','HGI','SGCC','칼라강판','냉연','열연','아연','원자재']},
   {key:'외주가공', cls:'out',  match:['외주','NCT/절곡','레이저가공','도금','열처리','절곡','포밍바']},
   {key:'부품/부속',cls:'part', match:['부속팀','부속E','코너보강대','유통','제작','방화캡','부속','부품']},
   {key:'금형',     cls:'mold', match:['금형']},
   {key:'관리비/기타',cls:'ovh',match:['관리비','기타']},
+  {key:UNCLASSIFIED_NATURE,cls:'unclassified',match:[]},
 ];
 function natureInfo(key){
-  return NATURE_MAP.find(n=>n.key===key) || (state.natureCustom||[]).find(n=>n.key===key) || {key:key||'기타',cls:'custom',match:[]};
+  return NATURE_MAP.find(n=>n.key===key) || (state.natureCustom||[]).find(n=>n.key===key) || {key:key||UNCLASSIFIED_NATURE,cls:'custom',match:[]};
 }
 function natureDefs(){ return [...NATURE_MAP,...(state.natureCustom||[])]; }
-function bigEditValues(){ return natureDefs().map(n=>n.key); } // 대분류는 매입구분으로만 지정
+function natureDisplayKey(key){
+  const k=String(key||'').trim()||UNCLASSIFIED_NATURE;
+  if(k==='(미분류)'||k==='분류없음')return UNCLASSIFIED_NATURE;
+  const ren=(state.categoryRename&&state.categoryRename.big)||{};
+  return ren[k]||k;
+}
+function natureValueKey(key){
+  const k=String(key||'').trim();
+  return !k||k==='(미분류)'||k==='분류없음'?UNCLASSIFIED_NATURE:k;
+}
+function natureOptionKeys(){
+  const renameMap=(state.categoryRename&&state.categoryRename.big)||{};
+  const defaults=['원자재','외주가공','부품/부속','금형','관리비/기타','기타',UNCLASSIFIED_NATURE].filter(v=>!Object.prototype.hasOwnProperty.call(renameMap,v));
+  const renamed=Object.values(renameMap);
+  const current=(CUR||[]).map(r=>String(r.big||'').trim()).filter(Boolean);
+  const custom=(state.categoryCustom&&state.categoryCustom.big)||[];
+  const currentNat=(CUR||[]).map(r=>String(r.nat||'').trim()).filter(Boolean);
+  return [...new Set([...defaults,...natureDefs().map(n=>n.key),...custom,...renamed,...current,...currentNat])];
+}
+function bigEditValues(){
+  return natureOptionKeys();
+} // 대분류는 매입구분으로만 지정
+function categoryFilterLabel(value){ return String(value||'').trim()||'분류없음'; }
 function natureTagStyle(key){
   const cls=(natureInfo(key)||{}).cls||'custom';
-  const map={raw:'background:#ccfbf1;color:#0f766e',out:'background:#ede9fe;color:#6d28d9',part:'background:#dbeafe;color:#1d4ed8',mold:'background:#ffedd5;color:#c2410c',ovh:'background:#f1f5f9;color:#64748b',custom:'background:#fce7f3;color:#be185d'};
+  const map={raw:'background:#ccfbf1;color:#0f766e',out:'background:#ede9fe;color:#6d28d9',part:'background:#dbeafe;color:#1d4ed8',mold:'background:#ffedd5;color:#c2410c',ovh:'background:#f1f5f9;color:#64748b',unclassified:'background:#f8fafc;color:#64748b',custom:'background:#fce7f3;color:#be185d'};
   return map[cls]||map.custom;
 }
 function bindCategoryAssignEditors(refresh,root=null){
@@ -715,25 +766,66 @@ function bindCategoryAssignEditors(refresh,root=null){
     inp.style.webkitUserSelect='text';
     inp.style.userSelect='text';
     inp.addEventListener('dragstart',e=>{e.preventDefault();e.stopImmediatePropagation();},true);
-    inp.onchange=e=>{
-    const k=e.target.dataset.k,l=e.target.dataset.l,v=e.target.value.trim();
-    if(l==='big'&&v&&!bigEditValues().includes(v)){ alert('대분류는 매입구분('+bigEditValues().join(', ')+')으로만 지정할 수 있습니다.'); e.target.value=(state.categoryOverride[k]&&state.categoryOverride[k].big)||''; return; }
-    const next={...(state.categoryOverride[k]||{})}; next[l]=v||categoryEmptyName(l);
-    if(Object.keys(next).length) state.categoryOverride[k]=next; else delete state.categoryOverride[k];
-    logEdit('품목분류',`${k} · ${l}을 '${v||categoryEmptyName(l)}'(으)로 변경`);
-    rebuildCUR(); saveSettings(); gsAutoPush(); if(refresh) refresh();
+    const commit=()=>{
+      const k=inp.dataset.k,l=inp.dataset.l,v=String(inp.value||'').trim();
+      if(inp.dataset.savedValue===v)return true;
+      if(l==='big'&&v&&!bigEditValues().includes(v))return false;
+      const scrollWrap=inp.closest('.tablewrap');
+      const scrollTop=scrollWrap?scrollWrap.scrollTop:0;
+      const scrollLeft=scrollWrap?scrollWrap.scrollLeft:0;
+      const next={...(state.categoryOverride[k]||{})};
+      if(l==='big'){
+        // 대분류는 실제 매입구분에도 반영해야 rebuildCUR() 후 자동분류로 되돌아가지 않습니다.
+        if(v)state.natureOverride[k]=v; else delete state.natureOverride[k];
+        if(v)next.big=v; else delete next.big;
+      }else{
+        next[l]=v||categoryEmptyName(l);
+      }
+      if(Object.keys(next).length)state.categoryOverride[k]=next; else delete state.categoryOverride[k];
+      inp.dataset.savedValue=v;
+      logEdit('품목분류',`${k} · ${l}을 '${v||categoryEmptyName(l)}'(으)로 변경`);
+      rebuildCUR(); saveSettings(); if(typeof gsAutoPush==='function')gsAutoPush();
+      if(refresh){
+        refresh({k,l,v});
+        requestAnimationFrame(()=>{
+          if(scrollWrap){scrollWrap.scrollTop=scrollTop;scrollWrap.scrollLeft=scrollLeft;}
+          const nextInp=scrollWrap&&[...scrollWrap.querySelectorAll('.catAssign')].find(x=>x.dataset.k===k&&x.dataset.l===l);
+          if(nextInp)try{nextInp.focus({preventScroll:true});}catch(_){nextInp.focus();}
+        });
+      }
+      return true;
+    };
+    inp.dataset.savedValue=String(inp.value||'').trim();
+    inp.onchange=()=>{
+      const v=String(inp.value||'').trim();
+      if(inp.dataset.l==='big'&&v&&!bigEditValues().includes(v)){
+        alert('대분류는 매입구분('+bigEditValues().join(', ')+')으로만 지정할 수 있습니다.');
+        const cur=CUR.find(r=>productKey(r)===inp.dataset.k);
+        inp.value=cur?categoryDisplayLabel('big',cur.big||categoryEmptyName('big')):'';
+        inp.dataset.savedValue=String(inp.value||'').trim();
+        return;
+      }
+      commit();
+    };
+    inp.onblur=()=>{
+      const v=String(inp.value||'').trim();
+      if((inp.dataset.l!=='big'||!v||bigEditValues().includes(v))&&!commit()){
+        const cur=CUR.find(r=>productKey(r)===inp.dataset.k);
+        inp.value=cur?categoryDisplayLabel(inp.dataset.l,cur[inp.dataset.l]||categoryEmptyName(inp.dataset.l)):'';
+        inp.dataset.savedValue=String(inp.value||'').trim();
+      }
     };
   });
 }
 function homeNatureKey(key){
   const k=String(key||'').trim();
-  return !k||k==='기타'||k==='관리비/기타'?'기타':k;
+  return !k?UNCLASSIFIED_NATURE:(k==='기타'||k==='관리비/기타'?'기타':k);
 }
 function productKey(r){ return `${r.code||''}|${r.name||''}|${r.spec||''}`; }
 function itemNatureSelect(o){
   const r=(o.srcRows&&o.srcRows[0])||o;
-  const key=productKey(r), manual=state.natureOverride[key]||'', nat=manual||o.nat||r.nat||'기타', cls=natureInfo(nat).cls||'custom';
-  return `<select class="sel itemNat ${esc(cls)} ${manual?'':'is-auto'}" data-k="${esc(key)}" title="품목별 매입구분 지정"><option value="">자동 (${esc(o.nat||r.nat||'기타')})</option>${natureDefs().map(n=>`<option value="${esc(n.key)}" ${manual===n.key?'selected':''}>${esc(n.key)}</option>`).join('')}</select>`;
+  const key=productKey(r), manual=natureValueKey(state.natureOverride[key]||''), nat=manual||o.nat||r.nat||UNCLASSIFIED_NATURE, cls=natureInfo(nat).cls||'custom';
+  return `<select class="sel itemNat ${esc(cls)} ${manual?'':'is-auto'}" data-k="${esc(key)}" title="품목별 매입구분 지정"><option value="">자동 (${esc(o.nat||r.nat||UNCLASSIFIED_NATURE)})</option>${natureOptionKeys().map(n=>`<option value="${esc(n)}" ${manual===n?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
 }
 function applyNatureUpdate(refresh){
   const sx=window.scrollX||0, sy=window.scrollY||0;
@@ -779,15 +871,22 @@ function natureOf(big,mgmt,project){
     if(/외주|유통/.test(p)) return NATURE_MAP[1];   // 외주가공
     if(p) return NATURE_MAP[2];                    // 부품/부속
   }
-  return {key:'기타', cls:'ovh', match:[]};
+  return NATURE_MAP.find(n=>n.key===UNCLASSIFIED_NATURE);
 }
 function isOverhead(nat){ return nat.cls==='ovh'; }
 function categoryFor(r,manualNat){
   const ov=(state.categoryOverride&&state.categoryOverride[productKey(r)])||{};
   const rn=state.categoryRename||{big:{},mid:{},small:{}};
-  const hasManualNature=!!(state.natureOverride[productKey(r)]||state.vendorNatureOverride[r.vendor]);
-  const base={big:hasManualNature?manualNat:(r.big||'(미분류)'),mid:r.mid||'(중분류없음)',small:r.small||'(소분류없음)'};
-  return ['big','mid','small'].reduce((o,k)=>{const v=ov[k]||base[k];o[k]=(rn[k]&&rn[k][v])||v;return o;},{});
+  // 대분류는 매입구분(nat)과 동일한 값으로 유지해야 매입구분 필터와
+  // 품목분류 팝업의 대분류 필터가 같은 품목을 가리킵니다.
+  const base={big:manualNat||r.big||'(미분류)',mid:r.mid||'(중분류없음)',small:r.small||'(소분류없음)'};
+  return ['big','mid','small'].reduce((o,k)=>{
+    const v=k==='big'?(manualNat||ov[k]||base[k]):(ov[k]||base[k]);
+    // 사용자가 행에서 직접 지정한 대분류는 명칭 매핑으로 다시 바꾸지 않습니다.
+    // 자동분류 값의 명칭 변경은 rebuildCUR()에서 natureDisplayKey()로 이미 처리됩니다.
+    o[k]=k==='big'?v:((rn[k]&&rn[k][v])||v);
+    return o;
+  },{});
 }
 function categoryEmptyName(level){ return {big:'(미분류)',mid:'(중분류없음)',small:'(소분류없음)'}[level]; }
 function categoryOptionLabel(level,value){ return value===categoryEmptyName(level)?'분류없음':value; }
@@ -920,7 +1019,9 @@ function rebuildCUR(){
     const [Y,M,D]=r.d.split('-').map(Number); const dt=new Date(Y,M-1,D);
     const nat=natureOf(r.big,r.mgmt,r.project);
     const autoNat=/_G$/i.test(String(r.code||'').trim())?'유통/OEM':nat.key;
-    const manualNat=state.natureOverride[productKey(r)]||state.vendorNatureOverride[r.vendor]||autoNat;
+    const categoryNat=(state.categoryOverride[productKey(r)]||{}).big;
+    const explicitNat=state.natureOverride[productKey(r)]||state.vendorNatureOverride[r.vendor]||categoryNat;
+    const manualNat=natureValueKey(explicitNat||natureDisplayKey(autoNat));
     const natInfo=natureInfo(manualNat);
     const manualProject=state.projectOverride[productKey(r)]||r.project;
     const cat=categoryFor(r,manualNat);
@@ -1489,7 +1590,7 @@ function homeDashboard(){
   const retAmt=returns.reduce((a,r)=>a+amtOf(r),0);
   // nature split
   const byNat=groupSum(rows, r=>homeNatureKey(r.nat));
-  const natOrder=[...new Set(['원자재','외주가공','부품/부속','금형','유통/OEM','기타',...natureDefs().map(x=>homeNatureKey(x.key)),...byNat.keys()])];
+  const natOrder=[...new Set(['원자재','외주가공','부품/부속','금형','유통/OEM','기타',...natureDefs().map(x=>homeNatureKey(x.key)),...byNat.keys()])].filter(k=>byNat.has(k)).sort((a,b)=>(byNat.get(b)?.amt||0)-(byNat.get(a)?.amt||0));
   const natCls={'원자재':'rawm','외주가공':'out','부품/부속':'part','금형':'mold','기타':'ovh'};
   // 홈의 월별 매입 추이는 기간 선택과 무관하게 올해 1월부터 현재월까지 표시
   const homeNow=new Date(), currentYear=String(homeNow.getFullYear());
@@ -1561,7 +1662,9 @@ function homeDashboard(){
         ? `<div class="sub2" style="margin-top:4px;padding-top:4px;border-top:1px dashed ${on?'#bfdbfe':'var(--line)'}">${salesName} <b style="color:${on?'#1d4ed8':'var(--navy)'}">${wonM(salesAmt)}</b> · 원가율 <b class="${salesRatio>=65?'up':'flat'}">${salesRatio.toFixed(1)}%</b><br><span style="color:#94a3b8">${salesMonths.length}개월(${salesMonths.map(m=>m.slice(5)).join('·')}월)</span></div>` : '';
       return `<div class="divcard${on?' on':''}" data-v="${esc(d)}"><div style="font-size:12px;color:${on?'#1d4ed8':'var(--muted)'};font-weight:700">${esc(d)}${on?' ●':''}</div><div style="font-size:18px;font-weight:800;color:${on?'#1d4ed8':'var(--navy)'}">${wonM(divAmt[d])}</div><div class="bar" style="margin-top:5px"><i style="width:${pct(divAmt[d],divTot)}%;background:${on?'#3b82f6':'#94a3b8'}"></i></div><div class="sub2">${pct(divAmt[d],divTot).toFixed(1)}%</div>${salesLine}</div>`;}).join('')
   }</div></div>`;
-  html+=`<div class="kpigrid">`+kpis.map(k=>`<div class="kpi ${k.c}${k.nat?' nature-card':''}${k.detail?' action':''}" ${k.nat?`data-nat="${esc(k.nat)}"`:''} ${k.detail?`data-detail="${esc(k.detail)}" title="관련 목록"`:''}><div class="k-label">${esc(k.label)}</div><div class="k-val">${k.val}</div><div class="k-sub">${esc(k.sub)}</div></div>`).join('')+`</div>`;
+  const natFillColor={rawm:'#0f766e',out:'#7c3aed',part:'#2563eb',mold:'#c2410c',ovh:'#64748b',custom:'#be185d'};
+  const kpiStyle=k=>{ if(!k.nat)return ''; const ratio=totAmt?Math.max(0,Math.min(100,(byNat.get(k.nat)?.amt||0)/totAmt*100)):0; const cls=natCls[k.nat]||natureInfo(k.nat).cls||'custom'; return `style="--nat-fill:${ratio.toFixed(2)}%;--nat-fill-color:${natFillColor[cls]||natFillColor.custom}"`; };
+  html+=`<div class="kpigrid">`+kpis.map(k=>`<div class="kpi ${k.c}${k.nat?' nature-card':''}${k.detail?' action':''}" ${kpiStyle(k)} ${k.nat?`data-nat="${esc(k.nat)}"`:''} ${k.detail?`data-detail="${esc(k.detail)}" title="관련 목록"`:''}><div class="k-label">${esc(k.label)}</div><div class="k-val">${k.val}</div><div class="k-sub">${esc(k.sub)}</div></div>`).join('')+`</div>`;
 
   html+=`<div class="panelgrid">`;
   // monthly trend panel
@@ -1621,7 +1724,12 @@ function homeCardDetail(detail){
   }
   if(String(detail||'').startsWith('nat:')){
     const nat=detail.slice(4),sub=rows.filter(r=>homeNatureKey(r.nat)===nat);
-    itemListDetail(`📦 ${nat} · 품목 리스트`,`품목 ${new Set(sub.map(r=>productKey(r))).size}종 · 합계 ${wonM(sub.reduce((a,r)=>a+amtOf(r),0))}`,sub,'메인화면',homeDashboard);
+    if(nat==='원자재'){
+      state.materialFilters={forms:[],names:[],thicks:[]};
+      materialItemList('메인화면',homeDashboard);
+    }else{
+      itemListDetail(`📦 ${nat} · 품목 리스트`,`품목 ${new Set(sub.map(r=>productKey(r))).size}종 · 합계 ${wonM(sub.reduce((a,r)=>a+amtOf(r),0))}`,sub,'메인화면',homeDashboard);
+    }
   }
 }
 
@@ -1698,27 +1806,27 @@ function priceVolatility(rows){
 function rankVendor(){
   const rows=activeRows();
   const totalAll=rows.reduce((a,r)=>a+amtOf(r),0);
-  const natGroups=groupSum(rows,r=>r.nat||'기타');
-  const configuredNats=natureDefs().map(n=>n.key);
-  const natKeys=[...configuredNats,...[...natGroups.keys()].filter(k=>!configuredNats.includes(k))].filter(k=>natGroups.has(k));
-  if(state.vendorNatureFilter!=='all'&&!natGroups.has(state.vendorNatureFilter))state.vendorNatureFilter='all';
+  const natGroups=groupSum(rows,r=>r.nat||UNCLASSIFIED_NATURE);
+  const configuredNats=natureOptionKeys();
+  const natKeys=[...new Set([...configuredNats,...natGroups.keys()])].filter(n=>natGroups.has(n));
+  if(state.vendorNatureFilter!=='all'&&!natKeys.includes(state.vendorNatureFilter))state.vendorNatureFilter='all';
   const selectedNat=state.vendorNatureFilter;
-  const viewRows=selectedNat==='all'?rows:rows.filter(r=>(r.nat||'기타')===selectedNat);
+  const viewRows=selectedNat==='all'?rows:rows.filter(r=>(r.nat||UNCLASSIFIED_NATURE)===selectedNat);
   const g=groupSum(viewRows,r=>r.vendor);
   const tot=viewRows.reduce((a,r)=>a+amtOf(r),0);
   const arr=[...g.entries()].map(([v,o])=>{
     const days=new Set(o.rows.map(r=>r.d)).size;
     const autoNat=[...groupSum(o.rows,r=>state.natureOverride[productKey(r)]||natureOf(r.big,r.mgmt,r.project).key).entries()].sort((a,b)=>b[1].amt-a[1].amt)[0];
-    const selectedNat=state.vendorNatureOverride[v]||((autoNat&&autoNat[0])||'기타');
+    const selectedNat=natureValueKey(state.vendorNatureOverride[v]||natureDisplayKey((autoNat&&autoNat[0])||UNCLASSIFIED_NATURE));
     return {vendor:v, amt:o.amt, qty:o.qty, n:o.n, days, ratio:pct(o.amt,tot),
-      lastDate:o.rows.reduce((a,r)=>r.d>a?r.d:a,''), mainNat:selectedNat, autoNat:(autoNat&&autoNat[0])||'기타', memo:state.vendorMemo[v]||'', srcRows:o.rows };
+      lastDate:o.rows.reduce((a,r)=>r.d>a?r.d:a,''), mainNat:selectedNat, autoNat:natureDisplayKey((autoNat&&autoNat[0])||UNCLASSIFIED_NATURE), memo:state.vendorMemo[v]||'', srcRows:o.rows };
   });
   const max=Math.max(1,...arr.map(o=>o.amt));
   let cum=0; const sorted=[...arr].sort((a,b)=>b.amt-a.amt); const cumMap={}; sorted.forEach(o=>{cum+=o.amt;cumMap[o.vendor]=pct(cum,tot);});
   let cols=[
     {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
     {h:'거래처',l:1,k:'vendor',cell:o=>`<a href="#" class="vlink" data-v="${esc(o.vendor)}" style="color:var(--navy);font-weight:700;text-decoration:none">${esc(o.vendor)}</a>`,raw:o=>o.vendor},
-    {h:'매입구분',l:1,k:'mainNat',cell:o=>`<select class="sel vendorNat ${esc(natureInfo(o.mainNat).cls||'custom')} ${state.vendorNatureOverride[o.vendor]?'':'is-auto'}" data-v="${esc(o.vendor)}" title="거래처 매입구분 지정"><option value="">자동 (${esc(o.autoNat)})</option>${natureDefs().map(n=>`<option value="${esc(n.key)}" ${state.vendorNatureOverride[o.vendor]===n.key?'selected':''}>${esc(n.key)}</option>`).join('')}</select>`,raw:o=>o.mainNat},
+    {h:'매입구분',l:1,k:'mainNat',cell:o=>`<select class="sel vendorNat ${esc(natureInfo(o.mainNat).cls||'custom')} ${state.vendorNatureOverride[o.vendor]?'':'is-auto'}" data-v="${esc(o.vendor)}" title="거래처 매입구분 지정"><option value="">자동 (${esc(o.autoNat)})</option>${natureOptionKeys().map(n=>`<option value="${esc(n)}" ${state.vendorNatureOverride[o.vendor]===n?'selected':''}>${esc(n)}</option>`).join('')}</select>`,raw:o=>o.mainNat},
     {h:'매입액',k:'amt',cell:o=>won(o.amt),raw:o=>o.amt},
     {h:'비중',k:'ratio',cell:o=>o.ratio.toFixed(1)+'%',raw:o=>o.ratio},
     {h:'누적%',cell:o=>(cumMap[o.vendor]||0).toFixed(1)+'%',raw:o=>cumMap[o.vendor]},
@@ -1728,7 +1836,7 @@ function rankVendor(){
     {h:'최근입고',k:'lastDate',cell:o=>o.lastDate,raw:o=>o.lastDate},
     {h:'메모',l:1,cls:'vendor-memo-col',cell:o=>`<input class="mtxt vmemo" data-v="${esc(o.vendor)}" value="${esc(o.memo)}" placeholder="메모">`,raw:o=>o.memo},
   ];
-  const natureControls=`<div class="ctrlbar"><b style="font-size:12px">매입구분별</b><div class="seg" id="vendorNatureFilter"><button type="button" class="vendorNatFilter ${selectedNat==='all'?'on':''}" data-nat="all">전체 · 100.0%</button>${natKeys.map(n=>{const o=natGroups.get(n),share=pct(o.amt,totalAll),cls=natureInfo(n).cls||'custom';return `<button type="button" class="vendorNatFilter ${esc(cls)} ${selectedNat===n?'on':''}" data-nat="${esc(n)}">${esc(n)} · ${share.toFixed(1)}%</button>`;}).join('')}</div></div>`;
+  const natureControls=`<div class="ctrlbar"><b style="font-size:12px">매입구분별</b><div class="seg" id="vendorNatureFilter"><button type="button" class="vendorNatFilter ${selectedNat==='all'?'on':''}" data-nat="all">전체 · 100.0%</button>${natKeys.map(n=>{const o=natGroups.get(n)||{amt:0},share=pct(o.amt,totalAll),cls=natureInfo(n).cls||'custom';return `<button type="button" class="vendorNatFilter ${esc(cls)} ${selectedNat===n?'on':''}" data-nat="${esc(n)}">${esc(n)} · ${share.toFixed(1)}%</button>`;}).join('')}</div></div>`;
   render('🏢 거래처별 매입', `${arr.length}개사 · ${selectedNat==='all'?'전체':esc(selectedNat)} · 합계 ${wonM(tot)}`, arr, cols, 'amt',
     '',
     {totals:true, controlsHtml:natureControls, headExtra:'<button class="btn ghost sm" id="vendorNatureManage">＋ 매입구분 새로 만들기 · 품목 지정</button>', afterRender:wireVendorRows,
@@ -1907,60 +2015,122 @@ function itemListDetail(title, meta, rows, backLabel, backAct, extraNote, viewOp
      }});
 }
 
-function natureItemList(nat,backLabel,backAct,natureDetail=false){
-  const rows=activeRows().filter(r=>r.nat===nat);
-  const compact=nat==='유통/OEM'||nat==='부품/부속';
-  itemListDetail(`📦 ${nat} · 품목`, `품목 리스트 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`, rows, backLabel, backAct, '',
-    {monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,compactName:false,tableClass:nat==='유통/OEM'?'item-oem-table':'item-nature-monthly-table',monthlyAvgQty:true,
-     afterRender:()=>bindItemNatureEditors(()=>natureItemList(nat,backLabel,backAct,natureDetail))});
+function natureCategoryLabel(r,level){
+  return categoryFilterLabel(categoryDisplayLabel(level,r[level]||categoryEmptyName(level)));
+}
+function natureCategoryFilterState(key,nat){
+  state.natureCategoryFilters=state.natureCategoryFilters||{};
+  const f=state.natureCategoryFilters[key]||(state.natureCategoryFilters[key]={nat,mid:'전체',small:'전체'});
+  if(nat&&f.nat!==nat){f.nat=nat;f.mid='전체';f.small='전체';}
+  return f;
+}
+function natureCategoryRows(allRows,f){
+  return allRows.filter(r=>r.nat===f.nat&&(f.mid==='전체'||natureCategoryLabel(r,'mid')===f.mid)&&(f.small==='전체'||natureCategoryLabel(r,'small')===f.small));
+}
+function natureCategoryCounts(rows,get){
+  const m=new Map(); rows.forEach(r=>{const k=productKey(r);const v=get(r);if(!m.has(v))m.set(v,new Set());m.get(v).add(k);});
+  return new Map([...m.entries()].map(([k,s])=>[k,s.size]));
+}
+function natureCategoryToolbar(allRows,key,f,singleNature=false){
+  const natCounts=natureCategoryCounts(allRows,r=>r.nat);
+  const natRows=allRows.filter(r=>r.nat===f.nat);
+  const natValues=singleNature?[f.nat]:[...new Set([...natureOptionKeys(),...natCounts.keys()])].filter(v=>natCounts.has(v)&&natCounts.get(v)>0);
+  const midCounts=natureCategoryCounts(natRows,r=>natureCategoryLabel(r,'mid'));
+  const midValues=[...midCounts.keys()].filter(v=>midCounts.get(v)>0);
+  const midRows=natRows.filter(r=>f.mid==='전체'||natureCategoryLabel(r,'mid')===f.mid);
+  const smallCounts=natureCategoryCounts(midRows,r=>natureCategoryLabel(r,'small'));
+  const smallValues=[...smallCounts.keys()].filter(v=>smallCounts.get(v)>0);
+  const row=(level,label,values,selected,counts,total,showAll=true)=>`<div class="mat-filter-group"><span class="mat-filter-label">${label}</span><div class="mat-filter-list">${showAll?`<button type="button" class="mat-filter-btn natureCategoryFilter ${selected==='전체'?'on':''}" data-level="${level}" data-v="전체">전체 <span class="mat-filter-count">(${total})</span></button>`:''}${values.map(v=>`<button type="button" class="mat-filter-btn natureCategoryFilter ${selected===v?'on':''}" data-level="${level}" data-v="${esc(v)}">${esc(v)} <span class="mat-filter-count">(${counts.get(v)||0})</span></button>`).join('')}</div></div>`;
+  const natTotal=singleNature?[...new Set(natRows.map(productKey))].length:[...new Set(allRows.map(productKey))].length;
+  const midTotal=[...new Set(natRows.map(productKey))].length;
+  const smallTotal=[...new Set(midRows.map(productKey))].length;
+  return `<div class="mat-filter-toolbar nature-category-toolbar" data-filter-key="${esc(key)}">${row('nat','매입구분',natValues,f.nat,natCounts,natTotal,!singleNature)}${row('mid','중분류',midValues,f.mid,midCounts,midTotal)}${row('small','소분류',smallValues,f.small,smallCounts,smallTotal)}</div>`;
+}
+function bindNatureCategoryFilters(key,handler){
+  $$('#content .natureCategoryFilter').forEach(btn=>btn.onclick=()=>handler(btn.dataset.level,btn.dataset.v));
+}
+function openNaturePage(nat,backLabel,backAct,natureDetail=false,sourceRows=null){
+  if(nat==='원자재'){state.materialFilters={forms:[],names:[],thicks:[]};return materialItemList(backLabel,backAct,natureDetail,sourceRows);}
+  if(nat==='외주가공'){state.outsourcedItemFilter='전체';return outsourcedItemList(backLabel,backAct,natureDetail,sourceRows);}
+  if(nat==='금형'){state.moldItemFilter='전체';return moldItemList(backLabel,backAct,natureDetail,sourceRows);}
+  return natureItemList(nat,backLabel,backAct,natureDetail,sourceRows);
+}
+function natureItemList(nat,backLabel,backAct,natureDetail=false,sourceRows=null){
+  const allRows=sourceRows||activeRows();
+  const filterKey=`nature:${backLabel}:${sourceRows?'full':'active'}`;
+  const f=natureCategoryFilterState(filterKey,nat);
+  const rows=natureCategoryRows(allRows,f);
+  itemListDetail(`📦 ${f.nat} · 품목`, `품목 리스트 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`, rows, backLabel, backAct, '',
+    {monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,compactName:false,tableClass:f.nat==='유통/OEM'?'item-oem-table':'item-nature-monthly-table',monthlyAvgQty:true,controlsHtml:natureCategoryToolbar(allRows,filterKey,f,backLabel==='매입구분별 분석'),
+     afterRender:()=>{bindItemNatureEditors(()=>natureItemList(f.nat,backLabel,backAct,natureDetail,sourceRows));bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){f.nat=v;f.mid='전체';f.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}f[level]=v;if(level==='mid')f.small='전체';natureItemList(f.nat,backLabel,backAct,natureDetail,sourceRows);});}});
 }
 
-function materialItemList(backLabel,backAct,natureDetail=false){
-  const base=activeRows().filter(r=>r.nat==='원자재');
-  const allForms=['코일','판재','기타'];
+function materialItemList(backLabel,backAct,natureDetail=false,sourceRows=null){
+  const allRows=sourceRows||activeRows();
+  const filterKey=`nature:${backLabel}:${sourceRows?'full':'active'}`;
+  const categoryFilter=natureCategoryFilterState(filterKey,'원자재');
+  const showMaterialFilters=backLabel!=='매입구분별 분석';
+  const base=natureCategoryRows(allRows,categoryFilter).filter(r=>r.nat==='원자재');
+  const allForms=[...new Set(base.map(r=>r.cs||coilSheet(r)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   const allNames=[...new Set(base.map(r=>r.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   const f=state.materialFilters||(state.materialFilters={forms:[],names:[],thicks:[]});
-  f.forms=f.forms||[]; f.names=f.names||[]; f.thicks=f.thicks||[];
+  if(!showMaterialFilters){f.forms=[];f.names=[];f.thicks=[];}
+  f.forms=(f.forms||[]).filter(v=>allForms.includes(v)); f.names=(f.names||[]).filter(v=>allNames.includes(v)); f.thicks=f.thicks||[];
   const preRows=base.filter(r=>(!f.forms.length||f.forms.includes(r.cs||coilSheet(r)))&&(!f.names.length||f.names.includes(r.name)));
   const allThicks=[...new Set(preRows.map(materialTLabel).filter(Boolean))].sort((a,b)=>(parseFloat(a)||9999)-(parseFloat(b)||9999));
   if(f.thicks.length&&!allThicks.some(v=>f.thicks.includes(v)))f.thicks=[];
   const rows=preRows.filter(r=>!f.thicks.length||f.thicks.includes(materialTLabel(r)));
   const filterButtons=(kind,label,vals,selected)=>`<div class="mat-filter-group"><span class="mat-filter-label">${label}</span><div class="mat-filter-list"><button type="button" class="mat-filter-btn ${!selected.length?'on':''}" data-kind="${kind}" data-v="__all">전체</button>${vals.map(v=>`<button type="button" class="mat-filter-btn ${selected.includes(v)?'on':''}" data-kind="${kind}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div></div>`;
-  const controls=`<div class="mat-filter-toolbar">${filterButtons('forms','형태',allForms,f.forms)}${filterButtons('names','품명',allNames,f.names)}${filterButtons('thicks','재료T',allThicks,f.thicks)}<span class="sub2" style="margin-left:4px">형태·품명·재료T는 한 가지씩 선택할 수 있습니다.</span></div>`;
+  const controls=natureCategoryToolbar(allRows,filterKey,categoryFilter,backLabel==='매입구분별 분석')+(showMaterialFilters?`<div class="mat-filter-toolbar">${filterButtons('forms','형태',allForms,f.forms)}${filterButtons('names','품명',allNames,f.names)}${filterButtons('thicks','재료T',allThicks,f.thicks)}<span class="sub2" style="margin-left:4px">형태·품명·재료T는 한 가지씩 선택할 수 있습니다.</span></div>`:'');
   itemListDetail('📦 원자재 · 품목 리스트',`품목 리스트 · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{showKg:true,monthlyAvgKg:true,controlsHtml:controls,tableClass:'material-item-table',monthlyHideCode:true,monthlyHideHeaders:['그래프'],monthlyKeepHeaders:['순위','품명','규격','형태'],monthlyExpandHeaders:['품명'],hideSmall:true,wideName:false,materialName:true,materialSpec:true,materialForm:true,afterRender:()=>{
-    bindItemNatureEditors(()=>materialItemList(backLabel,backAct,natureDetail));
-     $$('#content .mat-filter-btn').forEach(btn=>btn.onclick=()=>{ const kind=btn.dataset.kind,v=btn.dataset.v; if(v==='__all')state.materialFilters[kind]=[]; else state.materialFilters[kind]=[v]; state.sortKey=null; materialItemList(backLabel,backAct,natureDetail); });
+    bindItemNatureEditors(()=>materialItemList(backLabel,backAct,natureDetail,sourceRows));
+     $$('#content .mat-filter-btn:not(.natureCategoryFilter)').forEach(btn=>btn.onclick=()=>{ const kind=btn.dataset.kind,v=btn.dataset.v; if(v==='__all')state.materialFilters[kind]=[]; else state.materialFilters[kind]=[v]; state.sortKey=null; materialItemList(backLabel,backAct,natureDetail,sourceRows); });
+     bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){categoryFilter.nat=v;categoryFilter.mid='전체';categoryFilter.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}categoryFilter[level]=v;if(level==='mid')categoryFilter.small='전체';materialItemList(backLabel,backAct,natureDetail,sourceRows);});
   }});
 }
 
 /* ---------- 금형 품목 리스트: 품명 기준 세부 구분 ---------- */
-function moldItemList(backLabel,backAct,natureDetail=false){
-  const base=activeRows().filter(r=>r.nat==='금형');
+function moldItemList(backLabel,backAct,natureDetail=false,sourceRows=null){
+  const allRows=sourceRows||activeRows();
+  const filterKey=`nature:${backLabel}:${sourceRows?'full':'active'}`;
+  const categoryFilter=natureCategoryFilterState(filterKey,'금형');
+  const showItemKindFilters=backLabel!=='매입구분별 분석';
+  const base=natureCategoryRows(allRows,categoryFilter).filter(r=>r.nat==='금형');
   const moldKind=r=>{
     const name=String(r.name||'');
     return name.includes('금형가공')?'금형가공':name.includes('금형소모품')?'금형소모품':'기타';
   };
-  const kinds=['금형가공','금형소모품','기타'];
-  const selected=state.moldItemFilter||'전체';
+  const kinds=['금형가공','금형소모품','기타'].filter(k=>base.some(r=>moldKind(r)===k));
+  const selectedValue=state.moldItemFilter||'전체';
+  const selected=kinds.includes(selectedValue)?selectedValue:'전체';
+  if(selected!==selectedValue)state.moldItemFilter='전체';
   const rows=selected==='전체'?base:base.filter(r=>moldKind(r)===selected);
-  const controls=`<div class="ctrlbar"><b style="font-size:12px">품명 구분</b><div class="seg" id="moldItemSeg"><button type="button" data-v="전체" class="${selected==='전체'?'on':''}">전체</button>${kinds.map(k=>`<button type="button" data-v="${esc(k)}" class="${selected===k?'on':''}">${esc(k)}</button>`).join('')}</div></div>`;
+  const controls=natureCategoryToolbar(allRows,filterKey,categoryFilter,backLabel==='매입구분별 분석')+(showItemKindFilters?`<div class="ctrlbar"><b style="font-size:12px">품명 구분</b><div class="seg" id="moldItemSeg"><button type="button" data-v="전체" class="${selected==='전체'?'on':''}">전체</button>${kinds.map(k=>`<button type="button" data-v="${esc(k)}" class="${selected===k?'on':''}">${esc(k)}</button>`).join('')}</div></div>`:'');
   itemListDetail('📦 금형 · 품목',`품목 리스트 · ${selected} · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,tableClass:'item-nature-monthly-table',monthlyAvgQty:true,controlsHtml:controls,afterRender:()=>{
-    bindItemNatureEditors(()=>moldItemList(backLabel,backAct,natureDetail));
-    const seg=$('#moldItemSeg'); if(seg)seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{state.moldItemFilter=btn.dataset.v;state.sortKey=null;moldItemList(backLabel,backAct,natureDetail);});
+    bindItemNatureEditors(()=>moldItemList(backLabel,backAct,natureDetail,sourceRows));
+    const seg=$('#moldItemSeg'); if(seg)seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{state.moldItemFilter=btn.dataset.v;state.sortKey=null;moldItemList(backLabel,backAct,natureDetail,sourceRows);});
+    bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){categoryFilter.nat=v;categoryFilter.mid='전체';categoryFilter.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}categoryFilter[level]=v;if(level==='mid')categoryFilter.small='전체';moldItemList(backLabel,backAct,natureDetail,sourceRows);});
   }});
 }
 
 /* ---------- 외주가공 품목 리스트: 품명 기준 세부 구분 ---------- */
-function outsourcedItemList(backLabel,backAct,natureDetail=false){
-  const base=activeRows().filter(r=>r.nat==='외주가공');
-  const kinds=['분체','도금','기타'];
-  const selected=state.outsourcedItemFilter||'전체';
+function outsourcedItemList(backLabel,backAct,natureDetail=false,sourceRows=null){
+  const allRows=sourceRows||activeRows();
+  const filterKey=`nature:${backLabel}:${sourceRows?'full':'active'}`;
+  const categoryFilter=natureCategoryFilterState(filterKey,'외주가공');
+  const showItemKindFilters=backLabel!=='매입구분별 분석';
+  const base=natureCategoryRows(allRows,categoryFilter).filter(r=>r.nat==='외주가공');
+  const kinds=['분체','도금','기타'].filter(k=>base.some(r=>outsourcedKindOf(r)===k));
+  const selectedValue=state.outsourcedItemFilter||'전체';
+  const selected=kinds.includes(selectedValue)?selectedValue:'전체';
+  if(selected!==selectedValue)state.outsourcedItemFilter='전체';
   const rows=selected==='전체'?base:base.filter(r=>outsourcedKindOf(r)===selected);
-  const controls=`<div class="ctrlbar"><b style="font-size:12px">품명 구분</b><div class="seg" id="outsourcedItemSeg"><button type="button" data-v="전체" class="${selected==='전체'?'on':''}">전체</button>${kinds.map(k=>`<button type="button" data-v="${esc(k)}" class="${selected===k?'on':''}">${esc(k)}</button>`).join('')}</div></div>`;
+  const controls=natureCategoryToolbar(allRows,filterKey,categoryFilter,backLabel==='매입구분별 분석')+(showItemKindFilters?`<div class="ctrlbar"><b style="font-size:12px">품명 구분</b><div class="seg" id="outsourcedItemSeg"><button type="button" data-v="전체" class="${selected==='전체'?'on':''}">전체</button>${kinds.map(k=>`<button type="button" data-v="${esc(k)}" class="${selected===k?'on':''}">${esc(k)}</button>`).join('')}</div></div>`:'');
   itemListDetail('📦 외주가공 · 품목',`품목 리스트 · ${selected} · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{monthlyHideCode:natureDetail,monthlyHideHeaders:['품목구분','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,tableClass:'item-nature-monthly-table',outsourcedKind:true,monthlyAvgQty:true,controlsHtml:controls,afterRender:()=>{
-    bindItemNatureEditors(()=>outsourcedItemList(backLabel,backAct,natureDetail));
-    bindOutsourcedKindEditors(()=>outsourcedItemList(backLabel,backAct,natureDetail));
-    const seg=$('#outsourcedItemSeg'); if(seg)seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{state.outsourcedItemFilter=btn.dataset.v;state.sortKey=null;outsourcedItemList(backLabel,backAct,natureDetail);});
+    bindItemNatureEditors(()=>outsourcedItemList(backLabel,backAct,natureDetail,sourceRows));
+    bindOutsourcedKindEditors(()=>outsourcedItemList(backLabel,backAct,natureDetail,sourceRows));
+    const seg=$('#outsourcedItemSeg'); if(seg)seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{state.outsourcedItemFilter=btn.dataset.v;state.sortKey=null;outsourcedItemList(backLabel,backAct,natureDetail,sourceRows);});
+    bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){categoryFilter.nat=v;categoryFilter.mid='전체';categoryFilter.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}categoryFilter[level]=v;if(level==='mid')categoryFilter.small='전체';outsourcedItemList(backLabel,backAct,natureDetail,sourceRows);});
   }});
 }
 
@@ -2033,7 +2203,8 @@ function renameCategoryLabel(level,from){
 }
 
 function rankCat(){
-  const rows=activeRows();
+  // 품목분류 지정 팝업과 동일하게 전체 기간·전체 사업부·전체 분류 데이터를 사용합니다.
+  const rows=CUR;
   const d1=state.catDrill, d2=state.catDrill2;
   const bigOf=r=>r.big||'(미분류)',midOf=r=>r.mid||'(중분류없음)',smallOf=r=>r.small||'(소분류없음)';
   // Level 3: 소분류 selected → item list
@@ -2044,7 +2215,9 @@ function rankCat(){
   else { level=3; base=rows.filter(r=>bigOf(r)===d1&&midOf(r)===d2); keyFn=smallOf; levelLabel='품목소분류'; crumb=`${d1} › ${d2}`; }
   const tot=base.reduce((a,r)=>a+amtOf(r),0);
   const g=groupSum(base, keyFn);
-  const arr=[...g.entries()].filter(([k])=>k!=null).map(([k,o])=>({cat:k,amt:o.amt,qty:o.qty,n:o.n,vendors:new Set(o.rows.map(r=>r.vendor)).size,rows:o.rows}));
+  // 현재 데이터에 실제로 존재하는 분류만 표시합니다. 0건 분류는 목록에서 숨깁니다.
+  const groupKeys=[...g.entries()].filter(([,o])=>(o.n||0)>0).map(([k])=>k);
+  const arr=groupKeys.filter(k=>k!=null).map(k=>{const o=g.get(k);return {cat:k,amt:o.amt,qty:o.qty,n:o.n,vendors:new Set(o.rows.map(r=>r.vendor)).size,rows:o.rows};});
   const max=Math.max(1,...arr.map(o=>o.amt));
   const labels={big:'대분류',mid:'중분류',small:'소분류'};
   const editCatOptions=(kind,value)=>{
@@ -2106,36 +2279,86 @@ function rankCat(){
 
 function openCategoryManager(){
   const modal=$('#categoryModal'),body=$('#categoryModalBody');
+  const categoryBackupKeys=['categoryRename','categoryOverride','categoryCustom','natureCustom','natureOverride','vendorNatureOverride','outsourcedKindOverride'];
+  const cloneBackupValue=v=>JSON.parse(JSON.stringify(v==null?{}:v));
+  const categoryBackupData=()=>{const data={};categoryBackupKeys.forEach(k=>data[k]=cloneBackupValue(state[k]));return {format:'purchase-category-backup',version:1,savedAt:new Date().toISOString(),data};};
+  const saveCategoryBackup=()=>{const blob=new Blob([JSON.stringify(categoryBackupData(),null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='purchase_category_backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  const loadCategoryBackup=raw=>{
+    let parsed;try{parsed=JSON.parse(raw);}catch(err){alert('불러오기 실패: JSON 파일을 확인해 주세요.');return;}
+    const data=parsed&&parsed.data&&typeof parsed.data==='object'?parsed.data:parsed;
+    const found=categoryBackupKeys.filter(k=>Object.prototype.hasOwnProperty.call(data||{},k));
+    if(!found.length){alert('품목분류 저장 파일 형식이 아닙니다.');return;}
+    found.forEach(k=>{state[k]=cloneBackupValue(data[k]);});
+    rebuildCUR();saveSettings();gsAutoPush();logEdit('품목분류 백업',`품목분류 설정 ${found.length}개 항목 불러오기`);fullDraw(catSearchQuery);alert('품목분류 설정을 불러왔습니다.');
+  };
+  $('#categorySave').onclick=saveCategoryBackup;
+  $('#categoryLoad').onclick=()=>$('#categoryFileInput').click();
+  $('#categoryFileInput').onchange=e=>{const file=e.target.files&&e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>loadCategoryBackup(reader.result);reader.onerror=()=>alert('불러오기 실패: 파일을 읽을 수 없습니다.');reader.readAsText(file);e.target.value='';};
   const makeProducts=()=>[...groupSum(CUR,r=>productKey(r)).entries()].map(([key,o])=>{const r=o.rows[0];return {key,code:r.code,name:r.name,spec:r.spec,big:categoryDisplayLabel('big',r.big||categoryEmptyName('big')),mid:categoryDisplayLabel('mid',r.mid||categoryEmptyName('mid')),small:categoryDisplayLabel('small',r.small||categoryEmptyName('small')),amt:o.amt};}).sort((a,b)=>b.amt-a.amt);
   let products=makeProducts();
+  let catBigFilter='전체';
+  let catMidFilter='전체';
+  let catSmallFilter='전체';
+  let catSearchQuery='';
   const catCols=[{k:'code',h:'품번',l:1},{k:'name',h:'품명',l:1},{k:'spec',h:'규격',l:1},{k:'amt',h:'매입액'},{k:'big',h:'매입구분(대분류)',l:1},{k:'mid',h:'중분류',l:1},{k:'small',h:'소분류',l:1}];
   if(!state.catSort)state.catSort={key:null,dir:-1};
 
-  const renderTable=(query='')=>{
+  const renderTable=(query=catSearchQuery)=>{
+    catSearchQuery=String(query||'');
     const q=query.trim();
-    let shown=products.filter(o=>matchesSearchText(`${o.code} ${o.name} ${o.spec} ${o.big} ${o.mid} ${o.small}`,q,o.spec));
+    let shown=products.filter(o=>(catBigFilter==='전체'||categoryFilterLabel(o.big)===catBigFilter)&&(catMidFilter==='전체'||categoryFilterLabel(o.mid)===catMidFilter)&&(catSmallFilter==='전체'||categoryFilterLabel(o.small)===catSmallFilter)&&matchesSearchText(`${o.code} ${o.name} ${o.spec} ${o.big} ${o.mid} ${o.small}`,q,o.spec));
     if(state.catSort.key){
       const k=state.catSort.key,dir=state.catSort.dir;
       shown=[...shown].sort((a,b)=>{const x=a[k],y=b[k];if(typeof x==='number'&&typeof y==='number')return (x-y)*dir;return String(x||'').localeCompare(String(y||''),'ko')*dir;});
     }
-    const total=shown.length; shown=shown.slice(0,350);
-    const cnt=$('#categoryProductCount'); if(cnt)cnt.textContent=q?(total+'건 표시'+(total>350?' (상위 350개 표시)':'')):('상위 '+shown.length+'개 표시 (검색 가능)');
+    const total=shown.length;
+    const cnt=$('#categoryProductCount'); if(cnt)cnt.textContent=q?(`${total}건 표시`):(`${total}건 표시 (전체 기간·전체 목록)`);
     const wrap=$('#categoryTableWrap'); if(!wrap)return;
-    wrap.innerHTML=`<table><thead><tr>${catCols.map(c=>`<th class="${c.l?'l':''} catSortTh" data-k="${c.k}">${esc(c.h)}${state.catSort.key===c.k?(state.catSort.dir===-1?' ▾':' ▴'):''}</th>`).join('')}</tr></thead><tbody>${shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td>${['big','mid','small'].map(l=>l==='big'?`<td class="l"><input class="catAssign" data-k="${esc(o.key)}" data-l="big" value="${esc(o.big)}" list="catBigList" style="width:190px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit;font-weight:700;${natureTagStyle(o.big)}"></td>`:`<td class="l"><input class="catAssign" data-k="${esc(o.key)}" data-l="${l}" value="${esc(o[l])}" list="cat${l[0].toUpperCase()+l.slice(1)}List" style="width:190px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit"></td>`).join('')}</tr>`).join('')||'<tr><td colspan="7" class="l sub2" style="padding:16px">검색 결과가 없습니다.</td></tr>'}</tbody></table>`;
-    bindCategoryAssignEditors(()=>{ products=makeProducts(); renderTable($('#categoryProductSearch')?$('#categoryProductSearch').value:query); });
-    $$('#categoryModal .catSortTh').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(state.catSort.key===k)state.catSort.dir*=-1;else state.catSort={key:k,dir:k==='amt'?-1:1};renderTable($('#categoryProductSearch')?$('#categoryProductSearch').value:query);});
+    wrap.innerHTML=`<table><thead><tr>${catCols.map(c=>`<th class="${c.l?'l':''} catSortTh" data-k="${c.k}">${esc(c.h)}${state.catSort.key===c.k?(state.catSort.dir===-1?' ▾':' ▴'):''}</th>`).join('')}</tr></thead><tbody>${shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td>${['big','mid','small'].map(l=>{
+      if(l==='big'){
+        const vals=bigEditValues(),selected=o.big||'';
+        return `<td class="l"><select class="catAssign" data-k="${esc(o.key)}" data-l="big" style="width:190px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit;font-weight:700;${natureTagStyle(selected)}"><option value="" ${selected?'':'selected'}>분류없음</option>${vals.map(v=>`<option value="${esc(v)}" ${selected===v?'selected':''}>${esc(v)}</option>`).join('')}</select></td>`;
+      }
+      return `<td class="l"><input class="catAssign" data-k="${esc(o.key)}" data-l="${l}" value="${esc(o[l])}" list="cat${l[0].toUpperCase()+l.slice(1)}List" style="width:190px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit"></td>`;
+    }).join('')}</tr>`).join('')||'<tr><td colspan="7" class="l sub2" style="padding:16px">검색 결과가 없습니다.</td></tr>'}</tbody></table>`;
+    bindCategoryAssignEditors(edit=>{
+      products=makeProducts();
+      // 수정 후에도 현재 대·중·소분류 필터와 검색어를 그대로 유지합니다.
+      renderTable(catSearchQuery);
+    });
+    $$('#categoryModal .catSortTh').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(state.catSort.key===k)state.catSort.dir*=-1;else state.catSort={key:k,dir:k==='amt'?-1:1};renderTable(catSearchQuery);});
   };
 
   const fullDraw=(query='')=>{
+    catSearchQuery=String(query||'');
+    products=makeProducts();
     const values=level=>categoryValues(level);
     const bigs=bigEditValues(),mids=values('mid'),smalls=values('small');
     const renameBox=(level,label,vals)=>`<div style="flex:1;min-width:230px;border:1px solid var(--line);border-radius:9px;padding:9px"><b style="font-size:12px">${label} 명칭 수정</b><div style="display:flex;gap:5px;margin-top:6px"><select class="sel catRenameFrom" data-l="${level}" style="min-width:0;flex:1">${vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select><input class="catRenameTo" data-l="${level}" placeholder="새 명칭" style="min-width:0;flex:1;border:1px solid var(--line);border-radius:7px;padding:0 7px;font-family:inherit"><button class="btn sm catRenameBtn" data-l="${level}">변경</button></div></div>`;
     const datalist=(id,vals)=>`<datalist id="${id}">${vals.map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>`;
-    body.innerHTML=`<div class="note">대·중·소분류 명칭은 전체 변경할 수 있고, 아래 품목별 입력칸에서 원하는 분류로 직접 이동할 수 있습니다. 매입구분을 수동 지정한 품목은 대분류에도 같은 값이 연동됩니다. 검색은 품번·품명·규격뿐 아니라 대·중·소분류명으로도 되며, 표의 각 제목(품번·품명·규격·매입액·매입구분(대분류)·중분류·소분류)을 클릭하면 정렬됩니다.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${renameBox('big','매입구분(대분류)',bigs)}${renameBox('mid','중분류',mids)}${renameBox('small','소분류',smalls)}</div>${datalist('catBigList',bigs)}${datalist('catMidList',mids)}${datalist('catSmallList',smalls)}<div style="display:flex;gap:8px;align-items:center;margin:8px 0"><input id="categoryProductSearch" value="${esc(query)}" placeholder="품번·품명·규격·매입구분(대분류)·중분류·소분류 검색" style="flex:1;height:38px;border:1px solid var(--line);border-radius:7px;padding:0 10px;font-family:inherit"><span class="sub2" id="categoryProductCount"></span></div><div class="tablewrap" style="max-height:56vh" id="categoryTableWrap"></div>`;
+    // 관리 목록(bigEditValues)과 실제 품목에 사용된 대분류를 함께 표시합니다.
+    // 기존에는 products에 현재 표시된 값만 사용해, 명칭 관리 목록에는 있지만
+    // 품목 데이터에 아직 직접 연결되지 않은 매입구분이 검색필터에서 누락됐습니다.
+    const bigFilterValues=['전체',...new Set([...bigs,...products.map(o=>categoryFilterLabel(o.big))].map(categoryFilterLabel).filter(Boolean))];
+    if(!bigFilterValues.includes(catBigFilter))catBigFilter='전체';
+    const midFilterValues=['전체',...new Set(products.filter(o=>catBigFilter==='전체'||categoryFilterLabel(o.big)===catBigFilter).map(o=>categoryFilterLabel(o.mid)).filter(Boolean))];
+    if(!midFilterValues.includes(catMidFilter))catMidFilter='전체';
+    const smallFilterValues=['전체',...new Set(products.filter(o=>(catBigFilter==='전체'||categoryFilterLabel(o.big)===catBigFilter)&&(catMidFilter==='전체'||categoryFilterLabel(o.mid)===catMidFilter)).map(o=>categoryFilterLabel(o.small)).filter(Boolean))];
+    if(!smallFilterValues.includes(catSmallFilter))catSmallFilter='전체';
+    const countBy=(list,get)=>{const m=new Map();list.forEach(o=>{const v=categoryFilterLabel(get(o));m.set(v,(m.get(v)||0)+1);});return m;};
+    const bigCounts=countBy(products,o=>o.big); bigCounts.set('전체',products.length);
+    const midBase=products.filter(o=>catBigFilter==='전체'||categoryFilterLabel(o.big)===catBigFilter);
+    const midCounts=countBy(midBase,o=>o.mid); midCounts.set('전체',midBase.length);
+    const smallBase=midBase.filter(o=>catMidFilter==='전체'||categoryFilterLabel(o.mid)===catMidFilter);
+    const smallCounts=countBy(smallBase,o=>o.small); smallCounts.set('전체',smallBase.length);
+    const filterRow=(kind,label,values,selected,counts)=>`<div class="mat-filter-group"><span class="mat-filter-label">${label}</span><div class="mat-filter-list">${values.filter(v=>v==='전체'||(counts.get(v)||0)>0).map(v=>{const display=v==='분류없음'?'구분없음':v;return `<button type="button" class="mat-filter-btn categoryFilterBtn ${selected===v?'on':''}" data-kind="${kind}" data-v="${esc(v)}">${esc(display)} <span class="mat-filter-count">(${counts.get(v)||0})</span></button>`;}).join('')}</div></div>`;
+    const categoryFilters=`<div class="mat-filter-toolbar">${filterRow('big','매입구분',bigFilterValues,catBigFilter,bigCounts)}${catBigFilter!=='전체'?filterRow('mid','중분류',midFilterValues,catMidFilter,midCounts):''}${catBigFilter!=='전체'&&catMidFilter!=='전체'?filterRow('small','소분류',smallFilterValues,catSmallFilter,smallCounts):''}</div>`;
+    body.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${renameBox('big','매입구분(대분류)',bigs)}${renameBox('mid','중분류',mids)}${renameBox('small','소분류',smalls)}</div>${datalist('catBigList',bigs)}${datalist('catMidList',mids)}${datalist('catSmallList',smalls)}${categoryFilters}<div style="display:flex;gap:8px;align-items:center;margin:8px 0"><input class="category-product-search" id="categoryProductSearch" value="${esc(query)}" placeholder="품번·품명·규격·매입구분(대분류)·중분류·소분류 검색" style="flex:1;height:38px;border:1px solid var(--line);border-radius:7px;padding:0 10px;font-family:inherit;font-size:13px"><span class="sub2" id="categoryProductCount"></span></div><div class="tablewrap" style="height:56vh;max-height:56vh" id="categoryTableWrap"></div>`;
     $$('#categoryModal .catRenameBtn').forEach(b=>b.onclick=()=>{const l=b.dataset.l,from=$(`#categoryModal .catRenameFrom[data-l="${l}"]`).value,to=$(`#categoryModal .catRenameTo[data-l="${l}"]`).value.trim();if(!to||to===from)return;state.categoryRename[l]=state.categoryRename[l]||{};Object.keys(state.categoryRename[l]).forEach(k=>{if(state.categoryRename[l][k]===from)state.categoryRename[l][k]=to;});state.categoryRename[l][from]=to;rebuildCUR();saveSettings();gsAutoPush();fullDraw(query);});
-    renderTable(query);
+    $$('#categoryModal .categoryFilterBtn').forEach(b=>b.onclick=()=>{const kind=b.dataset.kind,v=b.dataset.v;if(kind==='big'){catBigFilter=v;catMidFilter='전체';catSmallFilter='전체';}else if(kind==='mid'){catMidFilter=v;catSmallFilter='전체';}else catSmallFilter=v;fullDraw(catSearchQuery);});
+    renderTable(catSearchQuery);
     const search=$('#categoryProductSearch');
-    bindSearchInput(search,()=>renderTable(search.value));
+    bindSearchInput(search,()=>{catSearchQuery=search.value;renderTable(catSearchQuery);});
   };
 
   fullDraw();
@@ -2155,7 +2378,7 @@ function rankItem(){
   const arr=state.majorProductOnly?allArr.filter(o=>!!majorProducts[o.catKey]):allArr;
   const tot=arr.reduce((a,r)=>a+amtOf(r),0);
   const max=Math.max(1,...arr.map(o=>o.amt));
-  const natOrder=[...new Set([...natureDefs().map(n=>n.key),'관리비/기타','기타'])];
+  const natOrder=[...new Set([...natureOptionKeys(),'관리비/기타','기타',...arr.map(o=>o.nat).filter(Boolean)])];
   const chips=[{v:'전체',label:'전체',count:arr.length}]
     .concat(natOrder.filter(n=>arr.some(o=>o.nat===n)).map(n=>({v:n,label:n,cls:natureInfo(n).cls||'custom',count:arr.filter(o=>o.nat===n).length})));
   const showKg=state.chipVal==='원자재'||(arr.length>0&&arr.every(o=>isKgList(o.srcRows)));
@@ -2194,7 +2417,9 @@ function rankItem(){
 /* ---------- 제품별 구매주기 ---------- */
 function purchaseCycleView(){
   const base=activeRows().filter(r=>(+r.qty||0)>0 && amtOf(r)>0);
-  const nat=state.purchaseCycleNat||'원자재';
+  let nat=state.purchaseCycleNat||'원자재';
+  const natOptions=['전체',...new Set([...natureOptionKeys(),...base.map(r=>r.nat).filter(Boolean)])].filter(v=>v==='전체'||base.some(r=>r.nat===v));
+  if(!natOptions.includes(nat)){nat='전체';state.purchaseCycleNat='전체';}
   const fixedMetric=nat==='원자재'?'kg':'amount';
   if(state.purchaseCycleMetric!==fixedMetric){ state.purchaseCycleMetric=fixedMetric; saveSettings(); }
   const metric=fixedMetric;
@@ -2220,7 +2445,6 @@ function purchaseCycleView(){
   if(!statusOptions.some(([v])=>v===state.purchaseCycleStatus))state.purchaseCycleStatus='all';
   if(state.purchaseCycleStatus!=='all')arr=arr.filter(o=>o.statusCls===state.purchaseCycleStatus);
   const totAmt=arr.reduce((a,o)=>a+o.amt,0),totQty=arr.reduce((a,o)=>a+o.qty,0);
-  const natOptions=['전체',...natureDefs().map(n=>n.key)].filter(v=>v==='전체'||base.some(r=>r.nat===v));
   const controls=`<div class="ctrlbar"><b style="font-size:12px">매입구분</b><div class="seg" id="cycleNatSeg">${natOptions.map(v=>{const c=v==='전체'?'':natureInfo(v).cls;return `<button data-v="${esc(v)}" class="cycleNat ${c} ${nat===v?'on':''}">${esc(v==='전체'?'전체 제품':v)}</button>`;}).join('')}</div><span style="width:1px;height:20px;background:var(--line)"></span><b style="font-size:12px">표시 기준</b><div class="seg" id="cycleMetricSeg"><button data-v="kg" class="${metric==='kg'?'on':''}" ${nat!=='원자재'?'disabled style="opacity:.45;cursor:not-allowed"':''}>kg</button><button data-v="amount" class="${metric==='amount'?'on':''}" ${nat==='원자재'?'disabled style="opacity:.45;cursor:not-allowed"':''}>금액</button></div><span style="width:1px;height:20px;background:var(--line)"></span><b style="font-size:12px">상태</b><div class="seg" id="cycleStatusSeg">${statusOptions.map(([v,l])=>`<button data-v="${v}" class="cycleStatus ${v} ${state.purchaseCycleStatus===v?'on':''}">${l}</button>`).join('')}</div></div>`;
   const metricCols=metric==='kg'?
     [{h:'구매량(kg)',k:'qty',cell:o=>won(o.qty),raw:o=>o.qty,total:v=>won(v.reduce((a,o)=>a+o.qty,0))},{h:'회당 평균(kg)',k:'avgQty',cell:o=>won(o.buyCount?o.qty/o.buyCount:0),raw:o=>o.buyCount?o.qty/o.buyCount:0}]:
@@ -2386,12 +2610,14 @@ function rankMaterial(){
 
 /* ---------- 매입구분별 분석 (원자재/외주/부품/금형) ---------- */
 function rankNature(){
-  const rows=activeRows();
+  // 품목분류 지정 팝업과 동일한 전체 데이터 기준으로 집계해야 분류별 금액·건수가 일치합니다.
+  const rows=CUR;
   const tot=rows.reduce((a,r)=>a+amtOf(r),0);
   const g=groupSum(rows,r=>r.nat);
-  const order=['원자재','외주가공','부품/부속','금형',...(state.natureCustom||[]).map(x=>x.key),'관리비/기타','기타'];
-  let arr=[...g.entries()].map(([k,o])=>({nat:k,amt:o.amt,qty:o.qty,n:o.n,vendors:new Set(o.rows.map(r=>r.vendor)).size,rows:o.rows}));
-  arr.sort((a,b)=>order.indexOf(a.nat)-order.indexOf(b.nat));
+  const order=[...new Set([...natureOptionKeys(),...g.keys()])];
+  // 기본 매입구분 목록에는 현재 데이터에 없는 항목도 포함될 수 있으므로,
+  // 실제 품목 건수가 1건 이상인 매입구분만 분석 표에 표시합니다.
+  let arr=order.filter(k=>g.has(k)&&(g.get(k).n||0)>0).map(k=>{const o=g.get(k);return {nat:k,amt:o.amt,qty:o.qty,n:o.n,vendors:new Set(o.rows.map(r=>r.vendor)).size,rows:o.rows};});
   arr.forEach(o=>{ o.items=new Set(o.rows.map(r=>(r.code||'')+r.name+r.spec)).size;
     o.big=[...groupSum(o.rows,r=>r.big||'(미분류)').entries()].sort((a,b)=>b[1].amt-a[1].amt).slice(0,3).map(x=>x[0]).join(', ');
     o.searchText=o.rows.map(r=>[r.vendor,r.code,r.name,r.spec,r.big,r.mid,r.small,r.project,r.po].join(' ')).join(' ');
@@ -2424,13 +2650,9 @@ function rankNature(){
   }<tr class="total-row"><td class="l">합계</td>${ms.map(m=>{const s=arr.reduce((a,o)=>{const x=groupSum(o.rows,r=>r.ym).get(m);return a+(x?x.amt:0);},0);return `<td>${won(s)}</td>`;}).join('')}<td>${won(ms.reduce((a,m)=>a+arr.reduce((b,o)=>{const x=groupSum(o.rows,r=>r.ym).get(m);return b+(x?x.amt:0);},0),0))}</td></tr></tbody></table></div></div>`;
   render('🧱 매입구분별 분석', `${arr.length}개 구분 · 합계 ${wonM(tot)} · ${state.basis==='total'?'합계액':'공급가'} 기준`, arr, cols, 'amt',
     '매입을 원자재·외주가공·부품/부속·금형으로 구분해 집계합니다. 매입구분(📋) 클릭 → 품목 리스트 → 품목 클릭 시 매입일자별 상세. 거래처수 클릭 → 공급처별.',
-    {totals:true, hideMonthly:true, searchFields:['nat','big','searchText'], headExtra:'<button class="btn ghost sm" id="natureManage">⚙️ 매입구분 · 품목 지정</button>', afterRender:()=>{
+    {totals:true, hideMonthly:true, searchFields:['nat','big','searchText'], headExtra:'<button class="btn sm nature-manage-btn" id="natureManage">⚙️ 매입구분 · 품목 지정</button>', afterRender:()=>{
       $('#tbl').closest('.tablewrap').insertAdjacentHTML('afterend',matrix);
-      $$('#content .natlink').forEach(a=>a.onclick=e=>{e.preventDefault(); const c=a.dataset.c; const sub=rows.filter(r=>r.nat===c);
-        if(c==='원자재'){ state.materialFilters={forms:[],names:[]}; materialItemList('매입구분별 분석',()=>rankNature(),true); }
-        else if(c==='외주가공'){ state.outsourcedItemFilter='전체'; outsourcedItemList('매입구분별 분석',()=>rankNature(),true); }
-        else if(c==='금형'){ state.moldItemFilter='전체'; moldItemList('매입구분별 분석',()=>rankNature(),true); }
-        else natureItemList(c,'매입구분별 분석',()=>rankNature(),true); });
+      $$('#content .natlink').forEach(a=>a.onclick=e=>{e.preventDefault();openNaturePage(a.dataset.c,'매입구분별 분석',()=>rankNature(),true,rows);});
       $$('#content .natvlink').forEach(a=>a.onclick=e=>{e.preventDefault(); const c=a.dataset.c; const sub=rows.filter(r=>r.nat===c);
         vendorBreakdown(`🏢 ${c} · 공급처별`, `공급처 ${new Set(sub.map(r=>r.vendor)).size}개 · 합계 ${wonM(sub.reduce((a,r)=>a+amtOf(r),0))}`, sub, '매입구분별 분석', ()=>rankNature()); });
        $('#natureManage').onclick=openCategoryManager;
@@ -2441,12 +2663,12 @@ function openNatureManager(){
   const modal=$('#natureModal'), body=$('#natureModalBody');
   const products=[...groupSum(CUR,r=>productKey(r)).entries()].map(([key,o])=>{const [code,name,spec]=key.split('|'),r0=o.rows[0];return {key,code,name,spec,amt:o.amt,auto:r0.nat,mid:categoryDisplayLabel('mid',r0.mid),small:categoryDisplayLabel('small',r0.small)};}).sort((a,b)=>b.amt-a.amt);
   const draw=(initialQuery='')=>{
-    const defs=natureDefs();
-    const opts=o=>`<option value="">자동 분류 (${esc(o.auto)})</option>`+defs.map(d=>`<option value="${esc(d.key)}" ${(state.natureOverride[o.key]||'')===d.key?'selected':''}>${esc(d.key)}</option>`).join('');
+    const defs=natureOptionKeys();
+    const opts=o=>`<option value="">자동 분류 (${esc(o.auto)})</option>`+defs.map(d=>`<option value="${esc(d)}" ${(state.natureOverride[o.key]||'')===d?'selected':''}>${esc(d)}</option>`).join('');
     const rowHtml=shown=>shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td><td class="l"><select class="sel natureAssign" data-k="${esc(o.key)}">${opts(o)}</select></td><td class="l"><input class="catAssign natureCatAssign" data-k="${esc(o.key)}" data-l="mid" value="${esc(o.mid)}" list="natureMidList" placeholder="중분류"></td><td class="l"><input class="catAssign natureCatAssign" data-k="${esc(o.key)}" data-l="small" value="${esc(o.small)}" list="natureSmallList" placeholder="소분류"></td></tr>`).join('')||'<tr><td colspan="7" class="l sub2" style="padding:16px">검색 결과가 없습니다.</td></tr>';
     body.innerHTML=`<div class="note">새 매입구분을 추가한 뒤, 아래 제품별 선택란에서 수동 지정할 수 있습니다. 수동 지정값은 자동 분류보다 우선하며 자동 저장·동기화됩니다.</div><div class="ctrlbar"><input id="newNature" type="text" placeholder="새 매입구분명 입력" style="height:32px;border:1px solid var(--line);border-radius:7px;padding:0 9px;font-family:inherit"><button class="btn sm" id="addNature">＋ 구분 추가</button></div><div style="margin:4px 0 12px;display:flex;gap:6px;flex-wrap:wrap">${(state.natureCustom||[]).map(n=>`<span class="tag custom">${esc(n.key)} <button class="delNature" data-k="${esc(n.key)}" style="border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></span>`).join('')||'<span class="sub2">추가한 사용자 매입구분이 없습니다. 기본 구분은 삭제되지 않습니다.</span>'}</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0"><input id="natureProductSearch" value="${esc(initialQuery)}" placeholder="품번·품명·규격 검색" style="flex:1;height:34px;border:1px solid var(--line);border-radius:7px;padding:0 9px;font-family:inherit"><span class="sub2" id="natureProductCount"></span></div><datalist id="natureMidList">${categoryValues('mid').map(v=>`<option value="${esc(categoryDisplayLabel('mid',v))}"></option>`).join('')}</datalist><datalist id="natureSmallList">${categoryValues('small').map(v=>`<option value="${esc(categoryDisplayLabel('small',v))}"></option>`).join('')}</datalist><div class="tablewrap" style="max-height:48vh"><table><thead><tr><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th>매입액</th><th class="l">매입구분 지정</th><th class="l">중분류</th><th class="l">소분류</th></tr></thead><tbody id="natureProductRows"></tbody></table></div>`;
-    const bindAssign=()=>{$$('#natureModal .natureAssign').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value;if(val)state.natureOverride[key]=val;else delete state.natureOverride[key];logEdit('매입구분',`${key} · ${val||'자동 분류'}로 변경`);applyNatureUpdate();});bindCategoryAssignEditors(()=>{},$('#natureModal'));};
-    const applySearch=query=>{const q=query.trim(),shown=products.filter(o=>matchesSearchText(`${o.code} ${o.name} ${o.spec}`,q,o.spec)).slice(0,350);$('#natureProductCount').textContent=q?`${shown.length}건 표시`:`상위 ${shown.length}개 표시 (검색 가능)`;$('#natureProductRows').innerHTML=rowHtml(shown);bindAssign();};
+    const bindAssign=()=>{$$('#natureModal .natureAssign').forEach(sel=>sel.onchange=e=>{const key=e.target.dataset.k,val=e.target.value,next={...(state.categoryOverride[key]||{})};if(val){state.natureOverride[key]=val;next.big=val;}else{delete state.natureOverride[key];delete next.big;}if(Object.keys(next).length)state.categoryOverride[key]=next;else delete state.categoryOverride[key];logEdit('매입구분',`${key} · ${val||'자동 분류'}로 변경`);applyNatureUpdate();});bindCategoryAssignEditors(()=>{},$('#natureModal'));};
+    const applySearch=query=>{const q=query.trim(),shown=products.filter(o=>matchesSearchText(`${o.code} ${o.name} ${o.spec}`,q,o.spec));$('#natureProductCount').textContent=q?`${shown.length}건 표시`:`${shown.length}건 표시 (전체 목록)`;$('#natureProductRows').innerHTML=rowHtml(shown);bindAssign();};
     $('#addNature').onclick=()=>{ const inp=$('#newNature'), key=inp.value.trim(); if(!key)return; if(natureDefs().some(n=>n.key===key)){alert('같은 매입구분이 이미 있습니다.');return;} state.natureCustom.push({key,cls:'custom',match:[]}); logEdit('매입구분 관리',`사용자 매입구분 '${key}' 추가`); applyNatureUpdate(); draw($('#natureProductSearch').value); };
     $$('#natureModal .delNature').forEach(b=>b.onclick=()=>{const key=b.dataset.k;if(!confirm(`'${key}' 매입구분을 삭제할까요? 지정된 품목·거래처는 자동분류로 돌아갑니다.`))return;state.natureCustom=state.natureCustom.filter(n=>n.key!==key);Object.keys(state.natureOverride).forEach(k=>{if(state.natureOverride[k]===key)delete state.natureOverride[k];});Object.keys(state.vendorNatureOverride).forEach(k=>{if(state.vendorNatureOverride[k]===key)delete state.vendorNatureOverride[k];});logEdit('매입구분 관리',`사용자 매입구분 '${key}' 삭제`);applyNatureUpdate();draw($('#natureProductSearch').value);});
     const search=$('#natureProductSearch');bindSearchInput(search,()=>applySearch(search.value));
@@ -2458,16 +2680,16 @@ function openNatureManager(){
 /* ---------- 파레토(매입 집중도) ---------- */
 function paretoView(){
   const allRows=activeRows();
-  const natGroups=groupSum(allRows,r=>r.nat||'기타');
-  const natOptions=['all',...natureDefs().map(n=>n.key),...[...natGroups.keys()].filter(n=>!natureDefs().some(d=>d.key===n))];
+  const natGroups=groupSum(allRows,r=>r.nat||UNCLASSIFIED_NATURE);
+  const natOptions=['all',...new Set([...natureOptionKeys(),...natGroups.keys()])].filter(v=>v==='all'||natGroups.has(v));
   if(!natOptions.includes(state.paretoNat))state.paretoNat='all';
-  const rows=state.paretoNat==='all'?allRows:allRows.filter(r=>(r.nat||'기타')===state.paretoNat);
+  const rows=state.paretoNat==='all'?allRows:allRows.filter(r=>(r.nat||UNCLASSIFIED_NATURE)===state.paretoNat);
   const tot=rows.reduce((a,r)=>a+amtOf(r),0);
   const salesMonths=[...new Set(rows.map(r=>r.ym).filter(Boolean))];
   const salesTot=salesMonths.reduce((a,ym)=>a+(+salesFor(ym)||0),0);
   const arr=[...groupSum(rows,r=>r.vendor).entries()].map(([v,o])=>{
-    const natCount=[...groupSum(o.rows,r=>r.nat||'기타').entries()].sort((a,b)=>b[1].amt-a[1].amt);
-    return {vendor:v,amt:o.amt,n:o.n,mainNat:(state.vendorNatureOverride[v]||natCount[0]?.[0]||'기타'),autoNat:natCount[0]?.[0]||'기타',srcRows:o.rows};
+    const natCount=[...groupSum(o.rows,r=>r.nat||UNCLASSIFIED_NATURE).entries()].sort((a,b)=>b[1].amt-a[1].amt);
+    return {vendor:v,amt:o.amt,n:o.n,mainNat:natureValueKey(state.vendorNatureOverride[v]||natureDisplayKey(natCount[0]?.[0]||UNCLASSIFIED_NATURE)),autoNat:natureDisplayKey(natCount[0]?.[0]||UNCLASSIFIED_NATURE),srcRows:o.rows};
   }).sort((a,b)=>b.amt-a.amt);
   const target=Math.max(1,Math.min(100,+state.paretoPct||80));
   let cum=0; arr.forEach(o=>{cum+=o.amt;o.cum=cum;o.cumPct=pct(cum,tot);o.ratio=pct(o.amt,tot);o.salesRatio=salesTot?o.amt/salesTot*100:null;});
@@ -2485,7 +2707,7 @@ function paretoView(){
     {h:'매출액 기준 그래프',l:1,cell:o=>o.salesRatio!=null?`<div class="gcell">${barCell(o.salesRatio,maxSalesRatio,ratioColor(o.salesRatio))}</div>`:'<span class="sub2">—</span>'},
     {h:'건수',cell:o=>won(o.n)},
   ];
-  const natControls=`<div class="ctrlbar"><b style="font-size:12px">매입구분</b><div class="seg" id="paretoNatSeg"><button type="button" data-v="all" class="${state.paretoNat==='all'?'on':''}">전체 · ${pct(natGroups.size?allRows.reduce((a,r)=>a+amtOf(r),0):0,allRows.reduce((a,r)=>a+amtOf(r),0)).toFixed(1)}%</button>${natOptions.filter(n=>n!=='all'&&natGroups.has(n)).map(n=>`<button type="button" data-v="${esc(n)}" class="${state.paretoNat===n?'on':''} ${natureInfo(n).cls||'custom'}">${esc(n)} · ${pct(natGroups.get(n).amt,allRows.reduce((a,r)=>a+amtOf(r),0)).toFixed(1)}%</button>`).join('')}</div><label style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;font-size:12px;font-weight:700">누적 기준 <input id="paretoPct" class="mini" type="number" min="1" max="100" step="1" value="${target}" style="width:62px">%</label></div>`;
+  const natControls=`<div class="ctrlbar"><b style="font-size:12px">매입구분</b><div class="seg" id="paretoNatSeg"><button type="button" data-v="all" class="${state.paretoNat==='all'?'on':''}">전체 · ${pct(natGroups.size?allRows.reduce((a,r)=>a+amtOf(r),0):0,allRows.reduce((a,r)=>a+amtOf(r),0)).toFixed(1)}%</button>${natOptions.filter(n=>n!=='all').map(n=>{const o=natGroups.get(n)||{amt:0};return `<button type="button" data-v="${esc(n)}" class="${state.paretoNat===n?'on':''} ${natureInfo(n).cls||'custom'}">${esc(n)} · ${pct(o.amt,allRows.reduce((a,r)=>a+amtOf(r),0)).toFixed(1)}%</button>`;}).join('')}</div><label style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;font-size:12px;font-weight:700">누적 기준 <input id="paretoPct" class="mini" type="number" min="1" max="100" step="1" value="${target}" style="width:62px">%</label></div>`;
   render('🎯 매입 집중도 (파레토)', `${arr.length}개사 · 상위 <b>${nTarget}개사</b>가 매입의 ${target.toFixed(0)}% 차지`, arr, cols, null,
     `공급 리스크 관점: 상위 <b>${nTarget}개사</b>(전체의 ${pct(nTarget,arr.length).toFixed(0)}%)가 매입액의 ${target.toFixed(0)}%를 차지합니다. 매출비중은 동일 기간 매입액을 ${esc(salesLabel())}으로 나눈 값입니다. 거래처를 클릭하면 해당 업체의 매입 리스트가 나옵니다.`,
     {totals:true, tableClass:'pareto-table', searchFields:['vendor','mainNat'], noteWarn:nTarget>0&&nTarget<=5, controlsHtml:natControls,
@@ -2596,7 +2818,7 @@ function priceCompare(){
 function priceAlert(){
   const rows=activeRows();
   let arr=priceVolatility(rows).filter(o=>Math.abs(o.chg)>=1);
-  const palertNatOptions=['전체',...natureDefs().map(n=>n.key)].filter(v=>v==='전체'||arr.some(o=>o.nat===v));
+  const palertNatOptions=['전체',...new Set([...natureOptionKeys(),...arr.map(o=>o.nat).filter(Boolean)])].filter(v=>v==='전체'||arr.some(o=>o.nat===v));
   if(!palertNatOptions.includes(state.priceAlertNat))state.priceAlertNat='전체';
   if(state.priceAlertNat!=='전체')arr=arr.filter(o=>o.nat===state.priceAlertNat);
   const palertControls=`<div class="ctrlbar"><b style="font-size:12px">매입구분</b><div class="seg" id="palertNatSeg">${palertNatOptions.map(v=>{const c=v==='전체'?'':(natureInfo(v).cls||'custom');return `<button data-v="${esc(v)}" class="${c} ${state.priceAlertNat===v?'on':''}">${esc(v)}</button>`;}).join('')}</div></div>`;
@@ -2791,7 +3013,7 @@ function costRatio(){
   const dataMonths=months();
   const ratioYear=(state.period&&/^\d{4}$/.test(state.period.year||'')?state.period.year:'')||((dataMonths[dataMonths.length-1]||`${new Date().getFullYear()}-01`).slice(0,4));
   const ms=Array.from({length:12},(_,i)=>`${ratioYear}-${String(i+1).padStart(2,'0')}`);
-  const natOrder=natureDefs().map(n=>n.key).filter(nat=>rows.some(r=>r.nat===nat));
+  const natOrder=[...new Set([...natureOptionKeys(),...rows.map(r=>r.nat).filter(Boolean)])].filter(nat=>rows.some(r=>r.nat===nat));
   // per month × nature
   const cell=(ym,nat)=>rows.filter(r=>r.ym===ym&&r.nat===nat).reduce((a,r)=>a+amtOf(r),0);
   let html=`<div class="rhead"><span class="title">💹 매출대비 매입비율</span><span class="meta">${ms[0]||''}~${ms[ms.length-1]||''} · 매입구분별 매출 점유율</span><span class="spacer"></span><button class="btn ghost sm" id="csExport">엑셀 내보내기</button></div>`;
