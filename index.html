@@ -452,6 +452,8 @@
   .tablewrap.monthly-view table.price-trend-table th.monthly-equal,.tablewrap.monthly-view table.price-trend-table td.monthly-equal{width:69px!important;min-width:69px!important;max-width:69px!important;text-align:right}
   .tablewrap.monthly-view table.price-trend-table th.price-trend-recent,.tablewrap.monthly-view table.price-trend-table td.price-trend-recent{width:86px!important;min-width:86px!important;max-width:86px!important;text-align:right}
   .tablewrap.monthly-view table.price-trend-table,.tablewrap.monthly-view table.price-trend-table th,.tablewrap.monthly-view table.price-trend-table td{font-size:12px!important}
+  .tablewrap.monthly-view table.vendor-price-summary-table th.monthly-wide-fit,.tablewrap.monthly-view table.vendor-price-summary-table td.monthly-wide-fit{width:165px!important;min-width:165px!important;max-width:165px!important}
+  .tablewrap.monthly-view table.vendor-price-summary-table th.monthly-compact-month,.tablewrap.monthly-view table.vendor-price-summary-table td.monthly-compact-month{width:64px!important;min-width:64px!important;max-width:64px!important;padding-left:4px;padding-right:4px}
   .nature-month-matrix{width:100%;min-width:1080px;table-layout:fixed;font-size:13px}
   .nature-month-matrix th,.nature-month-matrix td{white-space:nowrap}
   .nature-month-matrix th:first-child,.nature-month-matrix td:first-child{width:150px}
@@ -1518,24 +1520,28 @@ function monthlyWeightsFor(o){
 }
 function monthlyCurrentTableCols(cols,view,opts={}){
   const {axis,year}=monthlyMatrix(view,opts); if(!axis.length)return cols;
-  const vendorMonthly=state.act==='rank-vendor';
+  const vendorMonthly=opts.monthlyVendorColumns===true || (opts.monthlyVendorColumns!==false && state.act==='rank-vendor');
   const vendorCols=vendorMonthly?[cols[0],cols.find(c=>c.h==='거래처')].filter(Boolean):null;
-  const classCols=['매입구분','대분류','주요 품목대분류','중분류','소분류'];
+  const requestedHeaders=new Set(opts.monthlyKeepHeaders||[]);
+  const classCols=['매입구분','대분류','주요 품목대분류','중분류','소분류'].filter(h=>!requestedHeaders.has(h));
   const hiddenHeaders=new Set([...classCols,...(opts.monthlyHideHeaders||[])]);
   const sourceCols=(opts.monthlyHideCode?cols.filter(c=>c.h!=='품번'):cols).filter(c=>!hiddenHeaders.has(c.h));
   const left=sourceCols.filter(c=>c.l);
   const wanted=(opts.monthlyKeepHeaders||[]).map(h=>sourceCols.find(c=>c.h===h)).filter(Boolean);
   const keep=vendorCols|| (wanted.length?[...wanted,...left.filter(c=>!wanted.includes(c))]:left.length?left.slice(0,3):sourceCols.slice(0,2));
   const fitHeaders=new Set(opts.monthlyExpandHeaders||[]);
-  const mark=(c,extra='')=>({...c,cls:[c.cls,fitHeaders.has(c.h)?'monthly-fit':'',extra].filter(Boolean).join(' ')});
+  const wideHeaders=new Set(opts.monthlyWideHeaders||[]);
+  const mark=(c,extra='')=>({...c,cls:[c.cls,fitHeaders.has(c.h)?'monthly-fit':'',wideHeaders.has(c.h)?'monthly-wide-fit':'',opts.monthlyCompactMonths&&/^monthly_\d{4}-\d{2}$/.test(String(c.k||''))?'monthly-compact-month':'',extra].filter(Boolean).join(' ')});
   const keepMarked=keep.map(c=>mark(c));
   const showKg=!!opts.monthlyShowKg, qtyOnly=opts.monthlyMetric==='qty';
+  const qtyHeader=opts.monthlyQtyHeader||'kg';
+  const qtySuffix=opts.monthlyQtySuffix!=null?opts.monthlyQtySuffix:'kg';
   const unitPriceMode=opts.monthlyMetric==='unitPriceLast';
   const lastUnitPriceFor=(o,ym='')=>{let last=null;monthlyRowSources(o).forEach(r=>{const rowYm=r&&((r._monthlyYm)||r.ym||(r.d?String(r.d).slice(0,7):''));if(ym&&rowYm!==ym)return;if((+r.price||0)<=0)return;if(!last||String(r.d||'')>=String(last.d||''))last=r;});return last?(+last.price||0):0;};
-  const fmtMonthly=(a,q)=>qtyOnly?`${won(a)}kg`:(showKg?amtWithKg(a,q):won(a));
+  const fmtMonthly=(a,q)=>qtyOnly?`${won(a)}${qtySuffix}`:(showKg?amtWithKg(a,q):won(a));
   const equalClass=opts.monthlyEqualMonths?'monthly-equal':'';
-  const months=axis.map(m=>mark({h:unitPriceMode?`${+m.slice(5)}월`:`${+m.slice(5)}월${qtyOnly?'(kg)':''}`,k:`monthly_${m}`,cell:o=>{if(unitPriceMode){const v=lastUnitPriceFor(o,m);return v?`<span class="monthly-amt">${won(Math.round(v))}</span>`:'-';}const v=monthlyValuesFor(o,opts).get(m)||0,q=monthlyWeightsFor(o).get(m)||0;return v?`<span class="monthly-amt">${fmtMonthly(v,q)}</span>`:'-';},raw:o=>unitPriceMode?lastUnitPriceFor(o,m):monthlyValuesFor(o,opts).get(m)||0,total:v=>{if(unitPriceMode){const vals=v.map(o=>lastUnitPriceFor(o,m)).filter(Boolean);return vals.length?won(Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)):'-';}const a=v.reduce((s,o)=>s+(monthlyValuesFor(o,opts).get(m)||0),0),q=v.reduce((s,o)=>s+(monthlyWeightsFor(o).get(m)||0),0);return fmtMonthly(a,q);}},equalClass));
-  const latestCol=mark({h:unitPriceMode?'최근단가':`${year} 합계${qtyOnly?'(kg)':''}`,k:'monthlyTotal',cell:o=>{if(unitPriceMode){const v=lastUnitPriceFor(o);return v?`<b>${won(Math.round(v))}</b>`:'-';}const byM=monthlyValuesFor(o,opts),byQ=monthlyWeightsFor(o),a=axis.reduce((s,m)=>s+(byM.get(m)||0),0),q=axis.reduce((s,m)=>s+(byQ.get(m)||0),0);return `<b>${fmtMonthly(a,q)}</b>`;},raw:o=>unitPriceMode?lastUnitPriceFor(o):axis.reduce((a,m)=>a+(monthlyValuesFor(o,opts).get(m)||0),0),total:v=>unitPriceMode?'':fmtMonthly(0,0)},unitPriceMode?'price-trend-recent':equalClass);
+  const months=axis.map(m=>mark({h:unitPriceMode?`${+m.slice(5)}월`:`${+m.slice(5)}월${qtyOnly?`(${qtyHeader})`:''}`,k:`monthly_${m}`,cell:o=>{if(unitPriceMode){const v=lastUnitPriceFor(o,m);return v?`<span class="monthly-amt">${won(Math.round(v))}</span>`:'-';}const v=monthlyValuesFor(o,opts).get(m)||0,q=monthlyWeightsFor(o).get(m)||0;return v?`<span class="monthly-amt">${fmtMonthly(v,q)}</span>`:'-';},raw:o=>unitPriceMode?lastUnitPriceFor(o,m):monthlyValuesFor(o,opts).get(m)||0,total:v=>{if(unitPriceMode){const vals=v.map(o=>lastUnitPriceFor(o,m)).filter(Boolean);return vals.length?won(Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)):'-';}const a=v.reduce((s,o)=>s+(monthlyValuesFor(o,opts).get(m)||0),0),q=v.reduce((s,o)=>s+(monthlyWeightsFor(o).get(m)||0),0);return fmtMonthly(a,q);}},equalClass));
+  const latestCol=mark({h:unitPriceMode?'최근단가':`${year} 합계${qtyOnly?`(${qtyHeader})`:''}`,k:'monthlyTotal',cell:o=>{if(unitPriceMode){const v=lastUnitPriceFor(o);return v?`<b>${won(Math.round(v))}</b>`:'-';}const byM=monthlyValuesFor(o,opts),byQ=monthlyWeightsFor(o),a=axis.reduce((s,m)=>s+(byM.get(m)||0),0),q=axis.reduce((s,m)=>s+(byQ.get(m)||0),0);return `<b>${fmtMonthly(a,q)}</b>`;},raw:o=>unitPriceMode?lastUnitPriceFor(o):axis.reduce((a,m)=>a+(monthlyValuesFor(o,opts).get(m)||0),0),total:v=>{if(unitPriceMode)return '';const a=v.reduce((s,o)=>s+axis.reduce((ss,m)=>ss+(monthlyValuesFor(o,opts).get(m)||0),0),0),q=v.reduce((s,o)=>s+axis.reduce((ss,m)=>ss+(monthlyWeightsFor(o).get(m)||0),0),0);return fmtMonthly(a,q);}},unitPriceMode?'price-trend-recent':equalClass);
   return unitPriceMode?[...keepMarked,latestCol,...months]:[...keepMarked,...months,latestCol];
 }
 function bindMonthlyToggle(redraw){
@@ -1985,6 +1991,7 @@ function rankVendor(){
     {h:'건수',k:'n',cell:o=>won(o.n),raw:o=>o.n},
     {h:'최근입고',k:'lastDate',cell:o=>o.lastDate,raw:o=>o.lastDate},
     {h:'메모',l:1,cls:'vendor-memo-col',cell:o=>`<input class="mtxt vmemo" data-v="${esc(o.vendor)}" value="${esc(o.memo)}" placeholder="메모">`,raw:o=>o.memo},
+    {h:'단가정리',l:1,cell:o=>`<button type="button" class="btn ghost sm vendorPriceBtn" data-v="${esc(o.vendor)}">단가정리</button>`},
   ];
   const natureControls=`<div class="ctrlbar"><b style="font-size:12px">매입구분</b><div class="seg" id="vendorNatureFilter"><button type="button" class="vendorNatFilter ${selectedNat==='all'?'on':''}" data-nat="all">전체 (${rows.length} · 100.0%)</button>${natKeys.map(n=>{const o=natGroups.get(n)||{amt:0,n:0},share=pct(o.amt,totalAll),cls=natureInfo(n).cls||'custom';return `<button type="button" class="vendorNatFilter ${esc(cls)} ${selectedNat===n?'on':''}" data-nat="${esc(n)}">${esc(n)} (${o.n} · ${share.toFixed(1)}%)</button>`;}).join('')}</div></div>`;
   render('🏢 거래처별 매입', `${arr.length}개사 · ${selectedNat==='all'?'전체':esc(selectedNat)} · 합계 ${wonM(tot)}`, arr, cols, 'amt',
@@ -1999,11 +2006,76 @@ function rankVendor(){
 function wireVendorRows(){
   $$('#content .vendorNatFilter').forEach(btn=>btn.onclick=()=>{state.vendorNatureFilter=btn.dataset.nat;state.sortKey='amt';state.sortDir=-1;rankVendor();});
   $$('#content .vlink').forEach(a=>a.onclick=e=>{ e.preventDefault(); vendorDetail(a.dataset.v); });
+  $$('#content .vendorPriceBtn').forEach(btn=>btn.onclick=e=>{ e.preventDefault(); e.stopPropagation(); vendorPriceSummary(btn.dataset.v); });
   $$('#content .vmemo').forEach(inp=>inp.onchange=e=>{ const v=e.target.dataset.v; state.vendorMemo[v]=e.target.value; state.vendorMemoAt[v]={t:Date.now(),u:state.gsync.user}; logEdit('거래처 메모',`${v} 메모를 ${e.target.value?'수정':'삭제'}`); saveSettings(); gsAutoPush(); });
   $$('#content .vendorNat').forEach(sel=>sel.onchange=e=>{ const v=e.target.dataset.v,n=e.target.value; if(n)state.vendorNatureOverride[v]=n; else delete state.vendorNatureOverride[v]; logEdit('거래처 매입구분',`${v} · ${n||'자동 분류'}로 변경`); applyNatureUpdate(rankVendor); });
   $('#vendorNatureManage').onclick=openNatureManager;
 }
 function patchTotals(pairs){ /* best-effort: totals handled via cols.total normally; noop kept for clarity */ }
+
+function vendorPriceSummary(vendor){
+  const rows=activeRows().filter(r=>r.vendor===vendor);
+  const total=rows.reduce((a,r)=>a+amtOf(r),0);
+  const g=groupSum(rows,r=>(r.code||'')+'|'+r.name+'|'+r.spec);
+  const arr=[...g.entries()].map(([key,o])=>{
+    const [code,name,spec]=key.split('|');
+    const lastDate=o.rows.reduce((latest,r)=>!latest||String(r.d||'')>String(latest.d||'')?r:latest,null);
+    const lastPriced=o.rows.filter(r=>(+r.price||0)>0).reduce((latest,r)=>!latest||String(r.d||'')>String(latest.d||'')?r:latest,null);
+    const natureRow=lastPriced||lastDate||o.rows[0]||{};
+    return {
+      code,name,spec,
+      nat:state.natureOverride[productKey(natureRow)]||natureRow.nat||UNCLASSIFIED_NATURE,
+      lastPrice:lastPriced?(+lastPriced.price||0):0,
+      lastDate:lastDate?lastDate.d:'',
+      qty:o.qty,
+      unit:o.rows[0]?.unit||'',
+      amt:o.amt,
+      srcRows:o.rows
+    };
+  }).sort((a,b)=>String(b.lastDate||'').localeCompare(String(a.lastDate||''))||b.amt-a.amt);
+  state.sortKey='lastDate';
+  state.sortDir=-1;
+  state.vendorPriceMonthlyMetric=state.vendorPriceMonthlyMetric||'qty';
+  const monthlyMetric=state.vendorPriceMonthlyMetric;
+  const monthlyMetricControls=`<div class="seg" title="월별 표 표시 기준"><button type="button" class="vendorPriceMonthlyMetricBtn ${monthlyMetric==='amount'?'on':''}" data-metric="amount">금액</button><button type="button" class="vendorPriceMonthlyMetricBtn ${monthlyMetric==='qty'?'on':''}" data-metric="qty">수량</button></div>`;
+  render(`🏷️ ${vendor} · 단가정리`, `제품 ${arr.length}종 · 매입액 ${wonM(total)}`, arr, [
+    {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
+    {h:'매입구분',l:1,k:'nat',cell:o=>{const c=natureInfo(o.nat);return `<span class="tag ${c.cls||'custom'}">${esc(o.nat)}</span>`;},raw:o=>o.nat},
+    {h:'품번',l:1,k:'code',cell:o=>esc(o.code||'-'),raw:o=>o.code||''},
+    {h:'품명',l:1,k:'name',cell:o=>esc(o.name||'-'),raw:o=>o.name||''},
+    {h:'규격',l:1,k:'spec',cell:o=>esc(o.spec||'-'),raw:o=>o.spec||''},
+    {h:'최근 매입단가',k:'lastPrice',cell:o=>o.lastPrice?`<b>${won(Math.round(o.lastPrice))}</b>`:'-',raw:o=>Math.round(o.lastPrice||0)},
+    {h:'마지막 입고일',k:'lastDate',cell:o=>o.lastDate||'-',raw:o=>o.lastDate||''},
+    {h:'수량',k:'qty',cell:o=>won(o.qty)+(o.unit?` ${esc(o.unit)}`:''),raw:o=>o.qty,total:v=>won(v.reduce((a,o)=>a+o.qty,0))},
+    {h:'매입액',k:'amt',cell:o=>won(o.amt),raw:o=>o.amt,total:v=>won(v.reduce((a,o)=>a+o.amt,0))}
+  ], 'lastDate', '', {
+    totals:true,
+    back:'거래처별 매입 목록',
+    backAct:()=>rankVendor(),
+    searchFields:['nat','name','code','spec'],
+    note:`${esc(vendor)}에서 구매한 제품만 표시합니다. 최근 매입단가는 해당 제품의 가장 최근 단가가 입력된 입고 기록 기준입니다.`,
+    headExtra:monthlyMetricControls,
+    monthKey:'vendor-price-summary',
+    monthlyMetric,
+    monthlyVendorColumns:false,
+    monthlyHideCode:true,
+    monthlyHideHeaders:['그래프'],
+    monthlyKeepHeaders:['순위','품명','규격'],
+    monthlyExpandHeaders:['품명','규격'],
+    monthlyWideHeaders:['품명','규격'],
+    monthlyCompactMonths:true,
+    monthlyEqualMonths:true,
+    monthlyQtyHeader:'수량',
+    monthlyQtySuffix:'',
+    tableClass:'vendor-price-summary-table',
+    afterRender:()=>{
+      $$('#content .vendorPriceMonthlyMetricBtn').forEach(btn=>btn.onclick=()=>{
+        state.vendorPriceMonthlyMetric=btn.dataset.metric;
+        vendorPriceSummary(vendor);
+      });
+    }
+  });
+}
 
 function vendorDetail(vendor){
   const rows=activeRows().filter(r=>r.vendor===vendor);
@@ -3082,7 +3154,6 @@ function priceAlert(){
     {h:'최근 매입단가',k:'lastPrice',cell:o=>o.lastPrice?`<b>${won(Math.round(o.lastPrice))}</b>`:'-',raw:o=>Math.round(o.lastPrice||0)},
     {h:'마지막 입고일',k:'lastDate',cell:o=>o.lastDate||'-',raw:o=>o.lastDate||''},
     {h:'변동%',k:'chg',cell:o=>o.chg>=0?`<span class="up">▲${o.chg.toFixed(1)}%</span>`:`<span class="down">▼${Math.abs(o.chg).toFixed(1)}%</span>`,raw:o=>o.chg},
-    {h:'최근월',l:1,cell:o=>o.last},
     {h:'관측월수',cell:o=>won(o.months)},
     {h:'공급처',l:1,cell:o=>esc([...new Set((o.srcRows||[]).map(r=>r.vendor).filter(Boolean))].map(v=>clampTxt(v,10)).join(', ')),raw:o=>[...new Set((o.srcRows||[]).map(r=>r.vendor).filter(Boolean))].join(', ')},
   ];
