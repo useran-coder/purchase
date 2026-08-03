@@ -3592,7 +3592,7 @@ function trendView(){
   'use strict';
   const APP_VERSION='purchase_v35_sync_v2';
   const BASE_KEY='purchase_gsync_base_v1', OLD_BASE_KEYS=['purchase_gsync_base_v0'];
-  const AUTO_DELAY=5000, BUSY_RETRY=1300, MAX_AUTO_RETRY=5;
+  const AUTO_DELAY=15000, BUSY_RETRY=1500, MAX_AUTO_RETRY=6;
   let _gsBase=null,_gsBusy=false,_gsAutoT=null,_gsApplying=false,_gsPendingPush=false,_gsPushAt=0,_gsPollT=null;
   let _baseReady=null,_autoRetry=0,_uiMode='idle',_uiLabel='',_lastTransient='';
 
