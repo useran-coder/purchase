@@ -495,14 +495,17 @@
   #natureModal .tablewrap th:nth-child(6),#natureModal .tablewrap td:nth-child(6),#natureModal .tablewrap th:nth-child(7),#natureModal .tablewrap td:nth-child(7){width:130px}
   #natureModal .tablewrap th,#natureModal .tablewrap td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #natureModal .tablewrap input,#natureModal .tablewrap select{max-width:100%;box-sizing:border-box}
-  /* 매입구분 · 품목 지정: 규격은 기존 대비 1/5 축소, 분류 3열은 사업부 열과 동일 폭 */
-  #categoryModal #categoryTableWrap table{table-layout:fixed;min-width:1170px;width:100%}
-  #categoryModal #categoryTableWrap th:nth-child(3),#categoryModal #categoryTableWrap td:nth-child(3){width:120px;max-width:120px}
+  /* 매입구분 · 품목 지정: 사업부 구분·프로젝트·현장별·매입구분(대분류)·중분류·소분류는 기존 대비 1/5 확대, 품번·품명·규격은 축소 */
+  #categoryModal #categoryTableWrap table{table-layout:fixed;min-width:1140px;width:100%}
+  #categoryModal #categoryTableWrap th:nth-child(1),#categoryModal #categoryTableWrap td:nth-child(1){width:80px;max-width:80px}
+  #categoryModal #categoryTableWrap th:nth-child(2),#categoryModal #categoryTableWrap td:nth-child(2){width:95px;max-width:95px}
+  #categoryModal #categoryTableWrap th:nth-child(3),#categoryModal #categoryTableWrap td:nth-child(3){width:80px;max-width:80px}
+  #categoryModal #categoryTableWrap th:nth-child(4),#categoryModal #categoryTableWrap td:nth-child(4){width:110px;max-width:110px}
   #categoryModal #categoryTableWrap th:nth-child(5),#categoryModal #categoryTableWrap td:nth-child(5),
   #categoryModal #categoryTableWrap th:nth-child(7),#categoryModal #categoryTableWrap td:nth-child(7),
   #categoryModal #categoryTableWrap th:nth-child(8),#categoryModal #categoryTableWrap td:nth-child(8),
-  #categoryModal #categoryTableWrap th:nth-child(9),#categoryModal #categoryTableWrap td:nth-child(9){width:122px;max-width:122px}
-  #categoryModal #categoryTableWrap th:nth-child(6),#categoryModal #categoryTableWrap td:nth-child(6){width:150px;max-width:150px}
+  #categoryModal #categoryTableWrap th:nth-child(9),#categoryModal #categoryTableWrap td:nth-child(9){width:146px;max-width:146px}
+  #categoryModal #categoryTableWrap th:nth-child(6),#categoryModal #categoryTableWrap td:nth-child(6){width:180px;max-width:180px}
   #categoryModal #categoryTableWrap th,#categoryModal #categoryTableWrap td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #categoryModal #categoryTableWrap input,#categoryModal #categoryTableWrap select{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box}
   .item-purchase-table .col-item-division{width:128px;min-width:128px;max-width:128px}
@@ -2630,7 +2633,7 @@ function openCategoryManager(){
     const total=shown.length;
     const cnt=$('#categoryProductCount'); if(cnt)cnt.textContent=q?(`${total}건 표시`):(`${total}건 표시 (전체 기간·전체 목록)`);
     const wrap=$('#categoryTableWrap'); if(!wrap)return;
-    wrap.innerHTML=`<table><thead><tr>${catCols.map(c=>`<th class="${c.l?'l':''} ${c.cls||''} catSortTh" data-k="${c.k}">${esc(c.h)}${state.catSort.key===c.k?(state.catSort.dir===-1?' ▾':' ▴'):''}</th>`).join('')}</tr></thead><tbody>${shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td><td class="l"><select class="sel divisionCategoryAssign ${divisionFieldClass(o.division)}" data-k="${esc(o.key)}" style="min-width:122px"><option value="방화문부자재" ${o.division==='방화문부자재'?'selected':''}>방화문부자재</option><option value="PD사업부" ${o.division==='PD사업부'?'selected':''}>PD사업부</option><option value="관리·공통" ${o.division==='관리·공통'?'selected':''}>관리·공통</option></select></td><td class="l project-field-col"><input class="projectCategoryAssign" data-k="${esc(o.key)}" value="${esc(o.project||'')}" list="categoryProjectList" placeholder="프로젝트·현장별" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit"></td>${['big','mid','small'].map(l=>{
+    wrap.innerHTML=`<table><thead><tr>${catCols.map(c=>`<th class="${c.l?'l':''} ${c.cls||''} catSortTh" data-k="${c.k}">${esc(c.h)}${state.catSort.key===c.k?(state.catSort.dir===-1?' ▾':' ▴'):''}</th>`).join('')}</tr></thead><tbody>${shown.map(o=>`<tr><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td><td class="l"><select class="sel divisionCategoryAssign ${divisionFieldClass(o.division)}" data-k="${esc(o.key)}" style="min-width:122px"><option value="방화문부자재" ${o.division==='방화문부자재'?'selected':''}>방화문부자재</option><option value="PD사업부" ${o.division==='PD사업부'?'selected':''}>PD사업부</option><option value="관리·공통" ${o.division==='관리·공통'?'selected':''}>관리·공통</option><option value="미지정" ${o.division==='미지정'?'selected':''}>⚠ 미지정</option></select></td><td class="l project-field-col"><input class="projectCategoryAssign" data-k="${esc(o.key)}" value="${esc(o.project||'')}" list="categoryProjectList" placeholder="프로젝트·현장별" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit"></td>${['big','mid','small'].map(l=>{
       if(l==='big'){
         const vals=bigEditValues(),selected=o.big||'';
         return `<td class="l"><select class="catAssign" data-k="${esc(o.key)}" data-l="big" style="width:150px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit;font-weight:700;${natureTagStyle(selected)}"><option value="" ${selected?'':'selected'}>분류없음</option>${vals.map(v=>`<option value="${esc(v)}" ${selected===v?'selected':''}>${esc(v)}</option>`).join('')}</select></td>`;
@@ -2662,6 +2665,7 @@ function openCategoryManager(){
   const fullDraw=(query='')=>{
     catSearchQuery=String(query||'');
     products=makeProducts().filter(o=>categoryManagerDivision==='전체'||o.divs.has(categoryManagerDivision));
+    const unassignedDivisionProducts=makeProducts().filter(o=>o.divs.has('미지정'));
     const projectValues=['전체',...new Set(products.map(o=>o.project).filter(Boolean))];
     if(!projectValues.includes(categoryProjectFilter))categoryProjectFilter='전체';
     const values=level=>level==='big'?bigEditValues():categoryValues(level);
@@ -2689,7 +2693,7 @@ function openCategoryManager(){
     const categoryFilters=`<div class="mat-filter-toolbar">${filterRow('big','매입구분',bigFilterValues,catBigFilter,bigCounts)}${catBigFilter!=='전체'?filterRow('mid','중분류',midFilterValues,catMidFilter,midCounts):''}${catBigFilter!=='전체'&&catMidFilter!=='전체'?filterRow('small','소분류',smallFilterValues,catSmallFilter,smallCounts):''}</div>`;
     body.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${renameBox('big','매입구분(대분류)',bigs)}${renameBox('mid','중분류',mids)}${renameBox('small','소분류',smalls)}</div>${datalist('catBigList',bigs)}${datalist('catMidList',mids)}${datalist('catSmallList',smalls)}${datalist('categoryProjectList',[...new Set([...CUR.map(r=>r.project).filter(Boolean),...(state.projectCustom||[])])])}${categoryFilters}<div style="display:flex;gap:8px;align-items:center;margin:8px 0"><input class="category-product-search" id="categoryProductSearch" value="${esc(query)}" placeholder="품번·품명·규격·매입구분(대분류)·중분류·소분류 검색" style="flex:1;height:38px;border:1px solid var(--line);border-radius:7px;padding:0 10px;font-family:inherit;font-size:13px"><span class="sub2" id="categoryProductCount"></span></div><div class="tablewrap" style="height:60vh;max-height:60vh" id="categoryTableWrap"></div>`;
     const categorySearchRow=body.querySelector('#categoryProductSearch')?.parentElement; if(categorySearchRow)categorySearchRow.insertAdjacentHTML('beforebegin',projectFilterRow);
-    body.insertAdjacentHTML('afterbegin',`<div class="ctrlbar division-filter-bar"><b>🏢 사업부</b><div id="categoryDivisionFilters" class="chips">${['방화문부자재','PD사업부','관리·공통','전체'].map(v=>`<button type="button" class="chip ${divisionFieldClass(v)} ${categoryManagerDivision===v?'on':''}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div></div>`);
+    body.insertAdjacentHTML('afterbegin',`<div class="ctrlbar division-filter-bar"><b>🏢 사업부</b><div id="categoryDivisionFilters" class="chips">${['방화문부자재','PD사업부','관리·공통','전체'].map(v=>`<button type="button" class="chip ${divisionFieldClass(v)} ${categoryManagerDivision===v?'on':''}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}${unassignedDivisionProducts.length?`<button type="button" class="chip division-field-all ${categoryManagerDivision==='미지정'?'on':''}" data-v="미지정">⚠ 미지정 (${unassignedDivisionProducts.length})</button>`:''}</div></div>`);
     $$('#categoryDivisionFilters button').forEach(b=>b.onclick=()=>{categoryManagerDivision=b.dataset.v;fullDraw(catSearchQuery);});
     $$('#categoryModal .catRenameBtn').forEach(b=>b.onclick=()=>{const l=b.dataset.l,from=$(`#categoryModal .catRenameFrom[data-l="${l}"]`).value,to=$(`#categoryModal .catRenameTo[data-l="${l}"]`).value.trim();if(!to||to===from)return;state.categoryRename[l]=state.categoryRename[l]||{};Object.keys(state.categoryRename[l]).forEach(k=>{if(state.categoryRename[l][k]===from)state.categoryRename[l][k]=to;});state.categoryRename[l][from]=to;rebuildCUR();saveSettings();gsAutoPush();fullDraw(query);});
     $$('#categoryModal .categoryFilterBtn').forEach(b=>b.onclick=()=>{const kind=b.dataset.kind,v=b.dataset.v;if(kind==='big'){catBigFilter=v;catMidFilter='전체';catSmallFilter='전체';}else if(kind==='mid'){catMidFilter=v;catSmallFilter='전체';}else catSmallFilter=v;fullDraw(catSearchQuery);});
@@ -2708,7 +2712,7 @@ function rankItem(){
   // 품번별 매입 표는 저장된 이전 분류값이 남아 있어도
   // 자동분류 가능한 품목을 먼저 정상화한 뒤 필터와 표를 구성합니다.
   const divisionBaseRows=CUR.filter(r=>(state.inclOverhead||r.natCls!=='ovh')&&inPeriod(r)).map(normalizeAutomaticNatureRow);
-  const divisionValues=['전체','방화문부자재','PD사업부','관리·공통'];
+  const divisionValues=['전체','방화문부자재','PD사업부','관리·공통','미지정'];
   if(!divisionValues.includes(state.itemDivisionFilter))state.itemDivisionFilter=divisionValues.includes(state.division)?state.division:'전체';
   const itemDivisionFilter=state.itemDivisionFilter;
   const rows=(itemDivisionFilter==='전체'?divisionBaseRows:divisionBaseRows.filter(r=>r.div===itemDivisionFilter));
@@ -2737,7 +2741,7 @@ function rankItem(){
   const cols=[
     ...(state.majorProductEdit?[{h:'주요',cls:'major-product-col',cell:o=>`<input type="checkbox" class="majorProductCheck" data-k="${esc(o.catKey)}" ${majorProducts[o.catKey]?'checked':''} title="주요제품으로 지정">`}]:[]),
     {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
-    ...(showDivisionProject?[{h:'사업부 구분',l:1,cls:'col-item-division',k:'division',cell:o=>`<select class="sel itemDivisionAssign ${divisionFieldClass(o.division)}" data-k="${esc(o.catKey)}"><option value="방화문부자재" ${o.division==='방화문부자재'?'selected':''}>방화문부자재</option><option value="PD사업부" ${o.division==='PD사업부'?'selected':''}>PD사업부</option><option value="관리·공통" ${o.division==='관리·공통'?'selected':''}>관리·공통</option></select>`,raw:o=>o.division},{h:'프로젝트·현장별',l:1,cls:'col-item-project',k:'project',cell:o=>`<input class="itemProjectAssign" data-k="${esc(o.catKey)}" value="${esc(o.project)}" list="riProjectList" placeholder="프로젝트·현장별" style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit">`,raw:o=>o.project}]:[]),
+    ...(showDivisionProject?[{h:'사업부 구분',l:1,cls:'col-item-division',k:'division',cell:o=>`<select class="sel itemDivisionAssign ${divisionFieldClass(o.division)}" data-k="${esc(o.catKey)}"><option value="방화문부자재" ${o.division==='방화문부자재'?'selected':''}>방화문부자재</option><option value="PD사업부" ${o.division==='PD사업부'?'selected':''}>PD사업부</option><option value="관리·공통" ${o.division==='관리·공통'?'selected':''}>관리·공통</option><option value="미지정" ${o.division==='미지정'?'selected':''}>⚠ 미지정</option></select>`,raw:o=>o.division},{h:'프로젝트·현장별',l:1,cls:'col-item-project',k:'project',cell:o=>`<input class="itemProjectAssign" data-k="${esc(o.catKey)}" value="${esc(o.project)}" list="riProjectList" placeholder="프로젝트·현장별" style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit">`,raw:o=>o.project}]:[]),
     {h:'매입구분',l:1,cls:'col-item-nat',k:'nat',cell:o=>itemNatureSelect(o),raw:o=>state.natureOverride[productKey((o.srcRows&&o.srcRows[0])||o)]||o.nat},
     {h:'중분류',l:1,cls:'col-item-mid',k:'mid',cell:o=>`<input class="catAssign" data-k="${esc(o.catKey)}" data-l="mid" value="${esc(o.mid)}" list="riMidList" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-family:inherit">`,raw:o=>o.mid},
     {h:'소분류',l:1,cls:'col-item-small',k:'small',cell:o=>`<input class="catAssign" data-k="${esc(o.catKey)}" data-l="small" value="${esc(o.small)}" list="riSmallList" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-family:inherit">`,raw:o=>o.small},
@@ -3494,6 +3498,11 @@ function poView(){
 function costRatio(){
   // 매출대비 화면은 원가율의 전체 구성 확인이 목적이므로 관리비/기타도 항상 포함합니다.
   const rows=CUR.filter(r=>(state.division==='전체'||r.div===state.division)&&inPeriod(r));
+  // 사업부가 자동 분류되지 않은(프로젝트·현장 정보 없음) 매입은 '전체'가 아닌 특정 사업부 화면에서는
+  // r.div==='미지정'이라 위 필터에서 항상 빠집니다. 매출대비 매입비율이 실제보다 낮게 보이지 않도록
+  // 이 금액을 별도로 집계해 화면에 경고로 노출합니다.
+  const unassignedRows=state.division!=='전체'?CUR.filter(r=>r.div==='미지정'&&inPeriod(r)):[];
+  const unassignedAmt=unassignedRows.reduce((a,r)=>a+amtOf(r),0);
   const dataMonths=[...new Set(rows.map(r=>r.ym))].sort();
   const ratioYear=(state.period&&/^\d{4}$/.test(state.period.year||'')?state.period.year:'')||((dataMonths[dataMonths.length-1]||`${new Date().getFullYear()}-01`).slice(0,4));
   const ms=Array.from({length:12},(_,i)=>`${ratioYear}-${String(i+1).padStart(2,'0')}`);
@@ -3508,6 +3517,9 @@ function costRatio(){
   // per month × nature
   const cell=(ym,nat)=>rows.filter(r=>r.ym===ym&&(r.nat||UNCLASSIFIED_NATURE)===nat).reduce((a,r)=>a+amtOf(r),0);
   let html=`<div class="rhead"><span class="title">💹 매출대비 매입비율</span><span class="meta">${ms[0]||''}~${ms[ms.length-1]||''} · 매입구분별 매출 점유율</span><span class="spacer"></span><button class="btn ghost sm" id="csExport">엑셀 내보내기</button></div>`;
+  if(unassignedAmt>0){
+    html+=`<div class="panel" style="margin:10px 0;border:1px solid #f59e0b;background:#fffbeb"><b style="color:#b45309">⚠ 사업부 미지정 매입 ${won(unassignedAmt)} (${unassignedRows.length}건)</b><div class="sub2" style="line-height:1.6;margin-top:4px">프로젝트·현장 정보가 없어 사업부가 자동 분류되지 않은 매입입니다. 현재 '<b>${esc(state.division)}</b>' 화면의 매출대비 매입비율 집계에서는 빠져 있어 실제 비율보다 낮게 보일 수 있습니다. 아래에서 사업부를 지정하면 집계에 반영됩니다.<button class="btn ghost sm" id="csUnassignedBtn" style="margin-left:8px">🗂️ 품목분류에서 사업부 지정하기</button></div></div>`;
+  }
   const salesName=salesLabel();
   html+=ratioNatControls;
   const totRow=ms.map(m=>rows.filter(r=>r.ym===m).reduce((a,r)=>a+amtOf(r),0));
@@ -3534,6 +3546,7 @@ function costRatio(){
   html+=`<div class="panel" style="margin-top:14px"><h3>💡 원가율 진단</h3><div class="sub2" style="line-height:1.7">전체 매출대비 매입비율은 <b>${r.toFixed(1)}%</b>입니다. ${r>=65?'원가율이 높습니다. 원자재 kg단가·외주 단가 협상과 복수구매선 확보로 개선 여지를 점검하세요.':r>=50?'원가율이 통상 범위입니다. 매입구분별 비중 변화를 지속 모니터링하세요.':'원가율이 양호합니다.'} 원자재 비중이 큰 만큼 EGI 등 강재 시세 변동을 단가추이로 추적하는 것이 중요합니다.</div></div>`;
   $('#content').innerHTML=html; clearActiveMenu(); fitRatioChartText();
   $$('#content .ratioNatFilter').forEach(btn=>btn.onclick=()=>{state.costRatioNat=btn.dataset.nat;costRatio();});
+  const csUnassignedBtn=$('#csUnassignedBtn'); if(csUnassignedBtn)csUnassignedBtn.onclick=openCategoryManager;
   $$('#content .salesIn').forEach(inp=>inp.onchange=e=>{ const ym=e.target.dataset.ym; const v=toNum(e.target.value); if(state.division==='PD사업부'){ state.monthlyPdSales[ym]=v||''; } else { state.monthlySales[ym]=v||''; state.salesMonthlyManual=state.salesMonthlyManual||{}; if(v)state.salesMonthlyManual[ym]=true;else delete state.salesMonthlyManual[ym]; } logEdit('월매출 입력',`${ym} ${state.division==='PD사업부'?'PD':'방화문부자재'} 월매출을 ${v?won(v):'삭제'}으로 변경`); saveSettings(); gsAutoPush(); costRatio(); });
   $('#csExport').onclick=()=>{ const aoa=[['구분',...ms,'합계']]; aoa.push(['월매출',...ms.map(m=>+salesFor(m)||0),ms.reduce((a,m)=>a+(+salesFor(m)||0),0)]); natOrder.forEach(nat=>aoa.push([nat,...ms.map(m=>cell(m,nat)),ms.reduce((a,m)=>a+cell(m,nat),0)])); aoa.push(['매입합계',...totRow,totRow.reduce((a,b)=>a+b,0)]); const ws=XLSX.utils.aoa_to_sheet(aoa);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'원가율');XLSX.writeFile(wb,'cost_ratio.xlsx'); };
 }
