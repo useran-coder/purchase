@@ -585,6 +585,14 @@
   .dcmp-natshare .nums b.pd{color:#ea580c;font-weight:800}
   .dcmp-natshare .nums .sep{color:#cbd5e1;font-weight:700}
   .dcmp-natshare .dcmp-split{width:100%}
+  /* v47: 매출대비 매입비율 표의 매입구분 행 — 클릭하면 그 구분의 상세 리스트가 펼쳐집니다. */
+  tr.ratio-natpick{cursor:pointer}
+  tr.ratio-natpick:hover{background:#f8fafc}
+  tr.ratio-natpick.on{background:#eef4ff;box-shadow:inset 3px 0 0 var(--accent)}
+  .ratio-drill-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .ratio-drill-head .ttl{font-size:13px;font-weight:800;color:var(--navy)}
+  a.ratioDrill{color:inherit;font-weight:400;text-decoration:none;cursor:pointer}
+  a.ratioDrill:hover{color:var(--navy);text-decoration:underline;text-underline-offset:2px}
   table.divcmp-table tr.natpick{cursor:pointer}
   table.divcmp-table tr.natpick:hover{background:#f8fafc}
   table.divcmp-table tr.natpick.on{background:#eef4ff;box-shadow:inset 3px 0 0 var(--accent)}
@@ -1295,7 +1303,7 @@ let state = {
   divisionSplitOverride:{}, // 품번|품명|규격 → {ym:{fireRatio}} 원자재 공용품목 월별 사업부 분배 비율 (syncable)
   gsync:{url:'',key:'',auto:false,lastSync:'',user:'',syncCount:0},
   // view-local
-  priceCompItem:null, priceCompMonth:null, priceTrendItem:null, priceTrendBack:null, priceTrendBackLabel:'품목 리스트', priceTrendProject:'전체', priceTrendBig:'전체', priceTrendMid:'전체', priceTrendSmall:'전체', yoyMonth:null, yoySpan:6, natureFilter:null, catDrill:null, catDrill2:null, matGrp:'grade', matForm:'all', matGradeFilter:'all', matThickFilter:'all', matGradeSelected:null, purchaseCycleNat:'원자재', purchaseCycleMetric:'kg', purchaseCycleStatus:'all', paretoNat:'all', paretoPct:80, costRatioNat:'all',
+  priceCompItem:null, priceCompMonth:null, priceTrendItem:null, priceTrendBack:null, priceTrendBackLabel:'품목 리스트', priceTrendProject:'전체', priceTrendBig:'전체', priceTrendMid:'전체', priceTrendSmall:'전체', yoyMonth:null, yoySpan:6, natureFilter:null, catDrill:null, catDrill2:null, matGrp:'grade', matForm:'all', matGradeFilter:'all', matThickFilter:'all', matGradeSelected:null, purchaseCycleNat:'원자재', purchaseCycleMetric:'kg', purchaseCycleStatus:'all', paretoNat:'all', paretoPct:80, costRatioNat:'all', costRatioList:'vendor',
 };
 
 /* 방화문부자재 월매출 기본값 (총괄표 기준). 매출 파일을 올리면 자동으로 덮어씁니다. */
@@ -1452,10 +1460,9 @@ async function persistData(){ const slim=datasets.map(d=>({uid:d.uid,fileName:d.
 /* v47 동기화 수정 ①: 기존에는 saveSettings() 호출부 76곳 중 38곳에서만 gsAutoPush()를 함께
    불러, 나머지 절반의 수정(분류 변경·사업부 지정·목표비율·프로젝트 지정 등)은 로컬에만 저장되고
    구글시트로는 전송되지 않았습니다. 다른 PC에서 보면 "가끔 반영이 안 되는" 현상의 주원인입니다.
-   이제 saveSettings() 자체가 항상 자동저장을 예약하므로 누락이 발생하지 않습니다.
-   (동기화가 서버값을 내려받아 쓰는 동안에는 _gsApplying 플래그로 되돌림 루프를 막습니다.) */
+   이제 saveSettings() 자체가 항상 자동저장을 예약하므로 누락이 발생하지 않습니다. */
 async function saveSettings(){ try{if(typeof refreshPurchaseMonthlySync==='function')refreshPurchaseMonthlySync()}catch(_){} const s={}; SETTING_KEYS.forEach(k=>s[k]=state[k]); await idbSet('settings',s); try{ if(typeof gsAutoPush==='function')gsAutoPush(); }catch(_){} }
-const SETTING_KEYS=['basis','inclOverhead','natureCoverageVersion','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','divCmpNat','divCmpList','paretoNat','paretoPct','priceTrendBig','priceTrendMid','priceTrendSmall','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','commonProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','materialDB','materialBase','divisionOverride','divisionSplitOverride','targetPct','projectMemo','projectCustom','projectDivision','projectRename','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','editLog','elogSeenTs','gsync'];
+const SETTING_KEYS=['basis','inclOverhead','natureCoverageVersion','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','divCmpNat','divCmpList','paretoNat','paretoPct','costRatioNat','costRatioList','priceTrendBig','priceTrendMid','priceTrendSmall','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','commonProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','materialDB','materialBase','divisionOverride','divisionSplitOverride','targetPct','projectMemo','projectCustom','projectDivision','projectRename','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','editLog','elogSeenTs','gsync'];
 
 /* ============================================================
    File handling (SheetJS)
@@ -4003,22 +4010,128 @@ function costRatio(){
   // sales input row
   html+=`<tr style="background:#f0fdfa"><td class="l"><b>${esc(salesName)}(입력)</b></td>${ms.map(m=>`<td><input class="mini salesIn" data-ym="${m}" value="${salesFor(m)!==''?won(salesFor(m)):''}" placeholder="입력"></td>`).join('')}<td><b id="salesTot">${won(ms.reduce((a,m)=>a+(+salesFor(m)||0),0))}</b></td></tr>`;
   // nature rows
-  natOrder.forEach(nat=>{ const c=natureInfo(nat);
-    html+=`<tr><td class="l"><span class="tag ${c.cls}">${nat}</span></td>${ms.map(m=>`<td>${won(cell(m,nat))}</td>`).join('')}<td>${won(ms.reduce((a,m)=>a+cell(m,nat),0))}</td></tr>`;
+  // v47: 매입구분 행을 클릭하면 위 그래프가 그 구분으로 바뀌고, 표 아래에 상세 리스트가 펼쳐집니다.
+  natOrder.forEach(nat=>{ const c=natureInfo(nat), on=(selectedNat===nat)?'on':'';
+    html+=`<tr class="ratio-natpick ${on}" data-nat="${esc(nat)}" title="클릭하면 ${esc(nat)} 매입 상세 리스트를 봅니다"><td class="l"><span class="tag ${c.cls}">${nat}</span></td>${ms.map(m=>`<td>${won(cell(m,nat))}</td>`).join('')}<td>${won(ms.reduce((a,m)=>a+cell(m,nat),0))}</td></tr>`;
   });
   // total purchase row
   html+=`<tr class="total-row"><td class="l">매입 합계</td>${totRow.map(v=>`<td>${won(v)}</td>`).join('')}<td>${won(totRow.reduce((a,b)=>a+b,0))}</td></tr>`;
   // ratio row
   html+=`<tr style="background:#fffbeb"><td class="l"><b>매출대비 매입비율</b></td>${ms.map((m,i)=>{const s=+salesFor(m)||0;const rr=s?totRow[i]/s*100:null;return `<td><b class="${rr>=50?'up':'flat'}">${rr!=null?rr.toFixed(1)+'%':'—'}</b></td>`;}).join('')}<td>${ratioSummary.ratio!=null?`<b class="${ratioSummary.ratio>=50?'up':'flat'}">${ratioSummary.ratio.toFixed(1)}%</b>`:'—'}</td></tr>`;
   html+=`</tbody></table></div>`;
+  html+=costRatioNatList(selectedNat,graphRows,graphSummary);
   // insight
   const s=ratioSummary.sales; const p=ratioSummary.purchase; const r=ratioSummary.ratio||0;
   html+=`<div class="panel" style="margin-top:14px"><h3>💡 원가율 진단</h3><div class="sub2" style="line-height:1.7">전체 매출대비 매입비율은 <b>${r.toFixed(1)}%</b>입니다. ${r>=65?'원가율이 높습니다. 원자재 kg단가·외주 단가 협상과 복수구매선 확보로 개선 여지를 점검하세요.':r>=50?'원가율이 통상 범위입니다. 매입구분별 비중 변화를 지속 모니터링하세요.':'원가율이 양호합니다.'} 원자재 비중이 큰 만큼 EGI 등 강재 시세 변동을 단가추이로 추적하는 것이 중요합니다.</div></div>`;
   $('#content').innerHTML=html; clearActiveMenu(); fitRatioChartText();
-  $$('#content .ratioNatFilter').forEach(btn=>btn.onclick=()=>{state.costRatioNat=btn.dataset.nat;costRatio();});
+  $$('#content .ratioNatFilter').forEach(btn=>btn.onclick=()=>{state.costRatioNat=btn.dataset.nat;saveSettings();costRatio();});
+  // v47: 표의 매입구분 행 클릭 — 같은 행을 다시 누르면 '전체'로 돌아갑니다.
+  $$('#content tr.ratio-natpick').forEach(tr=>tr.onclick=()=>{
+    const v=tr.dataset.nat;
+    state.costRatioNat=(state.costRatioNat===v)?'all':v;
+    saveSettings(); costRatio();
+    if(state.costRatioNat!=='all'){const el=$('#ratioDrillPanel'); if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  });
+  $$('#content .ratioListMode').forEach(b=>b.onclick=()=>{state.costRatioList=b.dataset.m;saveSettings();costRatio();});
+  const rdClose=$('#ratioDrillClose'); if(rdClose)rdClose.onclick=()=>{state.costRatioNat='all';saveSettings();costRatio();};
+  $$('#content .ratioDrill').forEach(a=>a.onclick=e=>{
+    e.preventDefault();
+    const o=_ratioDrillMap.get(a.dataset.k); if(!o)return;
+    txnListDetail(`🧾 ${o.title} · 입고 내역`, `${esc(state.costRatioNat)} · 매입액 ${won(o.amt)} (${won(o.n)}건)`,
+      o.rows, '매출대비 매입비율', ()=>costRatio());
+  });
+  const rdExport=$('#ratioDrillExport'); if(rdExport)rdExport.onclick=()=>{
+    const isItem=state.costRatioList==='item';
+    const kg=(natureInfo(state.costRatioNat).cls==='raw')||state.costRatioNat==='원자재';
+    const aoa=[['순위', ...(isItem?['품번','품명','규격','거래처수']:['거래처','품목수']), '매입액', ...(kg?['중량(kg)']:[]), '구분 내 비중(%)','매출대비(%)','건수','최근 매입일']];
+    [..._ratioDrillMap.values()].forEach((o,i)=>aoa.push([i+1, ...(isItem?[o.code,o.name,o.spec,o.others.size]:[o.vendor,o.others.size]), o.amt, ...(kg?[Math.round(o.qty)]:[]), +o.share.toFixed(2), o.salesShare==null?'':+o.salesShare.toFixed(2), o.n, o.last]));
+    const ws=XLSX.utils.aoa_to_sheet(aoa),wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'매입구분리스트');
+    XLSX.writeFile(wb,`cost_ratio_${state.costRatioNat}_${isItem?'item':'vendor'}.xlsx`);
+  };
   const csUnassignedBtn=$('#csUnassignedBtn'); if(csUnassignedBtn)csUnassignedBtn.onclick=openCategoryManager;
   $$('#content .salesIn').forEach(inp=>inp.onchange=e=>{ const ym=e.target.dataset.ym; const v=toNum(e.target.value); if(state.division==='PD사업부'){ state.monthlyPdSales[ym]=v||''; } else { state.monthlySales[ym]=v||''; state.salesMonthlyManual=state.salesMonthlyManual||{}; if(v)state.salesMonthlyManual[ym]=true;else delete state.salesMonthlyManual[ym]; } logEdit('월매출 입력',`${ym} ${state.division==='PD사업부'?'PD':'방화문부자재'} 월매출을 ${v?won(v):'삭제'}으로 변경`); saveSettings(); gsAutoPush(); costRatio(); });
   $('#csExport').onclick=()=>{ const aoa=[['구분',...ms,'합계']]; aoa.push(['월매출',...ms.map(m=>+salesFor(m)||0),ms.reduce((a,m)=>a+(+salesFor(m)||0),0)]); natOrder.forEach(nat=>aoa.push([nat,...ms.map(m=>cell(m,nat)),ms.reduce((a,m)=>a+cell(m,nat),0)])); aoa.push(['매입합계',...totRow,totRow.reduce((a,b)=>a+b,0)]); const ws=XLSX.utils.aoa_to_sheet(aoa);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'원가율');XLSX.writeFile(wb,'cost_ratio.xlsx'); };
+}
+
+/* v47: 매출대비 매입비율 화면에서 선택한 매입구분의 상세 리스트.
+   위쪽 그래프·표는 그대로 두고 표 아래에만 펼쳐지므로, 비율 추이를 보면서
+   그 안에 어떤 거래처·품목이 들어 있는지 바로 확인할 수 있습니다. */
+let _ratioDrillMap=new Map();
+// 매입구분 태그 색과 그래프 막대 색을 맞춰, 어떤 구분을 보고 있는지 한눈에 알 수 있게 합니다.
+const NAT_BAR_COLOR={raw:'#0f766e',out:'#6d28d9',part:'#1d4ed8',mold:'#c2410c',ovh:'#64748b',unclassified:'#94a3b8'};
+function costRatioNatList(selectedNat,natRows,natSummary){
+  _ratioDrillMap=new Map();
+  if(selectedNat==='all')return '';
+  if(!natRows.length)return `<div class="panel" id="ratioDrillPanel" style="margin-top:14px"><div class="sub2">선택한 기간에 <b>${esc(selectedNat)}</b> 매입 내역이 없습니다.</div></div>`;
+  const listMode=state.costRatioList==='item'?'item':'vendor';
+  // v47: 중량(kg)은 kg 단위로 거래하는 원자재에서만 의미가 있어 그 구분에서만 '중량' 열을 냅니다.
+  //      다른 매입구분(외주가공·부품 등)은 수량 단위가 제각각이라 표시하지 않습니다.
+  const showKg=(natureInfo(selectedNat).cls==='raw')||selectedNat==='원자재';
+  const map=new Map();
+  natRows.forEach(r=>{
+    const k=listMode==='item'?productKey(r):(r.vendor||'(미상)');
+    if(!map.has(k))map.set(k,{key:k,vendor:r.vendor||'(미상)',code:r.code||'',name:r.name||'',spec:r.spec||'',amt:0,qty:0,n:0,rows:[],last:'',others:new Set()});
+    const o=map.get(k);
+    o.amt+=amtOf(r); o.qty+=(+r.qty||0); o.n++; o.rows.push(r);
+    if((r.d||'')>o.last)o.last=r.d||'';
+    o.others.add(listMode==='item'?(r.vendor||'(미상)'):productKey(r));
+  });
+  const arr=[...map.values()].sort((a,b)=>b.amt-a.amt);
+  const tot=arr.reduce((a,o)=>a+o.amt,0);
+  const mx=Math.max(1,...arr.map(o=>o.amt));
+  const sales=natSummary&&natSummary.sales||0;
+  arr.forEach(o=>{
+    o.share=tot?o.amt/tot*100:0;
+    o.salesShare=sales?o.amt/sales*100:null;
+    o.title=listMode==='item'?`${o.name}${o.spec?' ('+o.spec+')':''}`:o.vendor;
+    _ratioDrillMap.set(o.key,o);
+  });
+  const c=natureInfo(selectedNat);
+  const head=`<div class="ratio-drill-head">
+    <span class="tag ${c.cls||'custom'}">${esc(selectedNat)}</span>
+    <span class="ttl">매입구분 상세 리스트</span>
+    <span class="sub2">${listMode==='item'?'품목/규격':'거래처'} ${won(arr.length)}개 · 매입액 ${wonM(tot)}${sales?` · 매출대비 ${(tot/sales*100).toFixed(1)}%`:''}</span>
+    <span style="flex:1"></span>
+    <div class="seg">
+      <button type="button" class="ratioListMode ${listMode==='vendor'?'on':''}" data-m="vendor">🏢 거래처별</button>
+      <button type="button" class="ratioListMode ${listMode==='item'?'on':''}" data-m="item">📦 품목/규격별</button>
+    </div>
+    <button class="btn ghost sm" id="ratioDrillExport">엑셀 내보내기</button>
+    <button class="btn ghost sm" id="ratioDrillClose">✕ 닫기</button>
+  </div>`;
+  // 앞쪽(순위+이름) 열 정의 — 합계 행의 빈칸 수를 여기서 함께 계산해 열이 어긋나지 않게 합니다.
+  const leadCols=listMode==='item'
+    ? `<th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th>거래처수</th>`
+    : `<th class="l">거래처</th><th>품목수</th>`;
+  const leadCount=1+(listMode==='item'?4:2);
+  const body=arr.map((o,i)=>{
+    const nameCell=listMode==='item'
+      ? `<td class="l"><a href="#" class="ratioDrill" data-k="${esc(o.key)}">${esc(o.code||'-')}</a></td>`
+        +`<td class="l"><a href="#" class="ratioDrill" data-k="${esc(o.key)}" title="${esc(o.name)}">${esc(clampTxt(o.name,30))}</a></td>`
+        +`<td class="l">${o.spec?`<span title="${esc(o.spec)}">${esc(clampTxt(o.spec,26))}</span>`:'<span style="color:#cbd5e1">-</span>'}</td>`
+        +`<td>${won(o.others.size)}</td>`
+      : `<td class="l"><a href="#" class="ratioDrill" data-k="${esc(o.key)}">${esc(o.vendor)}</a></td><td>${won(o.others.size)}</td>`;
+    return `<tr><td>${i+1}</td>${nameCell}`
+      +`<td>${won(o.amt)}</td>`
+      +(showKg?`<td>${o.qty>0?won(Math.round(o.qty))+'kg':'<span style="color:#cbd5e1">-</span>'}</td>`:'')
+      +`<td><b>${o.share.toFixed(1)}%</b></td>`
+      +`<td>${o.salesShare!=null?`<b class="${o.salesShare>=10?'up':'flat'}">${o.salesShare.toFixed(1)}%</b>`:'—'}</td>`
+      +`<td class="l"><div class="gcell">${barCell(o.amt,mx,NAT_BAR_COLOR[c.cls]||'var(--accent)')}</div></td>`
+      +`<td>${won(o.n)}</td><td>${esc(o.last||'-')}</td></tr>`;
+  }).join('');
+  const totQty=arr.reduce((a,o)=>a+o.qty,0);
+  const totRow=`<tr class="total-row"><td>합계</td>${'<td></td>'.repeat(leadCount-1)}`
+    +`<td>${won(tot)}</td>`
+    +(showKg?`<td>${totQty>0?won(Math.round(totQty))+'kg':''}</td>`:'')
+    +`<td>100.0%</td><td>${sales?`${(tot/sales*100).toFixed(1)}%`:'—'}</td><td></td>`
+    +`<td>${won(arr.reduce((a,o)=>a+o.n,0))}</td><td></td></tr>`;
+  return `<div class="panel" id="ratioDrillPanel" style="margin-top:14px">${head}
+    <div class="tablewrap" style="max-height:52vh"><table>
+      <thead><tr><th>순위</th>${leadCols}<th>매입액</th>${showKg?'<th>중량</th>':''}<th>구분 내 비중</th><th>매출대비</th><th class="l" style="min-width:120px">매입액 그래프</th><th>건수</th><th>최근 매입일</th></tr></thead>
+      <tbody>${body}${totRow}</tbody></table></div>
+    <div class="sub2" style="margin-top:8px;line-height:1.6">· <b>구분 내 비중</b>은 ${esc(selectedNat)} 매입액 안에서의 점유율, <b>매출대비</b>는 같은 기간 매출액 대비 비율입니다.<br>· ${listMode==='item'?'품번·품명':'거래처명'}을 클릭하면 원본 입고 내역을 볼 수 있습니다. 위 표의 같은 행을 다시 누르면 전체로 돌아갑니다.</div>
+  </div>`;
 }
 
 /* ---------- 레이저 매입비율 ---------- */
