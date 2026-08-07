@@ -4908,8 +4908,8 @@ init();
 #view-matprice .mp-grade-table td{padding:4px;border-right:1px solid #e4e9f0;border-bottom:1px solid #edf1f6;background:#fff;height:36px}
 #view-matprice .mp-grade-table input{width:100%;height:29px;border:1px solid #dce3ec;border-radius:5px;padding:5px 6px;text-align:right;font-size:11.5px;background:#fff;color:#1b2435;font-family:inherit}
 #view-matprice .mp-grade-table input.mp-vendor{text-align:left;font-weight:700;color:#25354d}
-#view-matprice .mp-grade-table td.mp-month-min{background:#fffbe9}
-#view-matprice .mp-grade-table td.mp-month-min input{background:#fff9d9;border-color:#eadf9a;color:#745f16;font-weight:900;box-shadow:inset 0 0 0 1px rgba(234,223,154,.10)}
+#view-matprice .mp-grade-table td.mp-month-min{background:#fff}
+#view-matprice .mp-grade-table td.mp-month-min input{background:rgba(255,235,59,.25);border-color:#dce3ec;color:#745f16;font-weight:900;box-shadow:none}
 #view-matprice .mp-scrap-auto-label{display:inline-flex;align-items:center;flex:0 0 auto;border-radius:5px;padding:3px 5px;background:#fff3bd;color:#8a5a00;font-size:10px;font-weight:900;white-space:nowrap}
 #view-matprice .mp-vendor-inline{display:flex;align-items:center;gap:4px;width:100%}
 #view-matprice .mp-vendor-inline .mp-vendor{min-width:0;flex:1 1 auto;width:auto;height:33px}
@@ -5456,9 +5456,8 @@ function ensureUi(){
   '#mgBox .acts button.p{background:#1d4ed8;color:#fff;border-color:#1d4ed8}'+
   '#mgBox .n{font-size:12px;color:#64748b;margin-top:14px;line-height:1.6}';
   document.head.appendChild(st);
-  var b=document.createElement('button');
-  b.id='mgBtn';b.type='button';b.textContent='🔧 원자재 단가 복구';
-  b.onclick=openPanel;document.body.appendChild(b);
+  /* [삭제] 화면 우측 '🔧 원자재 단가 복구' 버튼 — 진단 기능은 콘솔에서 __matGuardOpenPanel() 로 호출 가능 */
+  try{window.__matGuardOpenPanel=openPanel}catch(e){}
   var ov=document.createElement('div');ov.id='mgOv';ov.className='hidden';ov.innerHTML='<div id="mgBox"></div>';
   ov.addEventListener('click',function(e){if(e.target===ov)ov.classList.add('hidden')});
   document.body.appendChild(ov);
@@ -5518,5 +5517,859 @@ window.addEventListener('load',boot,{once:true});
 </script>
 <!-- ===== /MATGUARD v1.0 ===== -->
 
+
+<!-- ===== 원자재 단가 v210 · 3개 프로그램 공통 화면 (매입분석 · 편집) ===== -->
+<script id="matprice-v210">
+/* =============================================================================
+   원자재 단가 페이지 v200 — 매입현황(ERP) 기준 단일 원천
+   ---------------------------------------------------------------------------
+   · 원천 데이터 : 매입현황 엑셀(ERP 매입 리스트)
+   · 마스터(master) = 매출목표(영업분석)  : 업로드·수동항목 입력·구글시트 push
+   · 리더(reader)  = 제조원가            : 받기 전용(읽기 only) · 기준단가 적용만
+   · 저장소       : dbfastec_material_price_history_v1 (MATGUARD 합집합 보호)
+   ========================================================================== */
+(function(){
+'use strict';
+if(window.__matPriceV200)return; window.__matPriceV200=true;
+
+var MODE='edit';   // 'edit'(매출목표·매입분석) | 'read'(제조원가)
+var SRC ='cur';    // 'file'(매입현황 엑셀 업로드) | 'cur'(앱에 적재된 매입데이터) | 'none'
+var APP ='purchase';
+var IS_EDIT   = (MODE==='edit');
+var IS_MASTER = IS_EDIT;
+var MAT_KEY='dbfastec_material_price_history_v1';
+var BASE_KEY='dbfastec_cost_base_v2';
+
+var MATERIALS=[
+  {k:'EGI',   n:'EGI',   desc:'전기아연도금강판', p:1100},
+  {k:'HGI',   n:'HGI',   desc:'용융아연도금강판', p:1100},
+  {k:'PO',    n:'PO',    desc:'산세강판',        p:1030},
+  {k:'CR',    n:'CR',    desc:'냉연강판',        p:1300},
+  {k:'STS201',n:'STS201',desc:'스테인리스 201',  p:1400},
+  {k:'STS304',n:'STS304',desc:'스테인리스 304',  p:3800},
+  {k:'STS430',n:'STS430',desc:'스테인리스 430',  p:1600}
+];
+var GRADE_MATCH=['STS201','STS304','STS430','EGI','HGI','PO','CR'];
+var UNIT_MIN=200, UNIT_MAX=20000;
+
+function cp(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
+function po(v){return v&&typeof v==='object'&&!Array.isArray(v)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function n0(v){var n=Number(String(v==null?'':v).replace(/[, ]/g,''));return isFinite(n)?n:0}
+function won(v){return Math.round(n0(v)).toLocaleString('ko-KR')}
+function hash(s){s=String(s||'');var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(36)}
+function nowText(){var d=new Date(),p=function(n){return String(n).padStart(2,'0')};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
+function rowKeyId(y,k,vendor){return 'mr_'+hash(String(y)+'|'+String(k)+'|'+String(vendor||'').trim())}
+function toast(msg){
+  var old=document.getElementById('mpToastV200');if(old)old.remove();
+  var e=document.createElement('div');e.id='mpToastV200';e.textContent=msg;
+  e.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100005;background:#16284a;color:#fff;padding:11px 17px;border-radius:9px;font-size:12.5px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.28);max-width:80vw;text-align:center';
+  document.body.appendChild(e);setTimeout(function(){if(e.parentNode)e.remove()},3600);
+}
+
+function readLocal(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
+function blankDb(){return{years:{},marketPrices:{},updated:'',_cellUpdated:{},_rowDeleted:{},_extraUpdated:{},_extraDeleted:{},_scrapManual:{},_scrapManualVendor:{},_scrapAutoDeleted:{},egiExtras:[]}}
+function normalize(db){
+  if(!po(db))db=blankDb();
+  ['years','marketPrices','_cellUpdated','_rowDeleted','_extraUpdated','_extraDeleted','_scrapManual','_scrapManualVendor','_scrapAutoDeleted'].forEach(function(k){if(!po(db[k]))db[k]={}});
+  if(!Array.isArray(db.egiExtras))db.egiExtras=[];
+  db.egiExtras.forEach(function(r,i){if(po(r)&&!r._id)r._id='ex_'+hash(String(r.name||'')+'|'+i)});
+  Object.keys(db.years).forEach(function(y){
+    var gy=db.years[y]; if(!po(gy)){db.years[y]={};return}
+    Object.keys(gy).forEach(function(k){
+      var v=gy[k];
+      if(!Array.isArray(v)&&po(v)){v=Object.keys(v).sort(function(a,b){return(+a)-(+b)}).map(function(i){return v[i]});gy[k]=v}
+      if(!Array.isArray(gy[k]))gy[k]=[];
+      gy[k].forEach(function(r,i){
+        if(!po(r)){gy[k][i]=r={vendor:'',m:[]}}
+        if(!Array.isArray(r.m))r.m=Array(12).fill('');
+        while(r.m.length<12)r.m.push('');
+        if(!r._id)r._id=rowKeyId(y,k,r.vendor||('row'+i));
+      });
+    });
+  });
+  return db;
+}
+var _hostSig=null,_inRender=false,_lastHtml='',_openTrend={};
+function hostReload(force){
+  /* 원가프로그램 내부(클로저) MATERIAL_DB 를 공유 저장소와 맞춘다.
+     호출할 때마다 저장소에 다시 쓰기 때문에, 내용이 실제로 바뀐 경우에만 부른다.
+     (매 렌더마다 부르면 저장 → 이벤트 → 재렌더 루프로 화면이 깜빡였다) */
+  if(typeof window.__dbfReloadMaterialDBV124!=='function')return null;
+  var raw='';
+  try{raw=localStorage.getItem(MAT_KEY)||''}catch(e){}
+  var sig=raw.length+':'+raw.charCodeAt(0)+':'+raw.slice(-64);
+  if(!force&&sig===_hostSig)return null;
+  _hostSig=sig;
+  try{return window.__dbfReloadMaterialDBV124()}catch(e){return null}
+}
+function getDb(){
+  var db=null;
+  try{if(typeof state!=='undefined'&&state&&po(state.materialDB))db=state.materialDB}catch(e){}
+  if(!db){try{if(window.MATERIAL_DB&&po(window.MATERIAL_DB))db=window.MATERIAL_DB}catch(e){}}
+  var ls=readLocal(MAT_KEY);
+  if(!db||(ls&&po(ls)&&Object.keys(ls.years||{}).length>=Object.keys((db&&db.years)||{}).length))db=ls||db;
+  return normalize(db||blankDb());
+}
+function putDb(db,stampSource){
+  db=normalize(db);
+  db.updated=nowText();
+  if(stampSource){db._sourceApp=IS_MASTER?'sales_analyzer_v200':'cost_v200';db._sourceUpdatedAt=Date.now();db._masterSource='purchase_erp'}
+  try{localStorage.setItem(MAT_KEY,JSON.stringify(db))}catch(e){}
+  try{if(typeof state!=='undefined'&&state)state.materialDB=db}catch(e){}
+  try{window.MATERIAL_DB=db;window.__dbfMaterialMemoryDB=cp(db)}catch(e){}
+  try{if(typeof saveSettings==='function')saveSettings()}catch(e){}
+  hostReload(true);
+  try{window.dispatchEvent(new CustomEvent('materialPriceChanged'))}catch(e){}
+  try{window.dispatchEvent(new CustomEvent('bomDataChanged',{detail:{section:'materialDB',reason:'matprice-v200'}}))}catch(e){}
+  if(IS_MASTER){try{if(typeof gsAutoPush==='function')gsAutoPush()}catch(e){}}
+}
+function touch(db,y,k,row,field){db._cellUpdated[String(y)+'|'+String(k)+'|'+String(row&&row._id||'')+'|'+field]=Date.now()}
+
+function getBase(){
+  try{if(typeof BASE!=='undefined'&&po(BASE))return BASE}catch(e){}
+  return readLocal(BASE_KEY)||{};
+}
+function persistBase(b){
+  try{if(typeof BASE!=='undefined')BASE=b}catch(e){}
+  try{localStorage.setItem(BASE_KEY,JSON.stringify(b))}catch(e){}
+  try{if(typeof state!=='undefined'&&state){state.materialBase=state.materialBase||{};state.materialBase.materialPrices=cp(b.materialPrices||{});state.materialBase.scrapPrice=b.scrapPrice}}catch(e){}
+  try{if(typeof saveSettings==='function')saveSettings()}catch(e){}
+  try{if(typeof renderBase==='function')renderBase()}catch(e){}
+  try{if(typeof renderCost==='function')renderCost(false)}catch(e){}
+  try{if(typeof renderPrice==='function')renderPrice()}catch(e){}
+  try{if(typeof quickCalc==='function')quickCalc()}catch(e){}
+}
+function setBasePrice(k,v){var b=getBase();if(!po(b.materialPrices))b.materialPrices={};b.materialPrices[k]=Math.round(n0(v));persistBase(b)}
+function setBaseScrap(v){var b=getBase();b.scrapPrice=Math.round(n0(v));persistBase(b)}
+function basePrice(k){
+  var b=getBase(),v=(b.materialPrices||{})[k];
+  if(v!==undefined&&v!=='')return n0(v);
+  var m=MATERIALS.filter(function(x){return x.k===k})[0];
+  return m?m.p:0;
+}
+
+function rowsOf(db,y,k){return(db.years[y]&&Array.isArray(db.years[y][k]))?db.years[y][k]:[]}
+function monthAvg(rows,mi){
+  var qs=0,as=0,plain=[];
+  (rows||[]).forEach(function(r){
+    var v=n0(r.m&&r.m[mi]); if(v<=0)return;
+    var w=n0(r.w&&r.w[mi]);
+    if(w>0){qs+=w;as+=v*w}else plain.push(v);
+  });
+  if(qs>0&&!plain.length)return as/qs;
+  var all=(rows||[]).map(function(r){return n0(r.m&&r.m[mi])}).filter(function(v){return v>0});
+  return all.length?all.reduce(function(a,b){return a+b},0)/all.length:null;
+}
+function monthMins(rows){
+  return Array.from({length:12},function(_,mi){
+    var a=(rows||[]).map(function(r){return n0(r.m&&r.m[mi])}).filter(function(v){return v>0});
+    return a.length>=2?Math.min.apply(Math,a):null;
+  });
+}
+function latest(db,k,y){
+  var rows=rowsOf(db,String(y),k);
+  for(var mi=11;mi>=0;mi--){var v=monthAvg(rows,mi);if(v!=null)return{month:mi+1,value:v}}
+  return null;
+}
+function marketPrice(db,k,y){
+  var v=db.marketPrices[y]&&db.marketPrices[y][k];
+  if(v!==undefined&&v!==''&&n0(v)>0)return Math.round(n0(v));
+  var li=latest(db,k,y);
+  return Math.round((li?li.value:basePrice(k))+100);
+}
+
+function gradeOf(name){
+  var n=String(name||'').toUpperCase().replace(/\s/g,'');
+  for(var i=0;i<GRADE_MATCH.length;i++){if(n.indexOf(GRADE_MATCH[i])===0)return GRADE_MATCH[i]}
+  return null;
+}
+function pick(obj,names){
+  var keys=Object.keys(obj);
+  for(var i=0;i<names.length;i++){
+    for(var j=0;j<keys.length;j++){if(String(keys[j]).trim()===names[i])return obj[keys[j]]}
+  }
+  return '';
+}
+function parsePurchase(arr){
+  var agg={},skipUnit=0,skipGrade={},used=0;
+  arr.forEach(function(r){
+    var grp=String(pick(r,['품목군','ITEMGRP_NMK'])||'').trim();
+    if(grp&&grp!=='원자재')return;
+    var ym=String(pick(r,['입고년월'])||'').replace(/[^0-9]/g,'');
+    if(ym.length<6)return;
+    var y=ym.slice(0,4),mi=parseInt(ym.slice(4,6),10)-1;
+    if(mi<0||mi>11)return;
+    var unitNm=String(pick(r,['단위'])||'').trim().toUpperCase();
+    if(unitNm&&unitNm!=='KG')return;
+    var nm=pick(r,['품명','ITEM_NMK']);
+    var g=gradeOf(nm);
+    if(!g){var raw=String(nm||'').trim();if(raw)skipGrade[raw]=(skipGrade[raw]||0)+1;return}
+    var qty=n0(pick(r,['입고수량','재고단위수량']));
+    var amt=n0(pick(r,['공급가']));
+    if(qty<=0||amt<=0)return;
+    var vendor=String(pick(r,['거래처','TR_NMK','TR_NM'])||'').trim()||'(거래처 미상)';
+    var key=y+''+g+''+vendor;
+    var o=agg[key]||(agg[key]={y:y,g:g,vendor:vendor,q:Array(12).fill(0),a:Array(12).fill(0)});
+    o.q[mi]+=qty;o.a[mi]+=amt;used++;
+  });
+  var out=[];
+  Object.keys(agg).forEach(function(key){
+    var o=agg[key],m=Array(12).fill(''),w=Array(12).fill(0),any=false;
+    for(var i=0;i<12;i++){
+      if(o.q[i]<=0)continue;
+      var u=Math.round(o.a[i]/o.q[i]);
+      if(u<UNIT_MIN||u>UNIT_MAX){skipUnit++;continue}
+      m[i]=String(u);w[i]=Math.round(o.q[i]);any=true;
+    }
+    if(any)out.push({y:o.y,g:o.g,vendor:o.vendor,m:m,w:w});
+  });
+  return {rows:out,skipUnit:skipUnit,skipGrade:skipGrade,used:used};
+}
+function applyPurchase(parsed){
+  var db=getDb(),years={},cells=0;
+  parsed.rows.forEach(function(p){
+    years[p.y]=1;
+    if(!db.years[p.y])db.years[p.y]={};
+    if(!Array.isArray(db.years[p.y][p.g]))db.years[p.y][p.g]=[];
+    var list=db.years[p.y][p.g],vend=p.vendor.trim();
+    var row=list.filter(function(r){return String(r.vendor||'').trim()===vend})[0];
+    if(!row){row={vendor:vend,m:Array(12).fill(''),w:Array(12).fill(0)};row._id=rowKeyId(p.y,p.g,vend);list.push(row);touch(db,p.y,p.g,row,'vendor')}
+    if(!Array.isArray(row.w))row.w=Array(12).fill(0);
+    row.auto=true;row.autoSrc='purchase';
+    for(var i=0;i<12;i++){
+      if(p.m[i]==='')continue;
+      if(db._manualCell&&db._manualCell[String(p.y)+'|'+p.g+'|'+String(row._id)+'|m'+i])continue;  /* 손으로 고친 칸 보존 */
+      if(String(row.m[i]||'')!==String(p.m[i])||n0(row.w[i])!==p.w[i])cells++;
+      row.m[i]=p.m[i];row.w[i]=p.w[i];
+      touch(db,p.y,p.g,row,'m'+i);
+    }
+  });
+  db._purchaseImportedAt=Date.now();
+  db._purchaseYears=Object.keys(years).sort().join(',');
+  putDb(db,true);
+  return {years:Object.keys(years).sort(),cells:cells,vendors:parsed.rows.length};
+}
+
+function curYear(){
+  var e=document.getElementById('mp-year');
+  return String((e&&e.value)||new Date().getFullYear());
+}
+function trendSvg(db,k,y){
+  var rows=rowsOf(db,y,k),series=Array.from({length:12},function(_,i){return monthAvg(rows,i)}),vals=series.filter(function(v){return v!=null});
+  if(vals.length<2)return '<div class="mp-no-trend">월 단가가 2개월 이상 있을 때 추이 그래프가 표시됩니다.</div>';
+  var mn=Math.min.apply(Math,vals),mx=Math.max.apply(Math,vals),W=980,H=170,pL=24,pR=18,pT=43,pB=25,iW=W-pL-pR,iH=H-pT-pB;
+  var X=function(i){return pL+iW*(i/11)},Y=function(v){return pT+iH*(1-(v-mn)/Math.max(1,mx-mn))};
+  var pts=series.map(function(v,i){return v==null?null:{i:i,v:v,x:X(i),y:Y(v)}}).filter(Boolean);
+  var poly=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1)}).join(' ');
+  var prevDec=monthAvg(rowsOf(db,String(+y-1),k),11);
+  var dots=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.6" fill="#2f6fb0"/>'}).join('');
+  var labs=pts.map(function(p){
+    var pv=p.i>0?series[p.i-1]:prevDec,d=pv!=null?Math.round(p.v-pv):null;
+    var chg=d!=null?'<text x="'+p.x.toFixed(1)+'" y="'+(p.y-17).toFixed(1)+'" text-anchor="middle" font-size="9" fill="'+(d>0?'#d23b3b':d<0?'#2563eb':'#929cab')+'">'+(d>0?'▲':d<0?'▼':'－')+(d?won(Math.abs(d)):'')+'</text>':'';
+    return '<text x="'+p.x.toFixed(1)+'" y="'+(p.y-6).toFixed(1)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1f2937">'+won(p.v)+'</text>'+chg;
+  }).join('');
+  var ml=Array.from({length:12},function(_,i){return '<text x="'+X(i).toFixed(1)+'" y="'+(H-7)+'" text-anchor="middle" font-size="9" fill="#8a96a8">'+(i+1)+'월</text>'}).join('');
+  return '<div class="mp-trend"><div class="mp-trend-head"><b>'+esc(y)+'년 '+esc(k)+' 월평균 단가 추이</b><span>최저 '+won(mn)+' · 최고 '+won(mx)+' 원/kg</span></div><svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet"><line x1="'+pL+'" y1="'+(pT+iH)+'" x2="'+(W-pR)+'" y2="'+(pT+iH)+'" stroke="#e5eaf1"/><polyline points="'+poly+'" fill="none" stroke="#2f6fb0" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labs+ml+'</svg></div>';
+}
+function tableHtml(db,k,y){
+  var rows=rowsOf(db,y,k),mins=monthMins(rows);
+  var head='<thead><tr><th>업체명</th>'+Array.from({length:12},function(_,i){return '<th>'+(i+1)+'월</th>'}).join('')+'</tr></thead>';
+  if(!rows.length){
+    var f0=IS_EDIT?'<div class="mp-card-foot"><button type="button" class="mp-add-vendor" data-mp-add="1" data-k="'+esc(k)+'">＋ 업체 추가</button></div>':'';
+    return '<div class="mp-grade-scroll"><table class="mp-grade-table mp-ro-table">'+head+'<tbody><tr><td class="mp-vendor-cell">-</td><td class="mp-ro" colspan="12"><span class="mp-empty">'+esc(y)+'년 자료가 없습니다.</span></td></tr></tbody></table></div>'+f0;
+  }
+  var body=rows.map(function(r,ri){
+    var tag=r.auto?'<span class="mp-auto-tag" title="매입 데이터에서 자동 산출">자동</span>':'';
+    if(IS_EDIT){
+      return '<tr><td class="mp-vendor-cell"><div class="mp-vendor-inline">'+
+        '<input class="mp-vendor" data-y="'+esc(y)+'" data-k="'+esc(k)+'" data-ri="'+ri+'" value="'+esc(r.vendor||'')+'" placeholder="업체명 입력">'+tag+
+        '<button type="button" class="mp-del-row" data-mp-del="1" data-k="'+esc(k)+'" data-ri="'+ri+'" title="이 업체 행 삭제">×</button></div></td>'+
+        Array.from({length:12},function(_,mi){
+          var v=n0(r.m&&r.m[mi]),isMin=mins[mi]!=null&&v>0&&v===mins[mi],qty=n0(r.w&&r.w[mi]);
+          return '<td class="'+(isMin?'mp-month-min':'')+'"'+(qty>0?' title="'+won(qty)+' kg 가중평균"':'')+'><input class="mp-month" data-y="'+esc(y)+'" data-k="'+esc(k)+'" data-ri="'+ri+'" data-mi="'+mi+'" value="'+esc(r.m&&r.m[mi]||'')+'" inputmode="decimal"></td>';
+        }).join('')+'</tr>';
+    }
+    return '<tr><td class="mp-vendor-cell">'+(r.vendor?esc(r.vendor):'<span class="mp-empty">(미입력)</span>')+tag+'</td>'+
+      Array.from({length:12},function(_,mi){
+        var v=n0(r.m&&r.m[mi]),isMin=mins[mi]!=null&&v>0&&v===mins[mi],qty=n0(r.w&&r.w[mi]);
+        return '<td class="mp-ro'+(isMin?' mp-month-min':'')+'"'+(qty>0?' title="'+won(qty)+' kg 가중평균"':'')+'>'+(v>0?won(v):'<span class="mp-empty">-</span>')+'</td>';
+      }).join('')+'</tr>';
+  }).join('');
+  var avgRow='<tr class="mp-avgrow"><td>월 가중평균</td>'+Array.from({length:12},function(_,mi){
+    var a=monthAvg(rows,mi);return '<td>'+(a!=null?won(a):'<span class="mp-empty">-</span>')+'</td>';
+  }).join('')+'</tr>';
+  var foot=IS_EDIT?'<div class="mp-card-foot"><button type="button" class="mp-add-vendor" data-mp-add="1" data-k="'+esc(k)+'">＋ 업체 추가</button><span class="mp-low-legend">노란색 = 해당 월 최저단가</span></div>':'';
+  return '<div class="mp-grade-scroll"><table class="mp-grade-table'+(IS_EDIT?'':' mp-ro-table')+'">'+head+'<tbody>'+body+avgRow+'</tbody></table></div>'+foot;
+}
+function gradeCard(db,m,y){
+  var li=latest(db,m.k,y),mk=marketPrice(db,m.k,y),applied=Math.round(basePrice(m.k));
+  var marketCell=IS_MASTER
+    ? '<input class="mp-market" data-k="'+esc(m.k)+'" data-y="'+esc(y)+'" value="'+esc(mk)+'" inputmode="decimal" title="시장단가 직접 입력">'
+    : '<span class="mp-market-ro">'+won(mk)+'</span>';
+  return '<section class="mp-grade-card" data-grade="'+esc(m.k)+'">'+
+    '<div class="mp-grade-head">'+
+      '<span class="mp-grade-name">'+esc(m.n)+'</span>'+
+      '<span class="mp-grade-desc">'+esc(m.desc)+'</span>'+
+      '<span class="mp-grade-current">적용 기준 <b>'+won(applied)+'</b>원/kg'+(li?' · 최근 '+li.month+'월 가중평균 <b>'+won(li.value)+'</b>원':' · 매입자료 없음')+'</span>'+
+      '<div class="mp-grade-actions">'+
+        '<span class="mp-lab">시장단가</span>'+marketCell+
+        '<button type="button" class="apply" data-mp-apply="latest" data-k="'+esc(m.k)+'">최근단가 적용</button>'+
+        '<button type="button" data-mp-apply="market" data-k="'+esc(m.k)+'">시장단가 적용</button>'+
+        '<button type="button" data-mp-trend="1">단가추이 그래프보기</button>'+
+      '</div>'+
+    '</div>'+
+    tableHtml(db,m.k,y)+
+    '<div class="mp-trend-wrap" hidden>'+trendSvg(db,m.k,y)+'</div>'+
+  '</section>';
+}
+function scrapCard(db,y){
+  var k='고철',li=latest(db,k,y),b=getBase();
+  return '<section class="mp-grade-card mp-special-card scrap">'+
+    '<div class="mp-grade-head"><span class="mp-grade-name">🔩 고철단가</span>'+
+    '<span class="mp-grade-desc">고철(스크랩) 회수단가 · 영업분석 매출자료에서 자동 반영</span>'+
+    '<span class="mp-grade-current">현재 적용 <b>'+won(b.scrapPrice||0)+'</b>원/kg'+(li?' · 최근 '+li.month+'월 평균 <b>'+won(li.value)+'</b>원':'')+'</span>'+
+    '<div class="mp-grade-actions"><button type="button" class="apply" data-mp-apply="scrap">최근 고철단가 적용</button></div></div>'+
+    tableHtml(db,k,y)+
+  '</section>';
+}
+function extraCard(db){
+  var rows=db.egiExtras||[];
+  var body=rows.map(function(r,i){
+    return '<tr><td>'+(IS_EDIT?'<input class="mp-extra-name" data-i="'+i+'" value="'+esc(r.name||'')+'" placeholder="항목명">':esc(r.name||''))+'</td>'+
+      '<td>'+(IS_EDIT?'<input class="mp-extra-amount" data-i="'+i+'" value="'+esc(r.amount||'')+'" inputmode="decimal" placeholder="원/kg">':'<span class="mp-market-ro">'+(r.amount!==''&&r.amount!=null?won(r.amount):'-')+'</span>')+'</td>'+
+      '<td>'+(IS_EDIT?'<input class="mp-extra-note" data-i="'+i+'" value="'+esc(r.note||'')+'" placeholder="비고">':esc(r.note||''))+'</td>'+
+      (IS_EDIT?'<td class="mp-extra-del"><button type="button" class="mp-del-row" onclick="deleteMaterialExtraV97('+i+')" title="삭제">×</button></td>':'')+'</tr>';
+  }).join('');
+  return '<section class="mp-grade-card mp-special-card mp-extra-card">'+
+    '<div class="mp-grade-head"><span class="mp-grade-name">EGI 추가 금액</span>'+
+    '<span class="mp-grade-desc">미니샤 가공 · 소폭가공 · 판재 소량 추가비용'+(IS_MASTER?' (직접 입력)':' (읽기 전용)')+'</span></div>'+
+    '<table class="mp-extra-table"><thead><tr><th>항목</th><th>추가 금액</th><th>비고</th>'+(IS_EDIT?'<th></th>':'')+'</tr></thead><tbody>'+
+    (body||'<tr><td colspan="4" class="mp-empty">등록된 항목이 없습니다.</td></tr>')+'</tbody></table>'+
+    (IS_EDIT?'<div class="mp-card-foot"><button type="button" class="mp-add-vendor" onclick="addMaterialExtraV97()">＋ 항목 추가</button></div>':'')+'</section>';
+}
+function toolbarHtml(db,y,years){
+  var opts=years.map(function(v){return '<option'+(v===y?' selected':'')+'>'+esc(v)+'</option>'}).join('');
+  var src=db._purchaseImportedAt?('매입현황 반영 '+new Date(db._purchaseImportedAt).toLocaleDateString('ko-KR')):'매입현황 미반영';
+  return '<div class="material-price-tools mp-tools-v200">'+
+    '<div class="mp-year-picker"><span>기준연도</span><select id="mp-year">'+opts+'</select>'+
+    '<span class="mp-year-legend">노란색 = 해당 월 최저단가</span>'+
+    '<span class="mp-src-badge'+(db._purchaseImportedAt?' on':'')+'">'+esc(src)+'</span></div>'+
+    '<div class="mp-tool-actions">'+
+      (SRC==='file'?'<button type="button" class="mp-btn mp-btn-primary" id="mpPurchaseBtn"><span class="mp-ico">⇧</span><span>매입현황 엑셀 올리기</span></button>':'')+
+      (SRC==='cur' ?'<button type="button" class="mp-btn mp-btn-primary" id="mpFromCurBtn" title="이 프로그램에 불러온 매입 데이터에서 강종·업체·월별 가중평균 단가를 자동으로 채웁니다"><span class="mp-ico">⚙</span><span>매입 데이터로 자동 채우기</span></button>':'')+
+      (IS_EDIT?'<button type="button" class="mp-btn mp-btn-import" id="mpReceiveBtn" title="원자재단가 엑셀을 합쳐서 불러옵니다(기존 자료 보존)"><span class="mp-ico">⇩</span><span>엑셀 불러오기</span></button>'
+              :'<span class="mp-readonly-badge">🔒 받기 전용 · 수정은 매입분석·매출목표에서</span><button type="button" class="mp-btn mp-btn-import" id="mpReceiveBtn" title="매출목표·매입분석에서 내보낸 원자재단가 엑셀을 그대로 받아옵니다"><span class="mp-ico">⇩</span><span>단가표 받기(엑셀)</span></button>')+
+      '<button type="button" class="mp-btn mp-btn-primary" id="mpApplyAllLatest"><span class="mp-ico">✓</span><span>최근단가 전체 적용</span></button>'+
+      '<button type="button" class="mp-btn mp-btn-market" id="mpApplyAllMarket"><span class="mp-ico">✓</span><span>시장단가 전체 적용</span></button>'+
+      '<button type="button" class="mp-btn mp-btn-export" id="mpExportBtn"><span class="mp-ico">⇩</span><span>엑셀 내보내기</span></button>'+
+    '</div>'+
+    '<input type="file" accept=".xls,.xlsx" id="mpPurchaseFile" style="display:none">'+
+    '<input type="file" accept=".xls,.xlsx" id="mpReceiveFile" style="display:none">'+
+  '</div>';
+}
+function noteHtml(){
+  return '<div class="mp-source-note"><b>원자재 단가 기준 = 매입현황(ERP)</b> — 강종·업체·월별 <b>가중평균 매입단가(Σ공급가 ÷ Σ입고수량)</b>로 산출합니다. '+
+    '중량(kg) 매입만 사용하며 '+won(UNIT_MIN)+'원 미만 · '+won(UNIT_MAX)+'원 초과 단가(임가공비·이상치)는 제외합니다. '+
+    (IS_EDIT
+      ? (SRC==='cur'?'<b>매입 데이터로 자동 채우기</b>를 누르면 불러온 매입자료에서 단가가 채워집니다. ':'<b>매입현황 엑셀 올리기</b>로 단가를 채웁니다. ')+'채워진 값은 표에서 직접 수정할 수 있고, 저장 즉시 구글시트 동기화로 공유됩니다.'
+      : '이 화면은 <b>받기 전용</b>입니다. 단가는 매입분석·매출목표에서 갱신되며 여기서는 <b>기준단가 적용</b>만 할 수 있습니다.')+
+  '</div>';
+}
+function yearList(db){
+  var ys=Object.keys(db.years||{}),cy=String(new Date().getFullYear());
+  Object.keys(db.marketPrices||{}).forEach(function(y){if(ys.indexOf(y)<0)ys.push(y)});
+  for(var d=-2;d<=1;d++){var yy=String(+cy+d);if(ys.indexOf(yy)<0)ys.push(yy)}
+  return ys.filter(function(v){return /^[0-9]{4}$/.test(v)}).sort();
+}
+function ensureYearRows(db,y){
+  if(!db.years[y])db.years[y]={};
+  MATERIALS.concat([{k:'고철'}]).forEach(function(m){if(!Array.isArray(db.years[y][m.k]))db.years[y][m.k]=[]});
+  return db;
+}
+
+var _rafId=0,_firstDraw=true;
+window.renderMaterialPricePage=function(){
+  /* 첫 진입은 즉시 그리고, 이후 연속 호출은 한 프레임에 한 번만 그린다
+     (여러 래퍼·동기화 이벤트가 연달아 호출해 화면이 깜빡이던 문제) */
+  if(_inRender)return null;
+  if(_firstDraw){_firstDraw=false;return renderNow()}
+  if(_rafId)return null;
+  var raf=window.requestAnimationFrame||function(f){return setTimeout(f,16)};
+  _rafId=raf(function(){_rafId=0;renderNow()});
+  return null;
+};
+window.renderMaterialPriceNow=renderNow;
+function renderNow(){
+  if(_inRender)return null;
+  _inRender=true;
+  try{return renderPage()}catch(e){
+    try{console.error('원자재 단가 화면 오류',e)}catch(_){}
+    var r=document.getElementById('view-matprice');
+    if(r)r.innerHTML='<div class="mp-source-note">원자재 단가 화면을 그리는 중 오류가 발생했습니다: '+esc((e&&e.message)||e)+'</div>';
+    return null;
+  }finally{_inRender=false}
+}
+function renderPage(){
+  hostReload(false);
+  var root=document.getElementById('view-matprice');
+  if(!root)return;
+  var db=getDb(),ys=yearList(db);
+  var sel=document.getElementById('mp-year');
+  var y=String((sel&&sel.value)||new Date().getFullYear());
+  if(ys.indexOf(y)<0)y=(ys.indexOf(String(new Date().getFullYear()))>=0)?String(new Date().getFullYear()):ys[ys.length-1];
+  ensureYearRows(db,y);
+  if(IS_MASTER){try{if(typeof window.__mpSyncScrap==='function')window.__mpSyncScrap(db,y)}catch(e){}}
+  var html=
+    noteHtml()+
+    '<div class="card"><div class="ch">💰 원자재 월별 매입단가'+
+      '<span id="mp-updated" style="margin-left:auto;font-size:11.5px;font-weight:600;color:#64748b">최종 업데이트: '+esc(db.updated||'-')+'</span></div>'+
+      '<div class="cb">'+toolbarHtml(db,y,ys)+
+      '<div class="material-price-box"><div class="mp-grade-stack">'+
+        scrapCard(db,y)+extraCard(db)+MATERIALS.map(function(m){return gradeCard(db,m,y)}).join('')+
+      '</div></div></div></div>';
+
+  /* 내용이 같으면 DOM 을 건드리지 않는다 → 깜빡임·스크롤 튐 방지 */
+  if(html===_lastHtml&&root.querySelector('.mp-grade-stack'))return;
+
+  /* 입력 중이면 현재 포커스·커서를 기억했다가 되살린다 */
+  var ae=document.activeElement,focus=null;
+  if(ae&&root.contains(ae)&&ae.tagName==='INPUT'){
+    focus={cls:ae.className,y:ae.dataset.y||'',k:ae.dataset.k||'',ri:ae.dataset.ri||'',mi:ae.dataset.mi||'',i:ae.dataset.i||'',
+           start:ae.selectionStart,end:ae.selectionEnd};
+  }
+  /* 스크롤 위치 보존 */
+  var winY=window.pageYOffset||document.documentElement.scrollTop||0;
+  var hbar={};
+  root.querySelectorAll('.mp-grade-card[data-grade] .mp-grade-scroll').forEach(function(el){
+    var c=el.closest('.mp-grade-card');
+    if(c&&el.scrollLeft)hbar[c.getAttribute('data-grade')]=el.scrollLeft;
+  });
+
+  root.innerHTML=html;
+  _lastHtml=html;
+  bind(root);
+
+  root.querySelectorAll('.mp-grade-card[data-grade]').forEach(function(c){
+    var v=hbar[c.getAttribute('data-grade')];
+    if(v){var sc=c.querySelector('.mp-grade-scroll');if(sc)sc.scrollLeft=v}
+  });
+  /* 열어둔 추이 그래프 복원 */
+  Object.keys(_openTrend).forEach(function(g){
+    if(!_openTrend[g])return;
+    var c=root.querySelector('.mp-grade-card[data-grade="'+g+'"]');
+    if(!c)return;
+    var w=c.querySelector('.mp-trend-wrap'),b=c.querySelector('[data-mp-trend]');
+    if(w){w.removeAttribute('hidden');if(b)b.textContent='단가추이 그래프 닫기'}
+  });
+  if(focus){
+    var sel='input.'+String(focus.cls).split(' ')[0]+
+      (focus.y?'[data-y="'+focus.y+'"]':'')+(focus.k?'[data-k="'+focus.k+'"]':'')+
+      (focus.ri!==''?'[data-ri="'+focus.ri+'"]':'')+(focus.mi!==''?'[data-mi="'+focus.mi+'"]':'')+
+      (focus.i!==''?'[data-i="'+focus.i+'"]':'');
+    try{
+      var el=root.querySelector(sel);
+      if(el){el.focus();if(focus.start!=null&&el.setSelectionRange)el.setSelectionRange(focus.start,focus.end)}
+    }catch(e){}
+  }
+  if(winY)window.scrollTo(0,winY);
+}
+
+function bind(root){
+  var sel=root.querySelector('#mp-year');
+  if(sel)sel.onchange=function(){window.renderMaterialPricePage()};
+
+  root.onclick=function(e){
+    var t=e.target&&e.target.closest?e.target.closest('button'):null;
+    if(!t)return;
+    var db=getDb();
+    if(t.hasAttribute('data-mp-trend')){
+      var card=t.closest('.mp-grade-card'),wrap=card&&card.querySelector('.mp-trend-wrap');
+      if(!wrap)return;
+      var show=wrap.hasAttribute('hidden');
+      if(show)wrap.removeAttribute('hidden');else wrap.setAttribute('hidden','');
+      t.textContent=show?'단가추이 그래프 닫기':'단가추이 그래프보기';
+      if(card&&card.getAttribute('data-grade'))_openTrend[card.getAttribute('data-grade')]=show;
+      return;
+    }
+    var mode=t.getAttribute('data-mp-apply');
+    if(mode==='latest'){
+      var k=t.getAttribute('data-k'),li=latest(db,k,curYear());
+      if(!li){toast(k+' 최근 매입단가가 없습니다');return}
+      setBasePrice(k,li.value);window.renderMaterialPricePage();
+      toast(k+' '+li.month+'월 가중평균 '+won(li.value)+'원/kg 을 기준단가에 적용했습니다');return;
+    }
+    if(mode==='market'){
+      var k2=t.getAttribute('data-k'),p=marketPrice(db,k2,curYear());
+      if(p<=0){toast(k2+' 시장단가가 없습니다');return}
+      setBasePrice(k2,p);window.renderMaterialPricePage();
+      toast(k2+' 시장단가 '+won(p)+'원/kg 을 기준단가에 적용했습니다');return;
+    }
+    if(mode==='scrap'){
+      var ls=latest(db,'고철',curYear());
+      if(!ls){toast('고철 최근단가가 없습니다');return}
+      setBaseScrap(ls.value);window.renderMaterialPricePage();
+      toast('고철 '+ls.month+'월 평균 '+won(ls.value)+'원/kg 적용');return;
+    }
+    if(t.id==='mpApplyAllLatest'){
+      var n=0;MATERIALS.forEach(function(m){var l=latest(db,m.k,curYear());if(l){setBasePrice(m.k,l.value);n++}});
+      window.renderMaterialPricePage();toast('최근 매입단가 '+n+'개 강종을 기준단가에 적용했습니다');return;
+    }
+    if(t.id==='mpApplyAllMarket'){
+      var n2=0;MATERIALS.forEach(function(m){var p2=marketPrice(db,m.k,curYear());if(p2>0){setBasePrice(m.k,p2);n2++}});
+      window.renderMaterialPricePage();toast('시장단가 '+n2+'개 강종을 기준단가에 적용했습니다');return;
+    }
+    if(t.id==='mpExportBtn'){exportXls(getDb());return}
+    if(t.id==='mpFromCurBtn'){fillFromCur();return}
+    if(IS_EDIT&&t.hasAttribute('data-mp-add')){
+      var ak=t.getAttribute('data-k'),ay=curYear(),d2=getDb();
+      if(!d2.years[ay])d2.years[ay]={};
+      if(!Array.isArray(d2.years[ay][ak]))d2.years[ay][ak]=[];
+      var nr={vendor:'',m:Array(12).fill(''),_id:'mr_'+hash(ay+'|'+ak+'|'+Date.now()+'|'+Math.random())};
+      d2.years[ay][ak].push(nr);touch(d2,ay,ak,nr,'vendor');putDb(d2,true);
+      window.renderMaterialPricePage();
+      setTimeout(function(){var a=document.querySelectorAll('.mp-vendor[data-k="'+ak+'"]');if(a.length)a[a.length-1].focus()},20);
+      return;
+    }
+    if(IS_EDIT&&t.hasAttribute('data-mp-del')){
+      var dk=t.getAttribute('data-k'),dri=+t.getAttribute('data-ri'),dy=curYear(),d3=getDb();
+      var list=(d3.years[dy]||{})[dk]||[],row=list[dri];
+      if(!row)return;
+      if(!confirm('이 업체 단가 행을 삭제할까요?\n'+(row.vendor||'(업체명 없음)')))return;
+      if(row._id)d3._rowDeleted[row._id]=Date.now();
+      list.splice(dri,1);putDb(d3,true);window.renderMaterialPricePage();return;
+    }
+    if(t.id==='mpPurchaseBtn'){var f=root.querySelector('#mpPurchaseFile');if(f)f.click();return}
+    if(t.id==='mpReceiveBtn'){var f2=root.querySelector('#mpReceiveFile');if(f2)f2.click();return}
+  };
+
+  root.onchange=function(e){
+    var t=e.target;
+    if(t&&t.classList&&(t.classList.contains('mp-month')||t.classList.contains('mp-vendor')))window.renderMaterialPricePage();
+  };
+  var file=root.querySelector('#mpPurchaseFile');
+  if(file)file.onchange=function(ev){importPurchase(ev)};
+  var rfile=root.querySelector('#mpReceiveFile');
+  if(rfile)rfile.onchange=function(ev){importSheet(ev)};
+
+  if(IS_EDIT){
+    root.oninput=function(e){
+      var t=e.target,db=getDb();
+      if(t.classList.contains('mp-vendor')){
+        var vr=((db.years[t.dataset.y]||{})[t.dataset.k]||[])[+t.dataset.ri];
+        if(vr){vr.vendor=t.value;touch(db,t.dataset.y,t.dataset.k,vr,'vendor');putDb(db,true)}
+      }else if(t.classList.contains('mp-month')){
+        var mr=((db.years[t.dataset.y]||{})[t.dataset.k]||[])[+t.dataset.ri];
+        if(mr){
+          var mi=+t.dataset.mi;
+          mr.m[mi]=String(t.value).replace(/,/g,'');
+          if(Array.isArray(mr.w))mr.w[mi]=0;      /* 손으로 고친 칸은 매입수량 가중치 해제 */
+          mr.manual=true;
+          if(!po(db._manualCell))db._manualCell={};
+          db._manualCell[String(t.dataset.y)+'|'+t.dataset.k+'|'+String(mr._id)+'|m'+mi]=Date.now();
+          touch(db,t.dataset.y,t.dataset.k,mr,'m'+mi);putDb(db,true);
+        }
+      }else if(t.classList.contains('mp-market')){
+        var k=t.dataset.k,yy=t.dataset.y;
+        if(!po(db.marketPrices[yy]))db.marketPrices[yy]={};
+        if(String(t.value).trim()===''||n0(t.value)<=0)delete db.marketPrices[yy][k];
+        else db.marketPrices[yy][k]=Math.round(n0(t.value));
+        db._cellUpdated[yy+'|'+k+'|market']=Date.now();
+        putDb(db,true);
+      }else if(t.classList.contains('mp-extra-name')){
+        var i0=+t.dataset.i,r0=db.egiExtras[i0];
+        if(r0){r0.name=t.value;db._extraUpdated[r0._id+'|name']=Date.now();putDb(db,true)}
+      }else if(t.classList.contains('mp-extra-amount')){
+        var i=+t.dataset.i,r=db.egiExtras[i];
+        if(r){r.amount=String(t.value).replace(/,/g,'');db._extraUpdated[r._id+'|amount']=Date.now();putDb(db,true)}
+      }else if(t.classList.contains('mp-extra-note')){
+        var i2=+t.dataset.i,r2=db.egiExtras[i2];
+        if(r2){r2.note=t.value;db._extraUpdated[r2._id+'|note']=Date.now();putDb(db,true)}
+      }
+    };
+  }
+}
+
+function exportXls(db){
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리를 불러오지 못했습니다');return}
+  var rows=[['연도','강종','업체명','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월','시장단가']];
+  Object.keys(db.years||{}).sort().forEach(function(y){
+    ['고철'].concat(MATERIALS.map(function(m){return m.k})).forEach(function(k){
+      rowsOf(db,y,k).forEach(function(r){
+        rows.push([y,k,r.vendor||''].concat((r.m||[]).map(function(v){return n0(v)||''}),[k==='고철'?'':marketPrice(db,k,y)]));
+      });
+    });
+  });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'원자재단가');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['항목','추가금액','비고']].concat((db.egiExtras||[]).map(function(r){return[r.name||'',n0(r.amount)||'',r.note||'']}))),'EGI추가금액');
+  var wrows=[['연도','강종','업체명','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']];
+  Object.keys(db.years||{}).sort().forEach(function(y){
+    ['고철'].concat(MATERIALS.map(function(m){return m.k})).forEach(function(k){
+      rowsOf(db,y,k).forEach(function(r){
+        if(!Array.isArray(r.w))return;
+        wrows.push([y,k,r.vendor||''].concat(r.w.map(function(v){return n0(v)||''})));
+      });
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(wrows),'월매입수량');
+  XLSX.writeFile(wb,'원자재단가_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('원자재 단가를 엑셀로 저장했습니다');
+}
+
+function importPurchase(ev){
+  if(!IS_MASTER)return;
+  var f=ev.target.files&&ev.target.files[0];if(!f)return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리를 불러오지 못했습니다');ev.target.value='';return}
+  toast('매입현황을 읽는 중입니다…');
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var arr=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!arr.length)throw new Error('빈 파일');
+      var parsed=parsePurchase(arr);
+      if(!parsed.rows.length){toast('원자재 매입 데이터를 찾지 못했습니다. 열 이름(입고년월·거래처·품명·입고수량·공급가)을 확인하세요');ev.target.value='';return}
+      var res=applyPurchase(parsed);
+      window.renderMaterialPricePage();
+      var skipped=Object.keys(parsed.skipGrade||{}).length;
+      toast('매입현황 반영 완료 — '+res.years.join(', ')+'년 · 업체 '+res.vendors+'건 · 단가 '+res.cells+'칸'+(skipped?' · 미등록 강종 '+skipped+'종 제외':'')+(parsed.skipUnit?' · 이상단가 '+parsed.skipUnit+'건 제외':''));
+    }catch(e){
+      toast('매입현황 파일을 읽지 못했습니다: '+((e&&e.message)||e));
+    }
+    ev.target.value='';
+  };
+  rd.readAsArrayBuffer(f);
+}
+
+/* 매출목표에서 내보낸 '원자재단가' 엑셀을 그대로 받아 합친다(받기 전용) */
+function importSheet(ev){
+  var f=ev.target.files&&ev.target.files[0];if(!f)return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리를 불러오지 못했습니다');ev.target.value='';return}
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+      var db=getDb(),stamp=Date.now(),cells=0,rowsN=0;
+      var ws=wb.Sheets['원자재단가']||wb.Sheets[wb.SheetNames[0]];
+      var arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      arr.slice(1).forEach(function(r){
+        var y=String(r[0]||'').trim(),k=String(r[1]||'').trim();
+        if(!/^[0-9]{4}$/.test(y))return;
+        if(k!=='고철'&&!MATERIALS.some(function(m){return m.k===k.toUpperCase()}))return;
+        if(k!=='고철')k=k.toUpperCase();
+        var vend=String(r[2]||'').trim();
+        if(!db.years[y])db.years[y]={};
+        if(!Array.isArray(db.years[y][k]))db.years[y][k]=[];
+        var list=db.years[y][k];
+        var row=list.filter(function(x){return String(x.vendor||'').trim()===vend})[0];
+        if(!row){row={vendor:vend,m:Array(12).fill(''),_id:rowKeyId(y,k,vend),auto:true,autoSrc:'sheet'};list.push(row);rowsN++}
+        for(var i=0;i<12;i++){
+          var v=n0(r[i+3]);
+          if(v<=0)continue;
+          if(String(row.m[i]||'')!==String(v)){row.m[i]=String(v);cells++}
+          db._cellUpdated[y+'|'+k+'|'+row._id+'|m'+i]=stamp;
+        }
+        var mk=n0(r[15]);
+        if(k!=='고철'&&mk>0){if(!po(db.marketPrices[y]))db.marketPrices[y]={};db.marketPrices[y][k]=Math.round(mk);db._cellUpdated[y+'|'+k+'|market']=stamp}
+      });
+      var wsq=wb.Sheets['월매입수량'];
+      if(wsq){
+        XLSX.utils.sheet_to_json(wsq,{header:1,defval:''}).slice(1).forEach(function(r){
+          var y=String(r[0]||'').trim(),k=String(r[1]||'').trim(),vend=String(r[2]||'').trim();
+          if(!/^[0-9]{4}$/.test(y))return;
+          if(k!=='고철')k=k.toUpperCase();
+          var list=(db.years[y]||{})[k]||[];
+          var row=list.filter(function(x){return String(x.vendor||'').trim()===vend})[0];
+          if(!row)return;
+          if(!Array.isArray(row.w))row.w=Array(12).fill(0);
+          for(var i=0;i<12;i++){var q=n0(r[i+3]);if(q>0)row.w[i]=q}
+        });
+      }
+      var ex=wb.Sheets['EGI추가금액'];
+      if(ex){
+        var ea=XLSX.utils.sheet_to_json(ex,{header:1,defval:''});
+        ea.slice(1).forEach(function(r){
+          var nm=String(r[0]||'').trim(); if(!nm)return;
+          var t=(db.egiExtras||[]).filter(function(x){return String(x.name||'').trim()===nm})[0];
+          if(!t){t={_id:'ex_'+hash(nm),name:nm,amount:'',note:''};db.egiExtras.push(t)}
+          t.amount=String(n0(r[1])||'');t.note=String(r[2]||'');
+          db._extraUpdated[t._id+'|amount']=stamp;
+        });
+      }
+      db._purchaseImportedAt=stamp;
+      putDb(db,false);
+      window.renderMaterialPricePage();
+      toast('원자재 단가를 받았습니다 — 새 업체 '+rowsN+'행 · 단가 '+cells+'칸 갱신');
+    }catch(e){toast('원자재단가 엑셀을 읽지 못했습니다: '+((e&&e.message)||e))}
+    ev.target.value='';
+  };
+  rd.readAsArrayBuffer(f);
+}
+
+/* 이 프로그램에 적재된 매입 데이터(CUR)에서 강종·업체·월별 가중평균 단가를 산출한다 */
+function fillFromCur(){
+  var rows=null;
+  try{if(typeof CUR!=='undefined'&&Array.isArray(CUR))rows=CUR}catch(e){}
+  if(!rows||!rows.length){toast('불러온 매입 데이터가 없습니다. 먼저 매입현황 파일을 불러오세요');return}
+  var conv=rows.map(function(r){
+    var ym=String(r.ym||'')||String(r.d||'').slice(0,7).replace('-','');
+    return {'입고년월':ym.replace('-',''),'거래처':r.vendor||r.cust||'','품명':r.name||'','단위':r.unit||'','입고수량':r.qty,'공급가':(r.supply!=null?r.supply:r.total),'품목군':r.group||''};
+  });
+  var parsed=parsePurchase(conv);
+  if(!parsed.rows.length){toast('매입 데이터에서 원자재(강종) 단가를 찾지 못했습니다');return}
+  var res=applyPurchase(parsed);
+  window.renderMaterialPricePage();
+  toast('매입 데이터 반영 완료 — '+res.years.join(', ')+'년 · 업체 '+res.vendors+'건 · 단가 '+res.cells+'칸'+(parsed.skipUnit?' · 이상단가 '+parsed.skipUnit+'건 제외':''));
+}
+
+window.materialPricePage=function(){
+  /* 프로그램마다 본문 컨테이너 id 가 다르다.
+     매출목표=#result · 매입분석=#content · 제조원가=.wrap 안의 정적 #view-matprice */
+  var host=document.getElementById('view-matprice');
+  if(!host){
+    var r=document.getElementById('result')||document.getElementById('content')
+        ||document.querySelector('.wrap')||document.querySelector('main')||document.body;
+    if(!r)return;
+    if(r===document.body||r.classList&&r.classList.contains('wrap')){
+      host=document.createElement('div');host.id='view-matprice';r.appendChild(host);
+    }else{
+      r.innerHTML='<div id="view-matprice"></div>';
+      host=document.getElementById('view-matprice');
+    }
+  }
+  if(!host)return;
+  if(host.classList)host.classList.remove('hidden');
+  host.style.display='';
+  _lastHtml='';            /* 컨테이너가 새로 만들어졌으므로 강제로 다시 그린다 */
+  _firstDraw=true;
+  renderNow();
+};
+/* 기존 '엑셀 불러오기'는 저장소를 통째로 새로 만들어 다른 연도·업체를 지웠다 → 병합 방식으로 교체 */
+window.importMaterialPrices=window.importMaterialPricesV97=window.importMaterialPricesV36=function(ev){
+  if(ev&&ev.target&&ev.target.files)return importSheet(ev);
+  toast('상단의 엑셀 불러오기 버튼을 사용하세요');
+};
+window.exportMaterialPrices=window.exportMaterialPricesV97=function(){exportXls(getDb())};
+window.applyLatestMaterial=window.applyLatestMaterialV97=function(k){var db=getDb(),l=latest(db,k,curYear());if(!l){toast(k+' 최근단가가 없습니다');return}setBasePrice(k,l.value);window.renderMaterialPricePage();toast(k+' '+l.month+'월 '+won(l.value)+'원/kg 적용')};
+window.applyAllLatestMaterials=window.applyAllLatestMaterialsV97=function(){var db=getDb(),n=0;MATERIALS.forEach(function(m){var l=latest(db,m.k,curYear());if(l){setBasePrice(m.k,l.value);n++}});window.renderMaterialPricePage();toast('최근단가 '+n+'개 적용')};
+window.applyMarketMaterial=window.applyMarketMaterialV97=function(k){var db=getDb(),p=marketPrice(db,k,curYear());setBasePrice(k,p);window.renderMaterialPricePage();toast(k+' 시장단가 '+won(p)+'원/kg 적용')};
+window.applyAllMarketMaterials=window.applyAllMarketMaterialsV97=function(){var db=getDb(),n=0;MATERIALS.forEach(function(m){var p=marketPrice(db,m.k,curYear());if(p>0){setBasePrice(m.k,p);n++}});window.renderMaterialPricePage();toast('시장단가 '+n+'개 적용')};
+window.applyLatestScrapPriceV56=window.applyLatestScrapPriceV97=function(){var db=getDb(),l=latest(db,'고철',curYear());if(!l){toast('고철 최근단가가 없습니다');return}setBaseScrap(l.value);window.renderMaterialPricePage();toast('고철 '+l.month+'월 '+won(l.value)+'원/kg 적용')};
+window.addMaterialVendorV56=window.addMaterialVendorV97=function(k){
+  if(!IS_EDIT){toast('받기 전용 화면입니다');return}
+  var y=curYear(),db=getDb();
+  if(!db.years[y])db.years[y]={};if(!Array.isArray(db.years[y][k]))db.years[y][k]=[];
+  var nr={vendor:'',m:Array(12).fill(''),_id:'mr_'+hash(y+'|'+k+'|'+Date.now())};
+  db.years[y][k].push(nr);touch(db,y,k,nr,'vendor');putDb(db,true);window.renderMaterialPricePage();
+};
+window.deleteMaterialVendorV56=window.deleteMaterialVendorV97=function(k,ri){
+  if(!IS_EDIT){toast('받기 전용 화면입니다');return}
+  var y=curYear(),db=getDb(),list=(db.years[y]||{})[k]||[],r=list[+ri];
+  if(!r||!confirm('이 업체 단가 행을 삭제할까요?'))return;
+  if(r._id)db._rowDeleted[r._id]=Date.now();
+  list.splice(+ri,1);putDb(db,true);window.renderMaterialPricePage();
+};
+window.addMaterialExtraV97=function(){
+  if(!IS_EDIT){toast('받기 전용 화면입니다');return}
+  var db=getDb(),r={_id:'ex_'+hash(Date.now()+'|'+Math.random()),name:'',amount:'',note:''};
+  db.egiExtras.push(r);db._extraUpdated[r._id+'|name']=Date.now();putDb(db,true);window.renderMaterialPricePage();
+};
+window.deleteMaterialExtraV97=function(i){
+  if(!IS_EDIT){toast('받기 전용 화면입니다');return}
+  var db=getDb(),r=db.egiExtras[+i];
+  if(!r||!confirm('이 EGI 추가 금액 항목을 삭제할까요?'))return;
+  if(r._id)db._extraDeleted[r._id]=Date.now();
+  db.egiExtras.splice(+i,1);putDb(db,true);window.renderMaterialPricePage();
+};
+
+window.materialLatestInfo=window.materialLatestInfoAny=function(k,y){return latest(getDb(),k,String(y||new Date().getFullYear()))};
+window.marketPriceValue=function(k,y){return marketPrice(getDb(),k,String(y||new Date().getFullYear()))};
+window.__matPriceApi={getDb:getDb,latest:function(k,y){return latest(getDb(),k,y)},market:function(k,y){return marketPrice(getDb(),k,y)},MATERIALS:MATERIALS,MODE:MODE,parsePurchase:parsePurchase,applyPurchase:applyPurchase,monthAvg:monthAvg};
+
+['gsLoad','gsSave','bomSyncLoad','bomSyncSave'].forEach(function(name){
+  var native=window[name];
+  if(typeof native!=='function'||native.__matPriceV200)return;
+  var wrapped=function(){
+    var r=native.apply(this,arguments);
+    var refresh=function(){try{var v=document.getElementById('view-matprice');if(v&&v.offsetParent!==null)window.renderMaterialPricePage()}catch(e){}};
+    if(r&&typeof r.then==='function'){r.then(refresh,function(){})}else refresh();
+    return r;
+  };
+  wrapped.__matPriceV200=true;window[name]=wrapped;
+});
+
+(function(){
+  var css=''+
+  '#view-matprice .mp-tools-v200{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:11px 12px;background:#f7f9fc;border:1px solid #e2e8f1;border-radius:12px}'+
+  '#view-matprice .mp-src-badge{margin-left:8px;font-size:11px;font-weight:800;color:#7b8798;background:#fff;border:1px solid #dbe2ec;border-radius:999px;padding:4px 10px}'+
+  '#view-matprice .mp-src-badge.on{color:#0b5e34;background:#eaf7ef;border-color:#a8d6bc}'+
+  '#view-matprice .mp-readonly-badge{font-size:11.5px;font-weight:800;color:#8a5a00;background:#fff7e6;border:1px solid #f0d089;border-radius:8px;padding:8px 11px}'+
+  '#view-matprice .mp-lab{font-size:11.5px;color:#7b8798;font-weight:800}'+
+  '#view-matprice .mp-market-ro{display:inline-block;min-width:78px;text-align:right;font-weight:900;color:#855600;background:#fffaf0;border:1px solid #e3c882;border-radius:7px;padding:5px 8px;font-size:12px}'+
+  '#view-matprice .mp-ro-table td.mp-ro{text-align:right;font-size:12px;font-weight:700;color:#1b2435;padding:6px 8px!important;background:#fff;height:auto}'+
+  '#view-matprice .mp-ro-table td.mp-month-min{background:#fff!important;color:#1b2435;font-weight:900}'+
+  '#view-matprice .mp-ro-table td.mp-vendor-cell{text-align:left;font-weight:800;color:#25354d;font-size:12px;white-space:nowrap;padding:6px 8px!important}'+
+  '#view-matprice .mp-ro-table .mp-avgrow td{background:#eef4fb!important;font-weight:900;color:#16284a;text-align:right}'+
+  '#view-matprice .mp-ro-table .mp-avgrow td:first-child{text-align:left}'+
+  '#view-matprice .mp-empty{color:#c2cad6;font-weight:600}'+
+  '#view-matprice .mp-auto-tag{margin-left:6px;font-size:9.5px;font-weight:900;color:#0b5e34;background:#eaf7ef;border:1px solid #a8d6bc;border-radius:999px;padding:1px 6px;vertical-align:middle}'+
+  '#view-matprice .mp-grade-table th:last-child{width:auto}'+
+  '#view-matprice .material-price-table{display:none!important}'+
+  '#view-matprice .mp-extra-table td{font-size:12px}'+
+  '#view-matprice .mp-vendor-inline{display:flex;align-items:center;gap:4px}'+
+  '#view-matprice input.mp-vendor{flex:1 1 auto;min-width:0;text-align:left;font-weight:700;color:#25354d}'+
+  '#view-matprice .mp-grade-table input{width:100%;height:29px;border:1px solid #dce3ec;border-radius:5px;padding:5px 6px;text-align:right;font-size:12px;background:#fff;color:#1b2435;font-family:inherit}'+
+  '#view-matprice .mp-grade-table td.mp-month-min input{background:rgba(255,235,59,.25)!important;border-color:#dce3ec!important;color:#745000!important;font-weight:900}'+
+  '#view-matprice .mp-del-row{flex:0 0 auto;width:24px;height:24px;border:1px solid #efc8c8;border-radius:6px;background:#fff;color:#b42323;font-weight:900;font-size:14px;cursor:pointer;line-height:1}'+
+  '#view-matprice .mp-del-row:hover{background:#b42323;color:#fff}'+
+  '#view-matprice .mp-add-vendor{border:1px dashed #9bb9db;border-radius:7px;background:#fff;color:#245f9d;padding:7px 12px;font-weight:900;font-size:11.5px;cursor:pointer}'+
+  '#view-matprice .mp-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 11px;border-top:1px solid #e4e9f0;background:#fbfcfe}'+
+  '#view-matprice .mp-low-legend{font-size:11px;color:#796018;background:#fff3bd;border:1px solid #ead16e;border-radius:6px;padding:4px 8px;font-weight:800}'+
+  '#view-matprice .mp-extra-table input{width:100%;border:1px solid #dce3ec;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:12px}'+
+  '#view-matprice .mp-extra-del{width:44px;text-align:center}'+
+  /* ── 스크롤 안정화 : 표는 카드 안에서만 가로 스크롤, 페이지는 가로로 늘어나지 않게 ── */
+  '#view-matprice{max-width:100%;overflow-x:hidden}'+
+  '#view-matprice .mp-grade-card{max-width:100%;overflow:hidden}'+
+  '#view-matprice .mp-grade-scroll{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}'+
+  '#view-matprice .mp-grade-scroll::-webkit-scrollbar{height:9px}'+
+  '#view-matprice .mp-grade-scroll::-webkit-scrollbar-thumb{background:#c3cede;border-radius:6px}'+
+  '#view-matprice .mp-grade-table{min-width:1180px;table-layout:fixed;border-collapse:collapse}'+
+  '#view-matprice .mp-grade-table th:first-child,#view-matprice .mp-grade-table td:first-child{width:210px}'+
+  '#view-matprice .mp-grade-table th{position:static!important;top:auto!important}'+
+  '#view-matprice .material-price-box{max-height:none!important;overflow:visible!important;border:0!important}'+
+  '#view-matprice .mp-trend svg{display:block;width:100%;height:auto}'+
+  /* 렌더 도중 잔상(플래시) 방지 */
+  '#view-matprice.v1245-rendering{opacity:1!important;visibility:visible!important}';
+  var st=document.createElement('style');st.id='matprice-v200-style';st.textContent=css;
+  (document.head||document.documentElement).appendChild(st);
+})();
+
+
+/* 다른 스크립트가 나중에 renderMaterialPricePage 를 덮어써도 v210 화면을 유지한다 */
+(function(){
+  var MINE=window.renderMaterialPricePage;
+  function assert(){ if(window.renderMaterialPricePage!==MINE)window.renderMaterialPricePage=MINE; }
+  [300,1200,3000,8000,15000].forEach(function(ms){setTimeout(assert,ms)});
+  try{window.addEventListener('load',assert)}catch(e){}
+})();
+
+})();
+
+</script>
+<!-- ===== /원자재 단가 v210 ===== -->
+
+<!-- 원자재 단가 페이지 글자 크기: 일반 글자 13px / 각 단가 제목 16px -->
+<style id="matprice-font-size-13px-v53">
+  #view-matprice,
+  #view-matprice * {
+    font-size:13px !important;
+  }
+  /* 고철단가, EGI 추가 금액, EGI, HGI, PO, CR, STS201, STS304, STS430 */
+  #view-matprice .mp-grade-name {
+    font-size:16px !important;
+  }
+</style>
 </body>
 </html>
