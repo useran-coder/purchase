@@ -2582,7 +2582,7 @@ function natureCategoryToolbar(allRows,key,f,singleNature=false){
   const natTotal=[...new Set(natRows.map(productKey))].length;
   const midTotal=[...new Set(natRows.map(productKey))].length;
   const smallTotal=[...new Set(midRows.map(productKey))].length;
-  return `<div class="mat-filter-toolbar nature-category-toolbar" data-filter-key="${esc(key)}">${row('nat','매입구분',natValues,f.nat,natCounts,natTotal,!singleNature)}${row('mid','중분류',midValues,f.mid,midCounts,midTotal)}${row('small','소분류',smallValues,f.small,smallCounts,smallTotal)}</div>`;
+  return `<div class="mat-filter-toolbar nature-category-toolbar" data-filter-key="${esc(key)}">${row('nat','매입구분',natValues,f.nat,natCounts,natTotal,!singleNature)}${f.nat!=='전체'?row('mid','중분류',midValues,f.mid,midCounts,midTotal):''}${f.nat!=='전체'&&f.mid!=='전체'?row('small','소분류',smallValues,f.small,smallCounts,smallTotal):''}</div>`;
 }
 function bindNatureCategoryFilters(key,handler){
   $$('#content .natureCategoryFilter').forEach(btn=>btn.onclick=()=>handler(btn.dataset.level,btn.dataset.v));
@@ -4008,7 +4008,7 @@ function costRatio(){
   // editable sales row + ratio table
   html+=`<div class="tablewrap" style="max-height:none"><table><thead><tr><th class="l">구분</th>${ms.map(m=>`<th>${m.slice(2)}</th>`).join('')}<th>합계</th></tr></thead><tbody>`;
   // sales input row
-  html+=`<tr style="background:#f0fdfa"><td class="l"><b>${esc(salesName)}(입력)</b></td>${ms.map(m=>`<td><input class="mini salesIn" data-ym="${m}" value="${salesFor(m)!==''?won(salesFor(m)):''}" placeholder="입력"></td>`).join('')}<td><b id="salesTot">${won(ms.reduce((a,m)=>a+(+salesFor(m)||0),0))}</b></td></tr>`;
+  html+=`<tr style="background:#f0fdfa"><td class="l"><b>${esc(salesName)}</b> (동기화)</td>${ms.map(m=>`<td><input class="mini salesIn" data-ym="${m}" value="${salesFor(m)!==''?won(salesFor(m)):''}" placeholder="동기화"></td>`).join('')}<td><b id="salesTot">${won(ms.reduce((a,m)=>a+(+salesFor(m)||0),0))}</b></td></tr>`;
   // nature rows
   // v47: 매입구분 행을 클릭하면 위 그래프가 그 구분으로 바뀌고, 표 아래에 상세 리스트가 펼쳐집니다.
   natOrder.forEach(nat=>{ const c=natureInfo(nat), on=(selectedNat===nat)?'on':'';
@@ -4141,11 +4141,9 @@ function laserRatio(){
   const ratioYear=(state.period&&/^\d{4}$/.test(state.period.year||'')?state.period.year:'')||((dataMonths[dataMonths.length-1]||`${new Date().getFullYear()}-01`).slice(0,4));
   const ms=Array.from({length:12},(_,i)=>`${ratioYear}-${String(i+1).padStart(2,'0')}`);
   const laserText=r=>[r.big,r.mid,r.small,r.name,r.spec,r.nat].filter(Boolean).join(' ');
-  const isLaserConsumable=r=>!/EGI|HGI|\bPO\b/i.test(laserText(r))&&/레이저|질소|산소|가스|소모품/i.test(laserText(r));
+  const isLaserConsumable=r=>(categoryDisplayLabel('mid',r.mid)==='레이저가공'||r.mid==='레이저가공');
   const laserReason=r=>/질소|산소|가스/i.test(laserText(r))?'레이저 가스':'레이저 소모품';
   const laserRows=rows.filter(isLaserConsumable);
-  // 같은 품목이라도 매입일자가 다르면 별도 행으로 표시합니다.
-  const laserItems=[...groupSum(laserRows,r=>`${r.d||''}|${productKey(r)}`).entries()].map(([key,o])=>{const r=o.rows[0];return {key,purchaseDate:r.d||'-',code:r.code,name:r.name,spec:r.spec,nat:r.nat,reason:[...new Set(o.rows.map(laserReason))].join(' · '),vendors:new Set(o.rows.map(x=>x.vendor)).size,amt:o.amt};}).sort((a,b)=>String(b.purchaseDate).localeCompare(String(a.purchaseDate))||b.amt-a.amt);
   let html=`<div class="rhead"><span class="title">🔶 레이저 매출대비 매입비율</span><span class="meta">${ms[0]}~${ms[ms.length-1]} · 레이저 가스·소모품 매입 vs 레이저 매출</span><span class="spacer"></span></div>`;
   const cell=(source,ym)=>source.filter(r=>r.ym===ym).reduce((a,r)=>a+amtOf(r),0);
   const consumablePr=ms.map(m=>cell(laserRows,m));
@@ -4159,14 +4157,28 @@ function laserRatio(){
   laserShareTotal.ratio=laserShareTotal.sales?laserShareTotal.purchase/laserShareTotal.sales*100:null;
   html+=ratioChartHtml('📊 레이저 가스·소모품 매출대비 비율 그래프', consumableSeries, consumableTotal, 60, {series:laserShareSeries,total:laserShareTotal,label:'매출대비 레이저 매출비율',primaryLabel:'가스·소모품 매입비율',color:'#f59e0b'});
   html+=`<div class="tablewrap" style="max-height:none"><table><thead><tr><th class="l">구분</th>${ms.map(m=>`<th>${m.slice(2)}</th>`).join('')}<th>합계</th></tr></thead><tbody>`;
-  html+=`<tr style="background:#f0fdfa"><td class="l"><b>방화문부자재 매출(입력)</b></td>${ms.map((m,i)=>`<td><input class="mini bfSalesIn" data-ym="${m}" value="${bfSales[i]?won(bfSales[i]):''}" placeholder="입력"></td>`).join('')}<td>${won(bfSales.reduce((a,b)=>a+b,0))}</td></tr>`;
-  html+=`<tr style="background:#f0fdfa"><td class="l"><b>레이저 월매출(입력)</b></td>${ms.map((m,i)=>`<td><input class="mini lsIn" data-ym="${m}" value="${laserSales[i]?won(laserSales[i]):''}" placeholder="입력"></td>`).join('')}<td>${won(laserSales.reduce((a,b)=>a+b,0))}</td></tr>`;
-  html+=`<tr class="total-row laser-purchase-row"><td class="l">레이저 가스·소모품 매입</td>${consumablePr.map(v=>`<td>${won(v)}</td>`).join('')}<td>${won(consumablePr.reduce((a,b)=>a+b,0))}</td></tr>`;
-  html+=`<tr class="laser-ratio-row" style="background:#fffbeb"><td class="l">레이저 가스·소모품 매입비율</td>${ms.map((m,i)=>{const s=laserSales[i];const rr=s?consumablePr[i]/s*100:null;return `<td>${rr!=null?rr.toFixed(1)+'%':'—'}</td>`;}).join('')}<td>${consumableTotal.ratio!=null?consumableTotal.ratio.toFixed(1)+'%':'—'}</td></tr>`;
+  html+=`<tr style="background:#f0fdfa"><td class="l"><b>방화문부자재 매출</b> (동기화)</td>${ms.map((m,i)=>`<td><input class="mini bfSalesIn" data-ym="${m}" value="${bfSales[i]?won(bfSales[i]):''}" placeholder="동기화"></td>`).join('')}<td>${won(bfSales.reduce((a,b)=>a+b,0))}</td></tr>`;
+  html+=`<tr style="background:#f0fdfa"><td class="l"><b>레이저 월매출</b> (동기화)</td>${ms.map((m,i)=>`<td><input class="mini lsIn" data-ym="${m}" value="${laserSales[i]?won(laserSales[i]):''}" placeholder="동기화"></td>`).join('')}<td>${won(laserSales.reduce((a,b)=>a+b,0))}</td></tr>`;
   html+=`<tr class="laser-ratio-row" style="background:#fff7ed"><td class="l">매출대비 레이저 매출비율</td>${laserShareSeries.map(o=>`<td>${o.ratio!=null?o.ratio.toFixed(1)+'%':'—'}</td>`).join('')}<td>${laserShareTotal.ratio!=null?laserShareTotal.ratio.toFixed(1)+'%':'—'}</td></tr>`;
+  html+=`<tr class="total-row laser-purchase-row"><td class="l">레이저 가스·소모품 매입</td>${consumablePr.map(v=>`<td>${won(v)}</td>`).join('')}<td>${won(consumablePr.reduce((a,b)=>a+b,0))}</td></tr>`;
+  html+=`<tr class="laser-ratio-row" style="background:#fffbeb"><td class="l">레이저매출 대비 가스·소모품 비율</td>${ms.map((m,i)=>{const s=laserSales[i];const rr=s?consumablePr[i]/s*100:null;return `<td>${rr!=null?rr.toFixed(1)+'%':'—'}</td>`;}).join('')}<td>${consumableTotal.ratio!=null?consumableTotal.ratio.toFixed(1)+'%':'—'}</td></tr>`;
   html+=`</tbody></table></div>`;
-  html+=`<div class="panel" style="margin-top:14px"><h3>🔎 레이저 가스·소모품 집계 포함 품목 <span class="ph-sub">매입일별 ${laserItems.length}건 · ${wonM(laserRows.reduce((a,r)=>a+amtOf(r),0))}</span></h3><div class="tablewrap" style="max-height:360px"><table><thead><tr><th class="l">매입일자</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th class="l">포함 사유</th><th class="l">매입구분</th><th>공급처</th><th>매입액</th></tr></thead><tbody>${laserItems.map(o=>`<tr><td class="l">${esc(o.purchaseDate)}</td><td class="l">${esc(o.code||'-')}</td><td class="l"><b>${esc(o.name)}</b></td><td class="l">${esc(o.spec||'-')}</td><td class="l">${esc(o.reason)}</td><td class="l">${esc(o.nat||UNCLASSIFIED_NATURE)}</td><td>${won(o.vendors)}</td><td>${won(o.amt)}</td></tr>`).join('')||'<tr><td colspan="8" class="l sub2" style="padding:16px">현재 기간·사업부에서 레이저 가스·소모품이 없습니다.</td></tr>'}</tbody></table></div></div>`;
-  html+=`<div class="sub2" style="margin-top:8px">※ 품명·규격·매입구분·분류에 레이저, 질소, 산소, 가스 또는 소모품이 포함된 품목만 집계하며, EGI·HGI·PO 원자재는 제외합니다. 위 목록에서 실제 포함 품목을 확인할 수 있습니다.</div>`;
+  const liView=state.laserItemView||'item';
+  const totalAmt=laserRows.reduce((a,r)=>a+amtOf(r),0);
+  const totalQty=laserRows.reduce((a,r)=>a+(+r.qty||0),0);
+  const itemAgg=[...groupSum(laserRows,r=>productKey(r)).entries()].map(([key,o])=>{const r=o.rows[0];const byM={};const byA={};const vmap=new Map();o.rows.forEach(x=>{byM[x.ym]=(byM[x.ym]||0)+(+x.qty||0);byA[x.ym]=(byA[x.ym]||0)+amtOf(x);if(x.vendor)vmap.set(x.vendor,(vmap.get(x.vendor)||0)+amtOf(x));});const vends=[...vmap.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);const vendor=vends.length>=2?`${vends[0]} 외 ${vends.length-1}개업체`:(vends[0]||'-');return {code:r.code,name:r.name,spec:r.spec,nat:r.nat,mid:categoryDisplayLabel('mid',r.mid)||'-',small:categoryDisplayLabel('small',r.small)||'-',vendor,unit:[...new Set(o.rows.map(x=>x.unit).filter(Boolean))].join('/')||'-',cnt:o.rows.length,qty:o.qty,amt:o.amt,byM,byA,srcRows:o.rows};}).sort((a,b)=>b.amt-a.amt);
+  const qn=v=>v?won(Math.round(v*100)/100):'-';
+  let listHtml;
+  if(liView==='month'){
+    const monthTot=ms.map(m=>itemAgg.reduce((a,o)=>a+(o.byM[m]||0),0));
+    const monthTotA=ms.map(m=>itemAgg.reduce((a,o)=>a+(o.byA[m]||0),0));
+    const mcell=(q,a)=>`<div style="line-height:1.3"><div>${qn(q)}</div><div style="color:var(--muted);font-size:11px">${a?won(a):'-'}</div></div>`;
+    listHtml=`<div class="tablewrap" style="max-height:360px"><table><thead><tr><th class="l">중분류</th><th class="l">소분류</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th>${ms.map(m=>`<th>${+m.slice(5)}월</th>`).join('')}<th>합계</th></tr></thead><tbody>${itemAgg.map((o,i)=>`<tr class="laserItemRow" data-i="${i}" style="cursor:pointer"><td class="l">${esc(o.mid)}</td><td class="l">${esc(o.small)}</td><td class="l">${esc(o.code||'-')}</td><td class="l"><b>${esc(o.name)}</b></td><td class="l">${esc(o.spec||'-')}</td>${ms.map(m=>`<td>${mcell(o.byM[m]||0,o.byA[m]||0)}</td>`).join('')}<td>${mcell(o.qty,o.amt)}</td></tr>`).join('')||'<tr><td colspan="18" class="l sub2" style="padding:16px">현재 기간·사업부에서 레이저가공 중분류 품목이 없습니다.</td></tr>'}${itemAgg.length?`<tr class="total-row"><td class="l" colspan="5">합계(수량·금액)</td>${ms.map((m,i)=>`<td>${mcell(monthTot[i],monthTotA[i])}</td>`).join('')}<td>${mcell(totalQty,totalAmt)}</td></tr>`:''}</tbody></table></div>`;
+  }else{
+    listHtml=`<div class="tablewrap" style="max-height:360px"><table><thead><tr><th class="l">중분류</th><th class="l">소분류</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th class="l">거래처</th><th>수량</th><th class="l">단위</th><th>건수</th><th>매입액</th></tr></thead><tbody>${itemAgg.map((o,i)=>`<tr class="laserItemRow" data-i="${i}" style="cursor:pointer"><td class="l">${esc(o.mid)}</td><td class="l">${esc(o.small)}</td><td class="l">${esc(o.code||'-')}</td><td class="l"><b>${esc(o.name)}</b></td><td class="l">${esc(o.spec||'-')}</td><td class="l">${esc(o.vendor)}</td><td>${qn(o.qty)}</td><td class="l">${esc(o.unit)}</td><td>${won(o.cnt)}</td><td>${won(o.amt)}</td></tr>`).join('')||'<tr><td colspan="10" class="l sub2" style="padding:16px">현재 기간·사업부에서 레이저가공 중분류 품목이 없습니다.</td></tr>'}${itemAgg.length?`<tr class="total-row"><td class="l" colspan="6">합계</td><td>${qn(totalQty)}</td><td></td><td>${won(itemAgg.reduce((a,o)=>a+o.cnt,0))}</td><td>${won(totalAmt)}</td></tr>`:''}</tbody></table></div>`;
+  }
+  html+=`<div class="panel" style="margin-top:14px"><h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">🔎 레이저 가스·소모품 집계 포함 품목 <span class="ph-sub">${itemAgg.length}품목${liView==='month'?' · 월별 수량':''} · ${wonM(totalAmt)}</span><span class="seg laserItemSeg" style="margin-left:auto"><button data-liview="item" class="${liView==='item'?'on':''}">품목별</button><button data-liview="month" class="${liView==='month'?'on':''}">월별보기</button></span></h3>${listHtml}</div>`;
+  html+=`<div class="sub2" style="margin-top:8px">※ 품목 <b>중분류가 '레이저가공'</b>인 매입만 집계합니다. 현재 선택된 기간·사업부 기준이며, 품목 행을 클릭하면 매입일자별 상세 내역을 볼 수 있습니다.</div>`;
   $('#content').innerHTML=html; clearActiveMenu(); fitRatioChartText();
   $$('#content .bfSalesIn').forEach(inp=>inp.onchange=e=>{
     const ym=e.target.dataset.ym,v=toNum(e.target.value);
@@ -4184,6 +4196,8 @@ function laserRatio(){
     logEdit('레이저 월매출',`${ym} 레이저 월매출을 ${v?won(v):'삭제'}으로 변경`);
     saveSettings(); gsAutoPush(); laserRatio();
   });
+  $$('#content .laserItemSeg button').forEach(b=>b.onclick=()=>{state.laserItemView=b.dataset.liview;laserRatio();});
+  $$('#content .laserItemRow').forEach(tr=>tr.onclick=()=>{const o=itemAgg[+tr.dataset.i];if(!o||!o.srcRows)return;txnListDetail(`🔎 ${o.name}${o.spec?' ('+o.spec+')':''} · 레이저가공 매입 상세`,`${o.code?o.code+' · ':''}매입일자별 내역 · 합계 ${wonM(o.srcRows.reduce((a,r)=>a+amtOf(r),0))}`,o.srcRows,'레이저 매출대비 매입비율',()=>laserRatio());});
 }
 
 /* ---------- 월별 매입추이 ---------- */
