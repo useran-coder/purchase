@@ -1018,6 +1018,7 @@ function bindCategoryAssignEditors(refresh,root=null){
       const scrollWrap=inp.closest('.tablewrap');
       const scrollTop=scrollWrap?scrollWrap.scrollTop:0;
       const scrollLeft=scrollWrap?scrollWrap.scrollLeft:0;
+      const scrollWrapIndex=scrollWrap?[...document.querySelectorAll('.tablewrap')].indexOf(scrollWrap):-1;
       const next={...(state.categoryOverride[k]||{})};
       if(l==='big'){
         // 대분류는 실제 매입구분에도 반영해야 rebuildCUR() 후 자동분류로 되돌아가지 않습니다.
@@ -1033,9 +1034,11 @@ function bindCategoryAssignEditors(refresh,root=null){
       if(refresh){
         refresh({k,l,v});
         requestAnimationFrame(()=>{
-          if(scrollWrap){scrollWrap.scrollTop=scrollTop;scrollWrap.scrollLeft=scrollLeft;}
-          const nextInp=scrollWrap&&[...scrollWrap.querySelectorAll('.catAssign')].find(x=>x.dataset.k===k&&x.dataset.l===l);
-          if(nextInp)try{nextInp.focus({preventScroll:true});}catch(_){nextInp.focus();}
+          // refresh()가 표 전체를 다시 만들기 때문에 scrollWrap/입력칸은 이미 DOM에서 제거된 객체입니다.
+          // 제거된 datalist 입력칸에 다시 포커스를 주면 브라우저가 예전 위치에 입력창/추천창을
+          // 잔상처럼 다시 표시할 수 있으므로, 새로 만들어진 현재 표의 스크롤만 복원합니다.
+          const currentWrap=scrollWrapIndex>=0?document.querySelectorAll('.tablewrap')[scrollWrapIndex]:null;
+          if(currentWrap){currentWrap.scrollTop=scrollTop;currentWrap.scrollLeft=scrollLeft;}
         });
       }
       return true;
@@ -1461,7 +1464,17 @@ async function persistData(){ const slim=datasets.map(d=>({uid:d.uid,fileName:d.
    불러, 나머지 절반의 수정(분류 변경·사업부 지정·목표비율·프로젝트 지정 등)은 로컬에만 저장되고
    구글시트로는 전송되지 않았습니다. 다른 PC에서 보면 "가끔 반영이 안 되는" 현상의 주원인입니다.
    이제 saveSettings() 자체가 항상 자동저장을 예약하므로 누락이 발생하지 않습니다. */
-async function saveSettings(){ try{if(typeof refreshPurchaseMonthlySync==='function')refreshPurchaseMonthlySync()}catch(_){} const s={}; SETTING_KEYS.forEach(k=>s[k]=state[k]); await idbSet('settings',s); try{ if(typeof gsAutoPush==='function')gsAutoPush(); }catch(_){} }
+let _settingsWriteChain=Promise.resolve();
+function saveSettings(){
+  try{if(typeof refreshPurchaseMonthlySync==='function')refreshPurchaseMonthlySync()}catch(_){}
+  // 연속으로 여러 필드를 수정할 때 IndexedDB 쓰기가 완료되는 순서가 뒤바뀌면
+  // 먼저 만든(예전) 스냅샷이 마지막에 저장되어 수정 전 값이 다시 나타날 수 있습니다.
+  // 호출 시점의 스냅샷을 복제하고 한 줄의 저장 대기열로 순서를 보장합니다.
+  const s={}; SETTING_KEYS.forEach(k=>{const value=state[k];if(value===undefined){s[k]=value;return;}try{s[k]=structuredClone(value);}catch(_){s[k]=JSON.parse(JSON.stringify(value));}});
+  _settingsWriteChain=_settingsWriteChain.catch(()=>{}).then(()=>idbSet('settings',s));
+  try{ if(typeof gsAutoPush==='function')gsAutoPush(); }catch(_){}
+  return _settingsWriteChain;
+}
 const SETTING_KEYS=['basis','inclOverhead','natureCoverageVersion','division','period','homeTopPeriod','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','divCmpNat','divCmpList','paretoNat','paretoPct','costRatioNat','costRatioList','priceTrendBig','priceTrendMid','priceTrendSmall','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceMemo','priceMemoAt','itemStd','majorProducts','commonProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','materialDB','materialBase','divisionOverride','divisionSplitOverride','targetPct','projectMemo','projectCustom','projectDivision','projectRename','projectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','editLog','elogSeenTs','gsync'];
 
 /* ============================================================
@@ -1812,6 +1825,8 @@ function bindTableRowSelection(){
 /* ============================================================
    Generic table renderer
    ============================================================ */
+let _activeViewRefresh=null;
+let _activeViewAct=null;
 function render(title, meta, data, cols, defSortKey, note, opts={}){
   state.lastData={title,data,cols,note,opts};
   if(state.sortKey===null && defSortKey){ state.sortKey=defSortKey; state.sortDir=-1; }
@@ -1821,6 +1836,13 @@ function render(title, meta, data, cols, defSortKey, note, opts={}){
   if(['item-oem-table','item-nature-monthly-table','material-item-table'].includes(opts.tableClass)){
     opts={...opts,monthlyHideHeaders:[...new Set([...(opts.monthlyHideHeaders||[]),'그래프'])],monthlyEqualMonths:true,monthlyExpandHeaders:[...new Set([...(opts.monthlyExpandHeaders||[]),'품명'])]};
   }
+  // 표의 상세 화면은 state.act가 부모 메뉴를 가리킨 채 직접 렌더링됩니다.
+  // 자동 동기화·기간 변경 등이 runAct()를 호출해도 부모 목록으로 되돌아가지 않도록
+  // 현재 화면의 재계산 함수를 별도로 기억합니다.
+  _activeViewAct=state.act;
+  if(typeof opts.viewRefresh==='function')_activeViewRefresh=opts.viewRefresh;
+  else if(!opts.back&&typeof ACTS!=='undefined'&&ACTS[state.act])_activeViewRefresh=ACTS[state.act];
+  else _activeViewRefresh=()=>render(title,meta,data,cols,null,note,opts);
   const monthOpen=!opts.hideMonthly&&!!(state.monthlyOpen&&state.monthlyOpen[monthlyKey(opts)]);
   const displayCols=monthOpen?monthlyCurrentTableCols(cols,view,opts):cols;
   // 정렬은 실제 표시되는 컬럼(displayCols) 기준으로 수행 — 월별 보기의 월별 열·월합계·월평균도 정렬됨
@@ -2452,7 +2474,7 @@ function txnListDetail(title, meta, rows, backLabel, backAct, viewOpts={}){
   })() : '';
   render(title, meta+` · ${won(arr.length)}건 · 합계 ${wonM(tot)}`, arr, cols, 'd',
     '',
-    {totals:true, back:backLabel, backAct, searchFields:['d','vendor','name','code','spec','po','project'], monthlyShowKg:showKg,
+    {totals:true, back:backLabel, backAct, viewRefresh:()=>txnListDetail(title,meta,rows,backLabel,backAct,viewOpts), searchFields:['d','vendor','name','code','spec','po','project'], monthlyShowKg:showKg,
       controlsHtml:viewOpts.controlsHtml||'',
       monthlyHideCode:!!viewOpts.monthlyHideCode,
       monthlyHideHeaders:viewOpts.monthlyHideHeaders||[],
@@ -2478,7 +2500,7 @@ function itemListDetail(title, meta, rows, backLabel, backAct, extraNote, viewOp
     const prices=o.rows.map(r=>+r.price||0).filter(v=>v>0);
     return {key:k, code:code==='∅'?'':code,name,spec,amt:o.amt,qty:o.qty,n:o.n,unit:o.rows[0].unit,
       up:o.qty?o.amt/o.qty:0, minUp:prices.length?Math.min(...prices):0, maxUp:prices.length?Math.max(...prices):0, vendors:new Set(o.rows.map(r=>r.vendor)).size, nat:o.rows[0].nat,
-      small:o.rows[0].small, mgr:o.rows[0].mgr, cs:o.rows[0].cs, project:o.rows[0].project||'', srcRows:o.rows}; });
+      mid:categoryDisplayLabel('mid',o.rows[0].mid), small:categoryDisplayLabel('small',o.rows[0].small), mgr:o.rows[0].mgr, cs:o.rows[0].cs, project:o.rows[0].project||'', srcRows:o.rows}; });
   const max=Math.max(1,...arr.map(o=>o.amt));
   const hasCS=!viewOpts.hideCS&&arr.some(o=>o.cs);
   const nMon=o=>Math.max(1,new Set((o.srcRows||[]).map(r=>r.ym)).size);
@@ -2495,15 +2517,19 @@ function itemListDetail(title, meta, rows, backLabel, backAct, extraNote, viewOp
   const projectFilterTotal=new Set(projectRows.map(productKey)).size;
   const projectFilterSelected=viewOpts.projectDefault||'전체';
   const projectFilterHtml=viewOpts.projectField&&projectFilterNames.length?`<div class="mat-filter-toolbar project-page-filter"><div class="mat-filter-group"><span class="mat-filter-label">프로젝트·현장별</span><div class="mat-filter-list"><button type="button" class="mat-filter-btn projectPageFilterBtn ${projectFilterSelected==='전체'?'on':''}" data-p="전체">전체 <span class="mat-filter-count">(${projectFilterTotal})</span></button>${projectFilterNames.map(p=>`<button type="button" class="mat-filter-btn projectPageFilterBtn ${projectFilterSelected===p?'on':''}" data-p="${esc(p)}">${esc(p)} <span class="mat-filter-count">(${projectFilterItemSets.get(p)?.size||0})</span></button>`).join('')}</div></div></div>`:'';
+  const natureAnalysisColumns=backLabel==='매입구분별 분석';
   let cols=[
     {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
     ...(viewOpts.projectField?[{h:'프로젝트·현장별',l:1,cls:'project-field-col',k:'project',cell:o=>`<input class="catAssign projectFieldAssign" data-k="${esc(o.key)}" value="${esc(o.project||viewOpts.projectDefault||'')}" list="projectFieldList" placeholder="프로젝트·현장별" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit">`,raw:o=>o.project||viewOpts.projectDefault||''}]:[]),
-    {h:'매입구분',l:1,k:'nat',cell:o=>itemNatureSelect(o),raw:o=>state.natureOverride[productKey((o.srcRows&&o.srcRows[0])||o)]||o.nat},
+    ...(!natureAnalysisColumns?[{h:'매입구분',l:1,k:'nat',cell:o=>itemNatureSelect(o),raw:o=>state.natureOverride[productKey((o.srcRows&&o.srcRows[0])||o)]||o.nat}]:[
+      {h:'중분류',l:1,k:'mid',cell:o=>esc(o.mid),raw:o=>o.mid},
+      {h:'소분류',l:1,k:'small',cell:o=>esc(o.small),raw:o=>o.small},
+    ]),
     {h:'품번',l:1,k:'code',cell:o=>esc(o.code),raw:o=>o.code},
     {h:'품명',l:1,cls:viewOpts.materialName?'col-material-name':(viewOpts.compactName?'col-compact-name':(viewOpts.wideName?'col-wide-name':'')),k:'name',cell:o=>`<a href="#" class="ilink" data-k="${esc(o.key)}" style="color:var(--navy);font-weight:600;text-decoration:none">${esc(o.name)}</a>`,raw:o=>o.name},
-    ...(viewOpts.outsourcedKind?[{h:'품목구분',l:1,k:'outsourcedKind',cell:o=>outsourcedKindSelect(o),raw:o=>outsourcedKindOf((o.srcRows&&o.srcRows[0])||o)}]:[]),
+    ...(viewOpts.outsourcedKind&&!natureAnalysisColumns?[{h:'품목구분',l:1,k:'outsourcedKind',cell:o=>outsourcedKindSelect(o),raw:o=>outsourcedKindOf((o.srcRows&&o.srcRows[0])||o)}]:[]),
      {h:'규격',l:1,cls:viewOpts.materialSpec?'col-material-spec':(viewOpts.wideSpec?'col-oem-spec':''),k:'spec',cell:o=>esc(o.spec),raw:o=>o.spec},
-    {h:'소분류',l:1,k:'small',cell:o=>esc(o.small),raw:o=>o.small},
+    ...(!natureAnalysisColumns?[{h:'소분류',l:1,k:'small',cell:o=>esc(o.small),raw:o=>o.small}]:[]),
      ...(hasCS?[{h:'형태',l:1,cls:viewOpts.materialForm?'col-material-form':'',k:'cs',cell:o=>o.cs?`<span class="tag ${csCls(o.cs)}">${o.cs}</span>`:'',raw:o=>o.cs}]:[]),
     {h:'매입액',k:'amt',cell:o=>won(o.amt),raw:o=>o.amt,total:v=>won(v.reduce((a,o)=>a+o.amt,0))},
     ...(viewOpts.monthlyAvgQty?[{h:'월평균<br>매입수량',k:'avgQty',cell:o=>won(Math.round(o.qty/nMon(o)))+(o.unit?` ${esc(o.unit)}`:''),raw:o=>o.qty/nMon(o)}]:[]),
@@ -2519,12 +2545,12 @@ function itemListDetail(title, meta, rows, backLabel, backAct, extraNote, viewOp
     {h:'건수',cls:'col-count',k:'n',cell:o=>won(o.n),raw:o=>o.n},
     {h:'추이',cls:'col-trend',cell:o=>`<a href="#" class="tlink" data-k="${esc(o.key)}" style="color:var(--accent);font-weight:700;text-decoration:none" title="단가추이">📈</a>`},
   ];
-  if(viewOpts.hideSmall)cols=cols.filter(c=>c.k!=='small'&&c.h!=='소분류');
+  if(viewOpts.hideSmall&&!natureAnalysisColumns)cols=cols.filter(c=>c.k!=='small'&&c.h!=='소분류');
   if(viewOpts.hideAvgUnitPrice||backLabel==='매입구분별 분석')cols=cols.filter(c=>c.k!=='up');
   const byKey=new Map(arr.map(o=>[o.key,o]));
   const categoryManageButton='<button class="btn sm nature-manage-btn" id="itemCategoryManage">⚙️ 매입구분 · 품목 지정</button>';
   render(title, meta, arr, cols, 'amt', extraNote===undefined?'':extraNote,
-    {totals:true, back:backLabel, backAct, searchFields:['name','code','spec','small',...(viewOpts.projectField?['project']:[])], controlsHtml:`${projectFieldList}${projectFilterHtml}${viewOpts.controlsHtml||''}`, headExtra:`${viewOpts.headExtra||''}${categoryManageButton}`, tableClass:viewOpts.tableClass||'', monthlyHideCode:!!viewOpts.monthlyHideCode, monthlyHideHeaders:viewOpts.monthlyHideHeaders||[], monthlyKeepHeaders:viewOpts.monthlyKeepHeaders||[], monthlyExpandHeaders:viewOpts.monthlyExpandHeaders||[], monthlyEqualMonths:!!viewOpts.monthlyEqualMonths, monthlyShowKg:showKg,
+    {totals:true, back:backLabel, backAct, viewRefresh:typeof viewOpts.viewRefresh==='function'?viewOpts.viewRefresh:()=>itemListDetail(title,meta,rows,backLabel,backAct,extraNote,viewOpts), searchFields:['name','code','spec','mid','small',...(viewOpts.projectField?['project']:[])], controlsHtml:`${projectFieldList}${projectFilterHtml}${viewOpts.controlsHtml||''}`, headExtra:`${viewOpts.headExtra||''}${categoryManageButton}`, tableClass:viewOpts.tableClass||'', monthlyHideCode:!!viewOpts.monthlyHideCode, monthlyHideHeaders:viewOpts.monthlyHideHeaders||[], monthlyKeepHeaders:viewOpts.monthlyKeepHeaders||[], monthlyExpandHeaders:viewOpts.monthlyExpandHeaders||[], monthlyEqualMonths:!!viewOpts.monthlyEqualMonths, monthlyShowKg:showKg,
      afterRender:()=>{
        bindItemNatureEditors(()=>itemListDetail(title,meta,rows,backLabel,backAct,extraNote,viewOpts));
        $$('#content .projectFieldAssign').forEach(inp=>inp.onchange=e=>{
@@ -2608,7 +2634,7 @@ function natureItemList(nat,backLabel,backAct,natureDetail=false,sourceRows=null
   const f=natureCategoryFilterState(filterKey,nat);
   const rows=natureCategoryRows(allRows,f);
   itemListDetail(`📦 ${f.nat} · 품목`, `품목 리스트 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`, rows, backLabel, backAct, '',
-    {monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,compactName:false,tableClass:f.nat==='유통/OEM'?'item-oem-table':'item-nature-monthly-table',monthlyAvgQty:true,controlsHtml:natureCategoryToolbar(allRows,filterKey,f,isSingleNatureList(backLabel,f.nat)),
+    {viewRefresh:()=>natureItemList(f.nat,backLabel,backAct,natureDetail,sourceRows),monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,compactName:false,tableClass:f.nat==='유통/OEM'?'item-oem-table':'item-nature-monthly-table',monthlyAvgQty:true,controlsHtml:natureCategoryToolbar(allRows,filterKey,f,isSingleNatureList(backLabel,f.nat)),
      afterRender:()=>{bindItemNatureEditors(()=>natureItemList(f.nat,backLabel,backAct,natureDetail,sourceRows));bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){f.nat=v;f.mid='전체';f.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}f[level]=v;if(level==='mid')f.small='전체';natureItemList(f.nat,backLabel,backAct,natureDetail,sourceRows);});}});
 }
 
@@ -2629,7 +2655,7 @@ function materialItemList(backLabel,backAct,natureDetail=false,sourceRows=null){
   const rows=preRows.filter(r=>!f.thicks.length||f.thicks.includes(materialTLabel(r)));
   const filterButtons=(kind,label,vals,selected)=>`<div class="mat-filter-group"><span class="mat-filter-label">${label}</span><div class="mat-filter-list"><button type="button" class="mat-filter-btn ${!selected.length?'on':''}" data-kind="${kind}" data-v="__all">전체</button>${vals.map(v=>`<button type="button" class="mat-filter-btn ${selected.includes(v)?'on':''}" data-kind="${kind}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div></div>`;
   const controls=natureCategoryToolbar(allRows,filterKey,categoryFilter,isSingleNatureList(backLabel,categoryFilter.nat))+(showMaterialFilters?`<div class="mat-filter-toolbar">${filterButtons('forms','형태',allForms,f.forms)}${filterButtons('names','품명',allNames,f.names)}${filterButtons('thicks','재료T',allThicks,f.thicks)}<span class="sub2" style="margin-left:4px">형태·품명·재료T는 한 가지씩 선택할 수 있습니다.</span></div>`:'');
-  itemListDetail('📦 원자재 · 품목 리스트',`품목 리스트 · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{showKg:true,monthlyAvgKg:true,controlsHtml:controls,tableClass:'material-item-table',monthlyHideCode:true,monthlyHideHeaders:['그래프'],monthlyKeepHeaders:['순위','품명','규격','형태'],monthlyExpandHeaders:['품명'],hideSmall:true,wideName:false,materialName:true,materialSpec:true,materialForm:true,afterRender:()=>{
+  itemListDetail('📦 원자재 · 품목 리스트',`품목 리스트 · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{viewRefresh:()=>materialItemList(backLabel,backAct,natureDetail,sourceRows),showKg:true,monthlyAvgKg:true,controlsHtml:controls,tableClass:'material-item-table',monthlyHideCode:true,monthlyHideHeaders:['그래프'],monthlyKeepHeaders:['순위','품명','규격','형태'],monthlyExpandHeaders:['품명'],hideSmall:true,wideName:false,materialName:true,materialSpec:true,materialForm:true,afterRender:()=>{
     bindItemNatureEditors(()=>materialItemList(backLabel,backAct,natureDetail,sourceRows));
      $$('#content .mat-filter-btn:not(.natureCategoryFilter)').forEach(btn=>btn.onclick=()=>{ const kind=btn.dataset.kind,v=btn.dataset.v; if(v==='__all')state.materialFilters[kind]=[]; else state.materialFilters[kind]=[v]; state.sortKey=null; materialItemList(backLabel,backAct,natureDetail,sourceRows); });
      bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){categoryFilter.nat=v;categoryFilter.mid='전체';categoryFilter.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}categoryFilter[level]=v;if(level==='mid')categoryFilter.small='전체';materialItemList(backLabel,backAct,natureDetail,sourceRows);});
@@ -2653,7 +2679,7 @@ function moldItemList(backLabel,backAct,natureDetail=false,sourceRows=null){
   if(selected!==selectedValue)state.moldItemFilter='전체';
   const rows=selected==='전체'?base:base.filter(r=>moldKind(r)===selected);
   const controls=natureCategoryToolbar(allRows,filterKey,categoryFilter,isSingleNatureList(backLabel,categoryFilter.nat))+(showItemKindFilters?`<div class="ctrlbar"><b style="font-size:12px">품명 구분</b><div class="seg" id="moldItemSeg"><button type="button" data-v="전체" class="${selected==='전체'?'on':''}">전체</button>${kinds.map(k=>`<button type="button" data-v="${esc(k)}" class="${selected===k?'on':''}">${esc(k)}</button>`).join('')}</div></div>`:'');
-  itemListDetail('📦 금형 · 품목',`품목 리스트 · ${selected} · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,tableClass:'item-nature-monthly-table',monthlyAvgQty:true,controlsHtml:controls,afterRender:()=>{
+  itemListDetail('📦 금형 · 품목',`품목 리스트 · ${selected} · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{viewRefresh:()=>moldItemList(backLabel,backAct,natureDetail,sourceRows),monthlyHideCode:natureDetail,monthlyHideHeaders:['형태','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,tableClass:'item-nature-monthly-table',monthlyAvgQty:true,controlsHtml:controls,afterRender:()=>{
     bindItemNatureEditors(()=>moldItemList(backLabel,backAct,natureDetail,sourceRows));
     const seg=$('#moldItemSeg'); if(seg)seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{state.moldItemFilter=btn.dataset.v;state.sortKey=null;moldItemList(backLabel,backAct,natureDetail,sourceRows);});
     bindNatureCategoryFilters(filterKey,(level,v)=>{if(level==='nat'){categoryFilter.nat=v;categoryFilter.mid='전체';categoryFilter.small='전체';return openNaturePage(v,backLabel,backAct,natureDetail,sourceRows);}categoryFilter[level]=v;if(level==='mid')categoryFilter.small='전체';moldItemList(backLabel,backAct,natureDetail,sourceRows);});
@@ -2673,7 +2699,7 @@ function outsourcedItemList(backLabel,backAct,natureDetail=false,sourceRows=null
   if(selected!==selectedValue)state.outsourcedItemFilter='전체';
   const rows=selected==='전체'?base:base.filter(r=>outsourcedKindOf(r)===selected);
   const controls=natureCategoryToolbar(allRows,filterKey,categoryFilter,isSingleNatureList(backLabel,categoryFilter.nat))+(showItemKindFilters?`<div class="ctrlbar"><b style="font-size:12px">품명 구분</b><div class="seg" id="outsourcedItemSeg"><button type="button" data-v="전체" class="${selected==='전체'?'on':''}">전체</button>${kinds.map(k=>`<button type="button" data-v="${esc(k)}" class="${selected===k?'on':''}">${esc(k)}</button>`).join('')}</div></div>`:'');
-  itemListDetail('📦 외주가공 · 품목',`품목 리스트 · ${selected} · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{monthlyHideCode:natureDetail,monthlyHideHeaders:['품목구분','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,tableClass:'item-nature-monthly-table',outsourcedKind:true,monthlyAvgQty:true,controlsHtml:controls,afterRender:()=>{
+  itemListDetail('📦 외주가공 · 품목',`품목 리스트 · ${selected} · ${rows.length}건 · 합계 ${wonM(rows.reduce((a,r)=>a+amtOf(r),0))}`,rows,backLabel,backAct,'',{viewRefresh:()=>outsourcedItemList(backLabel,backAct,natureDetail,sourceRows),monthlyHideCode:natureDetail,monthlyHideHeaders:['품목구분','그래프'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명'],monthlyEqualMonths:true,hideSmall:natureDetail,wideName:true,wideSpec:true,tableClass:'item-nature-monthly-table',outsourcedKind:showItemKindFilters,monthlyAvgQty:true,controlsHtml:controls,afterRender:()=>{
     bindItemNatureEditors(()=>outsourcedItemList(backLabel,backAct,natureDetail,sourceRows));
     bindOutsourcedKindEditors(()=>outsourcedItemList(backLabel,backAct,natureDetail,sourceRows));
     const seg=$('#outsourcedItemSeg'); if(seg)seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{state.outsourcedItemFilter=btn.dataset.v;state.sortKey=null;outsourcedItemList(backLabel,backAct,natureDetail,sourceRows);});
@@ -4648,8 +4674,8 @@ const ACTS={
   'retain':retainView,'project':projectView,'cost-ratio':costRatio,'laser-ratio':laserRatio,
   'trend':trendView,'div-purchase':divisionPurchaseCompare
 };
-function setAct(a,opts={}){ if(a==='price-trend'&&!opts.keepTrendBack)state.priceTrendBack=null; if(state.act!==a){ state.sortKey=null; state.chipVal=null; state.catDrill=null; state.catDrill2=null; } state._search=''; state.act=a; runAct(); highlightMenu(a); }
-function runAct(){ const fn=ACTS[state.act]||homeDashboard; try{ fn(); }catch(e){ console.error('render error',e); $('#content').innerHTML=`<div class="note warn">화면 표시 중 오류: ${esc(e.message||e)}</div>`; } window.scrollTo(0,0); }
+function setAct(a,opts={}){ if(a==='price-trend'&&!opts.keepTrendBack)state.priceTrendBack=null; if(state.act!==a){ state.sortKey=null; state.chipVal=null; state.catDrill=null; state.catDrill2=null; } state._search=''; state.act=a; _activeViewRefresh=null; _activeViewAct=null; runAct(true); highlightMenu(a); }
+function runAct(forceRoute=false){ const fn=!forceRoute&&_activeViewRefresh&&_activeViewAct===state.act?_activeViewRefresh:(ACTS[state.act]||homeDashboard); try{ fn(); }catch(e){ console.error('render error',e); $('#content').innerHTML=`<div class="note warn">화면 표시 중 오류: ${esc(e.message||e)}</div>`; } window.scrollTo(0,0); }
 function clearActiveMenu(){ $$('.tm-item').forEach(b=>b.style.background=''); }
 function highlightMenu(a){ clearActiveMenu(); const b=[...$$('.tm-item')].find(x=>x.dataset.act===a); if(b)b.style.background='var(--barbg)'; }
 
@@ -5083,7 +5109,11 @@ init();
   function installMenu(){var price=document.querySelector('#topMenu [data-act="price"]');if(!price||document.querySelector('#topMenu [data-act="matprice"]'))return;var wrap=price.parentElement;wrap.insertAdjacentHTML('beforeend','<button class="tm-item" data-act="matprice"><span class="ic">🧱</span>원자재 단가</button>');var b=wrap.querySelector('[data-act="matprice"]');b.addEventListener('click',function(e){e.stopPropagation();if(typeof closeFilePanel==='function')closeFilePanel();document.querySelectorAll('.tm-top.open').forEach(function(t){t.classList.remove('open');if(t.nextElementSibling)t.nextElementSibling.classList.remove('open')});document.querySelectorAll('.tile,.tm-item').forEach(function(x){x.classList.remove('active')});document.querySelectorAll('[data-act="matprice"]').forEach(function(x){x.classList.add('active')});state.act='matprice';state.sortKey=null;state._drill=false;state._parent=null;try{window.runAct()}catch(err){try{window.materialPricePage()}catch(_){var result=document.getElementById('content');if(result)result.innerHTML='<div class="card"><div class="cb">원자재 단가 화면을 열지 못했습니다. 다시 선택해 주세요.</div></div>'}}})}
   function installRunAct(){var nativeRun=window.runAct;if(typeof nativeRun!=='function'||nativeRun.__materialV97)return;var wrapped=function(){var drop=document.getElementById('drop');if(state.act==='matprice'){if(drop)drop.classList.add('hidden');state._lastAct='matprice';window.materialPricePage();window.scrollTo(0,0);return}if(drop&&typeof CUR!=='undefined'&&!CUR.length)drop.classList.remove('hidden');return nativeRun.apply(this,arguments)};wrapped.__materialV97=true;window.runAct=wrapped}
   function addSyncFields(){var native=window.gsFields;if(typeof native!=='function'||native.__materialV97)return;var wrapped=function(){var a=native.apply(this,arguments);if(!a.some(function(x){return x[0]==='materialDB'})){a.push(['materialDB',state,'materialDB'],['materialBase',state,'materialBase'])}return a};wrapped.__materialV97=true;window.gsFields=wrapped}
-  function wrapSaveSettings(){var native=window.saveSettings;if(typeof native!=='function'||native.__materialV97)return;var wrapped=async function(){var r=await native.apply(this,arguments);try{var s=await idbGet('settings')||{};s.materialDB=copy(state.materialDB);s.materialBase=copy(state.materialBase);await idbSet('settings',s)}catch(_){ }return r};wrapped.__materialV97=true;window.saveSettings=wrapped}
+  function wrapSaveSettings(){var native=window.saveSettings;if(typeof native!=='function'||native.__materialV97)return;
+    // 기본 saveSettings()가 materialDB·materialBase를 포함해 순서대로 저장합니다.
+    // 저장 직후 설정 전체를 다시 읽고 쓰던 예전 보정은 연속 편집 시 오래된 스냅샷으로
+    // 최신 품목분류를 덮어쓰는 원인이므로 제거하고 동일한 저장 Promise만 그대로 전달합니다.
+    var wrapped=function(){return native.apply(this,arguments)};wrapped.__materialV97=true;window.saveSettings=wrapped}
   async function restoreMaterialSettings(){try{var s=await idbGet('settings');if(s&&s.materialDB)state.materialDB=s.materialDB;if(s&&s.materialBase)state.materialBase=s.materialBase;ensureState()}catch(_){ensureState()}}
   function wrapSyncRefresh(){['gsLoad','gsSave'].forEach(function(name){var native=window[name];if(typeof native!=='function'||native.__materialV97)return;var wrapped=async function(){var ok=await native.apply(this,arguments);if(ok&&state.act==='matprice')window.renderMaterialPricePage();return ok};wrapped.__materialV97=true;window[name]=wrapped})}
   function install(){ensureState();installMenu();installRunAct();addSyncFields();installMaterialSyncMerge();wrapSaveSettings();wrapSyncRefresh();var r=document.getElementById('mp-import-v97');if(r&&!r._bound)r.onchange=function(e){window.importMaterialPricesV97(e)};}
