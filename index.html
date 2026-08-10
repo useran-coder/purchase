@@ -5057,8 +5057,9 @@ init();
 #view-matprice .mp-trend-head b{font-size:12px;color:#16284a}
 #view-matprice .mp-trend svg{display:block;width:100%;height:auto}
 #view-matprice .mp-no-trend{margin:9px 11px 11px;padding:14px;text-align:center;background:#fafbfd;border:1px dashed #dbe2ec;border-radius:9px;color:#7b8798;font-size:11px}
-#view-matprice .mp-special-card .mp-grade-head{background:#fffaf0}
-#view-matprice .mp-special-card.scrap .mp-grade-name{color:#8a5a00}
+#view-matprice .mp-special-card:not(.scrap) .mp-grade-head{background:#fffaf0}
+#view-matprice .mp-special-card.scrap .mp-grade-head{background:#f8fafc}
+#view-matprice .mp-special-card.scrap .mp-grade-name{color:#16284a}
 #view-matprice .mp-extra-toggle{width:100%;display:flex;align-items:center;gap:10px;padding:11px 13px;border:0;border-bottom:1px solid #e1e7f0;background:#fffaf0;color:inherit;text-align:left;font-family:inherit;cursor:pointer}
 #view-matprice .mp-extra-toggle:hover{background:#fff7e6}
 #view-matprice .mp-extra-toggle .mp-grade-name{font-size:15px;font-weight:900;color:#16284a}
@@ -5345,7 +5346,9 @@ function union(base,add){
       var dst=out.years[y][k];
       src.years[y][k].forEach(function(r){
         var vn=txt(r.vendor),id=txt(r._id);
-        if(!vn&&rowScore(r)===0)return;
+        /* 값·업체명이 아직 없어도, 사용자가 방금 '업체 추가'로 만든 행(수정 타임스탬프 존재)은 유지한다.
+           타임스탬프가 전혀 없는 진짜 빈 잡행만 버린다(백업·복원 루프로 쌓이는 것 방지) */
+        if(!vn&&rowScore(r)===0&&newestCell(src,k,id)===0)return;
         var ex=(id&&dst.filter(function(x){return txt(x._id)===id})[0])
              ||(vn&&dst.filter(function(x){return txt(x.vendor)===vn})[0]);
         if(!ex){dst.push(cp(r));return}
@@ -5371,6 +5374,9 @@ function union(base,add){
     });
   });
   if(!out.egiExtras.length&&src.egiExtras.length)out.egiExtras=cp(src.egiExtras);
+  /* '최종 업데이트' 시각은 병합에서 지워지지 않도록 최신 값을 유지 */
+  if(txt(src.updated)&&(!txt(out.updated)||String(src.updated)>String(out.updated)))out.updated=src.updated;
+  if(Number(src._sourceUpdatedAt||0)>Number(out._sourceUpdatedAt||0)){out._sourceUpdatedAt=src._sourceUpdatedAt;if(src._sourceApp)out._sourceApp=src._sourceApp;if(src._masterSource)out._masterSource=src._masterSource;}
   return out;
 }
 
@@ -5728,6 +5734,7 @@ var UNIT_MIN=200, UNIT_MAX=20000;
 
 function cp(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
 function po(v){return v&&typeof v==='object'&&!Array.isArray(v)}
+function txt(v){return String(v==null?'':v).trim()}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n0(v){var n=Number(String(v==null?'':v).replace(/[, ]/g,''));return isFinite(n)?n:0}
 function won(v){return Math.round(n0(v)).toLocaleString('ko-KR')}
@@ -5929,10 +5936,10 @@ function curYear(){
   var e=document.getElementById('mp-year');
   return String((e&&e.value)||new Date().getFullYear());
 }
-function trendSvg(db,k,y){
+function trendSvg(db,k,y,Wpx){
   var rows=rowsOf(db,y,k),series=Array.from({length:12},function(_,i){return monthAvg(rows,i)}),vals=series.filter(function(v){return v!=null});
   if(vals.length<2)return '<div class="mp-no-trend">월 단가가 2개월 이상 있을 때 추이 그래프가 표시됩니다.</div>';
-  var mn=Math.min.apply(Math,vals),mx=Math.max.apply(Math,vals),W=980,H=210,pL=24,pR=18,pT=60,pB=34,iW=W-pL-pR,iH=H-pT-pB;
+  var mn=Math.min.apply(Math,vals),mx=Math.max.apply(Math,vals),W=Math.max(360,Math.round(Wpx||980)),H=210,pL=24,pR=18,pT=60,pB=34,iW=W-pL-pR,iH=H-pT-pB;
   var X=function(i){return pL+iW*(i/11)},Y=function(v){return pT+iH*(1-(v-mn)/Math.max(1,mx-mn))};
   var pts=series.map(function(v,i){return v==null?null:{i:i,v:v,x:X(i),y:Y(v)}}).filter(Boolean);
   var poly=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1)}).join(' ');
@@ -5945,6 +5952,32 @@ function trendSvg(db,k,y){
   }).join('');
   var ml=Array.from({length:12},function(_,i){return '<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="14" fill="#8a96a8">'+(i+1)+'월</text>'}).join('');
   return '<div class="mp-trend"><div class="mp-trend-head"><b>'+esc(y)+'년 '+esc(k)+' 월평균 단가 추이</b><span>최저 '+won(mn)+' · 최고 '+won(mx)+' 원/kg</span></div><svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet"><line x1="'+pL+'" y1="'+(pT+iH)+'" x2="'+(W-pR)+'" y2="'+(pT+iH)+'" stroke="#e5eaf1"/><polyline points="'+poly+'" fill="none" stroke="#2f6fb0" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labs+ml+'</svg></div>';
+}
+/* 추이 그래프를 컨테이너 실제 픽셀폭(1:1)으로 다시 그린다 → viewBox 스케일에 눌리지 않고 글자가 정확히 14px 로 보이게 */
+function fitTrendCard(card){
+  try{
+    if(!card)return;
+    var wrap=card.querySelector('.mp-trend-wrap');
+    if(!wrap||wrap.hasAttribute('hidden'))return;
+    var host=wrap.querySelector('.mp-trend');
+    var k=card.getAttribute('data-grade');if(!k)return;
+    var base=(host||wrap);
+    var cs=host?getComputedStyle(host):null;
+    var w=(host?host.clientWidth:wrap.clientWidth)-(cs?parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight):0);
+    if(!(w>0))return;
+    wrap.innerHTML=trendSvg(getDb(),k,curYear(),Math.round(w));
+  }catch(e){}
+}
+function fitAllOpenTrends(){
+  var root=document.getElementById('view-matprice');if(!root)return;
+  root.querySelectorAll('.mp-grade-card[data-grade]').forEach(function(c){
+    var w=c.querySelector('.mp-trend-wrap');
+    if(w&&!w.hasAttribute('hidden'))fitTrendCard(c);
+  });
+}
+if(!window.__mpTrendResizeBound){
+  window.__mpTrendResizeBound=true;
+  window.addEventListener('resize',function(){clearTimeout(window.__mpTrendRT);window.__mpTrendRT=setTimeout(fitAllOpenTrends,140)});
 }
 function tableHtml(db,k,y){
   var rows=rowsOf(db,y,k),mins=monthMins(rows);
@@ -6092,7 +6125,7 @@ function renderPage(){
   ensureYearRows(db,y);
   if(IS_MASTER){try{if(typeof window.__mpSyncScrap==='function')window.__mpSyncScrap(db,y)}catch(e){}}
   var html=
-    '<div class="card"><div class="ch"><span style="font-size:16px">💰 원자재 월별 매입단가</span>'+
+    '<div class="card"><div class="ch"><span class="mp-page-title" style="font-size:16px">💰 원자재 월별 매입단가</span>'+
       '<span id="mp-updated" style="margin-left:auto;font-size:11.5px;font-weight:600;color:#64748b">최종 업데이트: '+esc(db.updated||'-')+'</span></div>'+
       '<div class="cb">'+toolbarHtml(db,y,ys)+
       '<div class="material-price-box"><div class="mp-grade-stack">'+
@@ -6130,7 +6163,7 @@ function renderPage(){
     var c=root.querySelector('.mp-grade-card[data-grade="'+g+'"]');
     if(!c)return;
     var w=c.querySelector('.mp-trend-wrap'),b=c.querySelector('[data-mp-trend]');
-    if(w){w.removeAttribute('hidden');if(b)b.textContent='단가추이 그래프 닫기'}
+    if(w){w.removeAttribute('hidden');if(b)b.textContent='단가추이 그래프 닫기';fitTrendCard(c);}
   });
   if(window.__mpExtraOpen){var _eb=root.querySelector('.mp-extra-card .mp-extra-body');if(_eb){_eb.removeAttribute('hidden');var _ar=root.querySelector('.mp-extra-card .mp-extra-arrow');if(_ar)_ar.textContent='▾';}}
   if(focus){
@@ -6161,6 +6194,7 @@ function bind(root){
       if(show)wrap.removeAttribute('hidden');else wrap.setAttribute('hidden','');
       t.textContent=show?'단가추이 그래프 닫기':'단가추이 그래프보기';
       if(card&&card.getAttribute('data-grade'))_openTrend[card.getAttribute('data-grade')]=show;
+      if(show)fitTrendCard(card);
       return;
     }
     var mode=t.getAttribute('data-mp-apply');
@@ -6543,6 +6577,14 @@ window.__matPriceApi={getDb:getDb,latest:function(k,y){return latest(getDb(),k,y
   /* 고철단가, EGI 추가 금액, EGI, HGI, PO, CR, STS201, STS304, STS430 */
   #view-matprice .mp-grade-name {
     font-size:16px !important;
+  }
+  /* 페이지 제목 '💰 원자재 월별 매입단가' */
+  #view-matprice .mp-page-title {
+    font-size:16px !important;
+  }
+  /* 단가추이 그래프 글자(값·증감·월 라벨) */
+  #view-matprice .mp-trend svg text {
+    font-size:14px !important;
   }
 </style>
 </body>
