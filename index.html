@@ -876,8 +876,8 @@
    ============================================================ */
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
-const BUILD='2026-08-09';
-const VERNO='ver45';
+const BUILD='2026-08-12';
+const VERNO='ver46';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -933,6 +933,20 @@ function natureDisplayKey(key){
   if(k==='(미분류)'||k==='분류없음')return UNCLASSIFIED_NATURE;
   const ren=(state.categoryRename&&state.categoryRename.big)||{};
   return ren[k]||k;
+}
+/* 원자재 여부는 화면에 표시되는 한글명 하나가 아니라 분류 class·명칭변경·자동분류를
+   함께 확인합니다. 기존 원자재 분석은 nat==='원자재'만 허용해, 대분류 명칭을 바꾸거나
+   예전 자동분류 값이 남은 품목이 분석에서 빠질 수 있었습니다. */
+function isRawNatureKey(key){
+  const k=natureValueKey(key);
+  return k==='원자재'||k===natureDisplayKey('원자재')||(natureInfo(k).cls==='raw');
+}
+function isRawMaterialRow(r){
+  if(!r)return false;
+  // 사용자가 품목·거래처·대분류에서 직접 지정한 값은 자동판정보다 우선합니다.
+  const manual=effectiveNatureOverride(r)||effectiveVendorNatureOverride(r)||effectiveCategoryBigOverride(r);
+  if(manual)return isRawNatureKey(manual);
+  return isRawNatureKey(r.nat)||r.natCls==='raw'||autoNatureKey(r)==='원자재';
 }
 function natureValueKey(key){
   const k=String(key||'').trim();
@@ -1239,14 +1253,17 @@ function categoryEmptyName(level){ return {big:'(미분류)',mid:'(중분류없�
 function categoryOptionLabel(level,value){ return value===categoryEmptyName(level)?'분류없음':value; }
 function categoryDisplayLabel(level,value){ return value===categoryEmptyName(level)?'':value; }
 function materialThicknessValue(o){
-  if(!o||!(o.nat==='원자재'||o.natCls==='raw'))return '';
+  if(!o||!isRawMaterialRow(o))return '';
   const spec=String(o.spec||'').trim();
   let m=spec.match(/^(\d+(?:\.\d+)?)\s*(?:t|T|mm|MM|㎜)?\s*[x×*＊]/i);   // 두께 × 폭 …
-  if(m)return m[1];
+  if(m&&parseFloat(m[1])<=50)return m[1];
   m=spec.match(/(\d+(?:\.\d+)?)\s*(?:t|T|mm|MM|㎜)(?![A-Za-z0-9])/);        // 1.2T · 1.2mm
   if(m&&parseFloat(m[1])<=50)return m[1];
   m=spec.match(/(?:^|[^0-9A-Za-z])[tT]\s*[:=]?\s*(\d+(?:\.\d+)?)/);        // T1.2 · t=1.2
   if(m&&parseFloat(m[1])<=50)return m[1];
+  // 폭×길이×두께처럼 두께가 마지막에 오는 ERP 규격도 누락 없이 인식합니다.
+  const dims=(spec.match(/\d+(?:\.\d+)?/g)||[]).map(Number);
+  if(dims.length>=2){const candidates=dims.filter(v=>v>0&&v<=50);if(candidates.length)return String(Math.min(...candidates));}
   return '';
 }
 function materialTLabel(r){
@@ -1397,8 +1414,9 @@ function rebuildCUR(){
     const natInfo=natureInfo(manualNat);
     const manualProject=state.projectOverride[productKey(r)]||r.project;
     const cat=categoryFor(r,manualNat);
+    const rawMaterial=isRawNatureKey(manualNat)||(!explicitNat&&autoNat==='원자재');
     CUR.push({...r, sourceBig:r.big,sourceMid:r.mid,sourceSmall:r.small, big:cat.big,mid:cat.mid,small:cat.small, project:manualProject, dt, ym:`${Y}-${String(M).padStart(2,'0')}`, y:String(Y), m:M,
-      nat:manualNat, natCls:natInfo.cls, div:(state.divisionOverride[productKey(r)]||divisionOf(manualProject,r.mgmt)), cs:(natInfo.cls==='raw'?coilSheet(r):''),
+      nat:manualNat, natCls:rawMaterial?'raw':natInfo.cls, div:(state.divisionOverride[productKey(r)]||divisionOf(manualProject,r.mgmt)), cs:(rawMaterial?coilSheet(r):''),
       mgr: (state.mgrOverride[r.code]||state.mgrOverride[r.vendor]||r.mgr||'미지정'),
       amt: state.basis==='total'?r.total:r.supply });
   }
@@ -1970,7 +1988,7 @@ let _toastT;
 function toast(msg){ let el=document.getElementById('appToast'); if(!el){ el=document.createElement('div'); el.id='appToast'; el.className='toast'; document.body.appendChild(el); } el.textContent=msg; el.classList.add('on'); clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('on'),3000); }
 function barCellAvg(v,max,avgPct,color){ const w=max?Math.max(1,v/max*100):0; const mark=(avgPct==null)?'':`<span class="avgmark" style="left:${Math.min(100,Math.max(0,avgPct))}%"></span>`; return `<div class="bar${mark?' has-mark':''}"><i style="width:${w}%;background:${color||'var(--accent)'}"></i>${mark}</div>`; }
 function amtWithKg(amt,qty){ return `<div class="amt-with-kg">${won(amt)}<span class="kg">${won(qty||0)}kg</span></div>`; }
-function isKgRow(r){ return !!r&&(r.natCls==='raw'||r.nat==='원자재'||/kg/i.test(String(r.unit||''))); }
+function isKgRow(r){ return !!r&&(isRawMaterialRow(r)||/kg/i.test(String(r.unit||''))); }
 function isKgList(rows){ const qtyRows=(Array.isArray(rows)?rows:[]).filter(r=>Math.abs(+r.qty||0)>0); return qtyRows.length>0&&qtyRows.every(isKgRow); }
 function ratioColor(v){ return v>=65?'var(--red)':v>=50?'var(--orange)':'var(--accent)'; }
 function ratioChartHtml(title, series, total, highlightThreshold=60, secondary=null, primaryLabelPosition='below'){
@@ -2085,7 +2103,7 @@ function homeDashboard(){
   const years=[...new Set(CUR.map(r=>r.y))].sort();
   const chartYear=(state.period&&state.period.year&&years.includes(state.period.year))?state.period.year:(years[years.length-1]||'');
   const chartRows=divisionAdjustedRows(CUR.filter(r=>(state.division==='전체'||r.div===state.division||hasAnySplit(productKey(r)))&&(state.inclOverhead||r.natCls!=='ovh')&&r.y===chartYear),state.division);
-  const chartData=Array.from({length:12},(_,i)=>{const ym=`${chartYear}-${String(i+1).padStart(2,'0')}`,mr=chartRows.filter(r=>r.ym===ym);return {m:i+1,purchase:mr.reduce((a,r)=>a+amtOf(r),0),sales:+salesFor(ym)||0,raw:mr.filter(r=>r.nat==='원자재').reduce((a,r)=>a+amtOf(r),0)};});
+  const chartData=Array.from({length:12},(_,i)=>{const ym=`${chartYear}-${String(i+1).padStart(2,'0')}`,mr=chartRows.filter(r=>r.ym===ym);return {m:i+1,purchase:mr.reduce((a,r)=>a+amtOf(r),0),sales:+salesFor(ym)||0,raw:mr.filter(isRawMaterialRow).reduce((a,r)=>a+amtOf(r),0)};});
   const chartMax=Math.max(1,...chartData.flatMap(o=>[o.purchase,o.sales,o.raw]));
   const chartPurchMonths=chartData.filter(o=>o.purchase>0);
   const avgPurchase=chartPurchMonths.length?chartPurchMonths.reduce((a,o)=>a+o.purchase,0)/chartPurchMonths.length:0;
@@ -2186,7 +2204,7 @@ function homeDashboard(){
   html+=`</div>`;
 
   const topItems=(src)=>[...groupSum(src,r=>(r.code||'∅')+'|'+r.name+'|'+r.spec).entries()].map(([key,o])=>{const [,name,spec]=key.split('|');return {key,name,spec,amt:o.amt,qty:o.qty};}).sort((a,b)=>b.amt-a.amt).slice(0,10);
-  const topMaterial=topItems(homeTopRows('material').filter(r=>r.nat==='원자재'));
+  const topMaterial=topItems(homeTopRows('material').filter(isRawMaterialRow));
   const topPurchase=topItems(homeTopRows('item'));
   const topTable=(arr,empty,showKg=false)=>{const mx=arr[0]?arr[0].amt:1;const cols=showKg?5:4;return `<table style="font-size:12px"><thead><tr><th class="l">품명</th><th class="l">규격</th><th>매입액</th>${showKg?'<th>중량(kg)</th>':''}<th class="l gcell">그래프</th></tr></thead><tbody>${arr.map((o,i)=>`<tr><td class="l"><b>${i+1}</b> ${esc(clampTxt(o.name,20))}</td><td class="l">${esc(clampTxt(o.spec,14))}</td><td>${won(o.amt)}</td>${showKg?`<td>${won(o.qty)}kg</td>`:''}<td class="l gcell">${barCell(o.amt,mx)}</td></tr>`).join('')||`<tr><td colspan="${cols}" class="l sub2" style="padding:14px">${empty}</td></tr>`}</tbody></table>`;};
   html+=`<div class="panelgrid"><div class="panel"><h3>🧱 주요 매입원자재 TOP 10 ${homeTopToggle('material')} <span class="ph-sub">${esc(homeTopLabel('material'))}</span><span style="margin-left:auto"></span><button class="btn ghost sm topMore" data-act="rank-material">더보기</button></h3>${topTable(topMaterial,'원자재 데이터가 없습니다.',true)}</div><div class="panel"><h3>📦 주요 매입품목 TOP 10 ${homeTopToggle('item')} <span class="ph-sub">${esc(homeTopLabel('item'))}</span><span style="margin-left:auto"></span><button class="btn ghost sm topMore" data-act="rank-item">더보기</button></h3>${topTable(topPurchase,'매입 데이터가 없습니다.')}</div></div>`;
@@ -2498,17 +2516,26 @@ function vendorDetail(vendor){
 function steelGrade(r){
   const fromText=v=>{
     const s=String(v||'').toUpperCase();
-    const m=s.match(/STS(?:\s*(?:201|304|316|430))?|SUS(?:\s*(?:201|304|316|430))?|HGI|EGI|(?:^|[^A-Z])PO(?:[-_\s]|$)|(?:^|[^A-Z])GA(?:[-_\s]|$)|(?:^|[^A-Z])GI(?:[-_\s]|$)|(?:^|[^A-Z])CR(?:[-_\s]|$)/);
+    const m=s.match(/(?:^|[^A-Z0-9])(STS|SUS)\s*[-_]?\s*(201|304|316|430)(?=$|[^A-Z0-9])|(?:^|[^A-Z0-9])(SGCC|SECC|SPCC|SPHC|PPGI|HGI|EGI|PO|GA|GI|CR|HR)(?=$|[^A-Z0-9])/);
     if(!m)return '';
-    return m[0].replace(/^[^A-Z]+|[^A-Z0-9]+$/g,'').replace(/\s+/g,'');
+    if(m[1])return (m[1]==='SUS'?'STS':m[1])+m[2];
+    return m[3];
   };
-  const detected=[r.sourceSmall,r.sourceMid,r.sourceBig,r.name,r.code,r.group].map(fromText).find(Boolean);
+  const sourceTexts=[r.sourceSmall,r.sourceMid,r.sourceBig,r.name,r.code,r.group,r.spec];
+  const detected=sourceTexts.map(fromText).find(Boolean);
   if(detected)return detected;
+  const korean=sourceTexts.map(v=>String(v||'')).find(v=>/칼라강판|냉연강판|열연강판|아연도금강판/.test(v));
+  if(korean){
+    if(/칼라강판/.test(korean))return '칼라강판';
+    if(/냉연강판/.test(korean))return 'CR';
+    if(/열연강판/.test(korean))return 'HR';
+    if(/아연도금강판/.test(korean))return 'GI';
+  }
   const sourceValue=[r.sourceSmall,r.sourceMid,r.sourceBig,r.name,r.group,r.small].map(v=>String(v||'').trim().replace(/\s*\d+(?:\.\d+)?\s*(?:t|T|mm)?\s*$/,'').trim()).find(v=>v&&!/^(원자재|부품\/?부속|외주가공|금형|유통\/?OEM|\(.*\)|미분류)$/i.test(v));
   if(sourceValue)return sourceValue;
   return '기타';
 }
-function thickTag(r){ const m=String(r.spec||'').match(/(\d+(?:\.\d+)?)/); return m?(m[1]+'t'):'기타'; }
+function thickTag(r){ const t=materialTLabel(r); return t?(t+'t'):'기타'; }
 
 /* ---------- 철판 형태: 코일(coil) / 판재(sheet) ---------- */
 function coilSheet(r){
@@ -2727,7 +2754,7 @@ function materialItemList(backLabel,backAct,natureDetail=false,sourceRows=null){
   const filterKey=`nature:${backLabel}:${sourceRows?'full':'active'}`;
   const categoryFilter=natureCategoryFilterState(filterKey,'원자재');
   const showMaterialFilters=!isSingleNatureList(backLabel,categoryFilter.nat);
-  const base=natureCategoryRows(allRows,categoryFilter).filter(r=>r.nat==='원자재');
+  const base=natureCategoryRows(allRows,categoryFilter).map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
   const allForms=[...new Set(base.map(r=>r.cs||coilSheet(r)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   const allNames=[...new Set(base.map(r=>r.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   const f=state.materialFilters||(state.materialFilters={forms:[],names:[],thicks:[]});
@@ -3438,7 +3465,13 @@ function purchaseCycleView(){
 
 /* ---------- 원자재 분석 (코일/판재 · 강종별 / 강종 두께별) ---------- */
 function rankMaterial(){
-  const allRaw=activeRows().filter(r=>r.nat==='원자재');
+  // 명칭 변경·기존 자동분류·raw class까지 같은 기준으로 복원한 뒤 집계합니다.
+  const allRaw=activeRows().map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
+  // 현재 필터로 빠진 행을 사용자가 바로 확인할 수 있도록 전체 보관 원자재와 대조합니다.
+  const storedRaw=CUR.map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
+  const periodRaw=CUR.filter(inPeriod).map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
+  const excludedByPeriod=Math.max(0,storedRaw.length-periodRaw.length);
+  const excludedByDivision=Math.max(0,periodRaw.length-allRaw.length);
   const totAll=allRaw.reduce((a,r)=>a+amtOf(r),0);
   // coil/sheet summary (over all raw, before form filter)
   const csSum={};
@@ -3506,10 +3539,11 @@ function rankMaterial(){
       return `코일:판재 비중 <b>${pct(c,c+s).toFixed(0)}:${pct(s,c+s).toFixed(0)}</b> · 판재 kg단가가 코일 대비 <b class="${diff>=0?'up':'down'}">${diff>=0?'+':''}${diff.toFixed(1)}%</b>. ${diff>=15?'판재 비중이 크면 사내 슬리팅(코일 구매 후 절단)으로 원가절감 여지를 검토하세요.':'코일 위주 구매로 소재 원가가 관리되고 있습니다.'}`;})()}</div></div>`;
 
   const thickFilters=byThick?`<span class="materialThickFilters" style="display:inline-flex;align-items:center;gap:6px;margin-left:8px"><b style="font-size:12px">강종·두께 선택</b><select class="sel" id="matGradeFilter" title="강종 선택"><option value="all">전체 강종</option>${gradeOptions.map(v=>`<option value="${esc(v)}" ${selectedGradeFilter===v?'selected':''}>${esc(v)}</option>`).join('')}</select><select class="sel" id="matThickFilter" title="두께 선택"><option value="all">전체 두께</option>${thickOptions.map(v=>`<option value="${esc(v)}" ${selectedThickFilter===v?'selected':''}>${esc(v)}</option>`).join('')}</select></span>`:'';
+  const auditText=`집계검증: 현재 ${won(allRaw.length)}건 / 보관 원자재 ${won(storedRaw.length)}건${excludedByPeriod?` · 기간 제외 ${won(excludedByPeriod)}건`:''}${excludedByDivision?` · 사업부 제외 ${won(excludedByDivision)}건`:''}`;
   const seg=`<div class="ctrlbar"><b style="font-size:12px">형태</b><div class="seg" id="formSeg"><button data-v="all" class="${form==='all'?'on':''}">전체</button><button data-v="coil" class="${form==='coil'?'on':''}">🌀 코일</button><button data-v="sheet" class="${form==='sheet'?'on':''}">▭ 판재</button></div>
     <span style="width:1px;height:20px;background:var(--line)"></span>
     <b style="font-size:12px">집계</b><div class="seg" id="matSeg"><button data-v="grade" class="${!byThick?'on':''}">강종별</button><button data-v="thick" class="${byThick?'on':''}">강종 두께별</button></div>${thickFilters}
-    <span class="sub2">강종별은 강종을 선택하면 아래 공급처별 월별 매입에 해당 집계만 표시됩니다.</span></div>`;
+    <span class="sub2">강종별은 강종을 선택하면 아래 공급처별 월별 매입에 해당 집계만 표시됩니다.</span><span class="sub2" title="기간·사업부 선택 때문에 제외된 건수를 포함한 원자재 집계 대조 결과">${auditText}</span></div>`;
 
   // vendor × month matrix (respects form filter) — 전체 표시, 원단위, 업체 클릭 시 납품리스트
   const materialYears=[...new Set(rows.map(r=>(r.ym||'').slice(0,4)).filter(Boolean))].sort();
@@ -4989,7 +5023,7 @@ async function init(){
 }
 init();
 </script>
-+<style id="purchase-material-price-v36-style">
+<style id="purchase-material-price-v36-style">
 #view-matprice{width:100%;max-width:1680px;margin:0 auto}
 #view-matprice .mp-grade-table tr.mp-scrap-auto-row input.mp-month{background:#fff!important;border-color:#dce3ec!important;color:#1b2435!important}
 #view-matprice .mp-grade-head .mp-grade-current{font-size:11.5px;color:#8b6a6a!important;background:#fff8f8!important;border:1px solid #f3dede!important;border-radius:7px;padding:5px 8px}
