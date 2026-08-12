@@ -877,7 +877,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-08-12';
-const VERNO='ver46';
+const VERNO='ver48';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -947,6 +947,18 @@ function isRawMaterialRow(r){
   const manual=effectiveNatureOverride(r)||effectiveVendorNatureOverride(r)||effectiveCategoryBigOverride(r);
   if(manual)return isRawNatureKey(manual);
   return isRawNatureKey(r.nat)||r.natCls==='raw'||autoNatureKey(r)==='원자재';
+}
+/* 원자재 분석의 누락 방지용 ERP 원본 판정.
+   동기화된 과거 수동분류가 EGI 같은 명확한 원자재를 다른 구분으로 덮어써도,
+   관리구분·원본 대분류·원본 품명/중분류가 원자재임을 확인할 수 있으면 분석에는 포함합니다. */
+function isSourceRawMaterialRow(r){
+  if(!r)return false;
+  if(String(r.mgmt||'').trim()==='원자재')return true;
+  const source={...r,
+    big:r.sourceBig!=null?r.sourceBig:r.big,
+    mid:r.sourceMid!=null?r.sourceMid:r.mid,
+    small:r.sourceSmall!=null?r.sourceSmall:r.small};
+  return autoNatureKey(source)==='원자재';
 }
 function natureValueKey(key){
   const k=String(key||'').trim();
@@ -1253,7 +1265,10 @@ function categoryEmptyName(level){ return {big:'(미분류)',mid:'(중분류없�
 function categoryOptionLabel(level,value){ return value===categoryEmptyName(level)?'분류없음':value; }
 function categoryDisplayLabel(level,value){ return value===categoryEmptyName(level)?'':value; }
 function materialThicknessValue(o){
-  if(!o||!isRawMaterialRow(o))return '';
+  // 원자재 분석에서 ERP 원본 기준으로 복원한 행(natCls='raw')은 과거 수동분류를
+  // 다시 적용하지 않습니다. 그렇지 않으면 EGI 1.6이 원자재로 복원된 뒤에도
+  // 두께 단계에서 '기타'로 빠져 강종·두께 표에 나타나지 않습니다.
+  if(!o||!(o.natCls==='raw'||isRawMaterialRow(o)||isSourceRawMaterialRow(o)))return '';
   const spec=String(o.spec||'').trim();
   let m=spec.match(/^(\d+(?:\.\d+)?)\s*(?:t|T|mm|MM|㎜)?\s*[x×*＊]/i);   // 두께 × 폭 …
   if(m&&parseFloat(m[1])<=50)return m[1];
@@ -1415,8 +1430,13 @@ function rebuildCUR(){
     const manualProject=state.projectOverride[productKey(r)]||r.project;
     const cat=categoryFor(r,manualNat);
     const rawMaterial=isRawNatureKey(manualNat)||(!explicitNat&&autoNat==='원자재');
-    CUR.push({...r, sourceBig:r.big,sourceMid:r.mid,sourceSmall:r.small, big:cat.big,mid:cat.mid,small:cat.small, project:manualProject, dt, ym:`${Y}-${String(M).padStart(2,'0')}`, y:String(Y), m:M,
-      nat:manualNat, natCls:rawMaterial?'raw':natInfo.cls, div:(state.divisionOverride[productKey(r)]||divisionOf(manualProject,r.mgmt)), cs:(rawMaterial?coilSheet(r):''),
+    // sourceProject/sourceDiv는 ERP 거래행 원본을 보존합니다. 품목 단위 프로젝트·사업부
+    // 수동 지정이 섞여도 원자재 분석에서는 실제 구매 용도를 다시 확인할 수 있습니다.
+    const sourceProject=r.project;
+    const sourceDiv=divisionOf(sourceProject,r.mgmt);
+    const assignedDiv=(state.projectDivision&&state.projectDivision[manualProject])||divisionOf(manualProject,r.mgmt);
+    CUR.push({...r, sourceBig:r.big,sourceMid:r.mid,sourceSmall:r.small,sourceProject, big:cat.big,mid:cat.mid,small:cat.small, project:manualProject, dt, ym:`${Y}-${String(M).padStart(2,'0')}`, y:String(Y), m:M,
+      nat:manualNat, natCls:rawMaterial?'raw':natInfo.cls, sourceDiv, div:(state.divisionOverride[productKey(r)]||assignedDiv), cs:(rawMaterial?coilSheet(r):''),
       mgr: (state.mgrOverride[r.code]||state.mgrOverride[r.vendor]||r.mgr||'미지정'),
       amt: state.basis==='total'?r.total:r.supply });
   }
@@ -2521,7 +2541,11 @@ function steelGrade(r){
     if(m[1])return (m[1]==='SUS'?'STS':m[1])+m[2];
     return m[3];
   };
-  const sourceTexts=[r.sourceSmall,r.sourceMid,r.sourceBig,r.name,r.code,r.group,r.spec];
+  // ERP 원본의 품목소분류에는 실제 강종과 다른 과거 기본값이 남는 경우가 있습니다.
+  // 예: EGI-C / EGI / EGI-COIL 행의 소분류가 STS201-S로 저장됨.
+  // 품명·품번과 대/중분류를 우선하고 소분류는 마지막 보조값으로만 사용해야
+  // EGI 1.6 코일이 STS201 1.6으로 잘못 묶이지 않습니다.
+  const sourceTexts=[r.name,r.code,r.sourceBig,r.sourceMid,r.group,r.spec,r.sourceSmall];
   const detected=sourceTexts.map(fromText).find(Boolean);
   if(detected)return detected;
   const korean=sourceTexts.map(v=>String(v||'')).find(v=>/칼라강판|냉연강판|열연강판|아연도금강판/.test(v));
@@ -2531,7 +2555,7 @@ function steelGrade(r){
     if(/열연강판/.test(korean))return 'HR';
     if(/아연도금강판/.test(korean))return 'GI';
   }
-  const sourceValue=[r.sourceSmall,r.sourceMid,r.sourceBig,r.name,r.group,r.small].map(v=>String(v||'').trim().replace(/\s*\d+(?:\.\d+)?\s*(?:t|T|mm)?\s*$/,'').trim()).find(v=>v&&!/^(원자재|부품\/?부속|외주가공|금형|유통\/?OEM|\(.*\)|미분류)$/i.test(v));
+  const sourceValue=[r.name,r.sourceBig,r.sourceMid,r.group,r.small,r.sourceSmall].map(v=>String(v||'').trim().replace(/\s*\d+(?:\.\d+)?\s*(?:t|T|mm)?\s*$/,'').trim()).find(v=>v&&!/^(원자재|부품\/?부속|외주가공|금형|유통\/?OEM|\(.*\)|미분류)$/i.test(v));
   if(sourceValue)return sourceValue;
   return '기타';
 }
@@ -3464,12 +3488,32 @@ function purchaseCycleView(){
 }
 
 /* ---------- 원자재 분석 (코일/판재 · 강종별 / 강종 두께별) ---------- */
+function materialAnalysisRows(scope='active'){
+  // 이 화면은 ERP의 실제 원자재 구매내역을 보는 곳이므로 명확한 원본 분류와
+  // 거래행 프로젝트의 사업부 판정을 품목 단위 수동 덮어쓰기보다 우선합니다.
+  // 단, 공용품목 월별 배분비율은 divisionAdjustedRows()로 그대로 반영합니다.
+  let base=CUR;
+  if(scope!=='stored')base=base.filter(inPeriod);
+  base=base.map(normalizeAutomaticNatureRow)
+    .filter(r=>isRawMaterialRow(r)||isSourceRawMaterialRow(r))
+    .map(r=>{
+      const sourceRaw=isSourceRawMaterialRow(r);
+      const sourceDiv=['방화문부자재','PD사업부'].includes(r.sourceDiv)?r.sourceDiv:r.div;
+      return {...r,
+        nat:sourceRaw?'원자재':r.nat,
+        natCls:'raw',
+        cs:r.cs||coilSheet(r),
+        div:sourceDiv};
+    });
+  if(scope!=='active'||state.division==='전체')return base;
+  return divisionAdjustedRows(base,state.division);
+}
 function rankMaterial(){
-  // 명칭 변경·기존 자동분류·raw class까지 같은 기준으로 복원한 뒤 집계합니다.
-  const allRaw=activeRows().map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
+  // 명칭 변경·기존 자동분류·ERP 원본 원자재 판정까지 같은 기준으로 복원해 집계합니다.
+  const allRaw=materialAnalysisRows('active');
   // 현재 필터로 빠진 행을 사용자가 바로 확인할 수 있도록 전체 보관 원자재와 대조합니다.
-  const storedRaw=CUR.map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
-  const periodRaw=CUR.filter(inPeriod).map(normalizeAutomaticNatureRow).filter(isRawMaterialRow);
+  const storedRaw=materialAnalysisRows('stored');
+  const periodRaw=materialAnalysisRows('period');
   const excludedByPeriod=Math.max(0,storedRaw.length-periodRaw.length);
   const excludedByDivision=Math.max(0,periodRaw.length-allRaw.length);
   const totAll=allRaw.reduce((a,r)=>a+amtOf(r),0);
