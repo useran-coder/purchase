@@ -77,26 +77,30 @@
   .modal-box{background:#fff;border-radius:14px;max-width:640px;width:92vw;max-height:78vh;overflow:auto;padding:20px}
   .modal-box h3{margin:0 0 10px;color:var(--navy);font-size:16px}
   /* ---------- top menu ---------- */
-  nav.topmenu{background:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:3px;padding:7px 16px;max-width:1720px;margin:0 auto;border-top:1px solid var(--line)}
-  .tm-direct{background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+  nav.topmenu{background:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:5px;row-gap:6px;padding:7px 16px;max-width:1720px;margin:0 auto;border-top:1px solid var(--line)}
+  /* 기간 버튼줄은 항상 아래로 내려 2줄로 보이게 합니다 (매출분석과 동일한 느낌) */
+  nav.topmenu .tm-spacer{flex:0 0 100%!important;min-width:100%!important;height:0}
+  nav.topmenu #fileToggle{margin-left:auto!important}
+  @media (max-width:700px){ nav.topmenu{padding:7px 10px} .tm-top,.tm-direct,.tm-sales,.per-btn{padding:8px 11px;font-size:12.5px} }
+  .tm-direct{background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
   .tm-direct:hover{filter:brightness(1.1)}
   .tm-grp{position:relative}
-  .tm-top{background:#fff;color:#334155;border:1px solid var(--line);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .tm-top{background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
   .tm-top:hover{background:var(--barbg);border-color:var(--accent);color:var(--accent)}
   .tm-drop{display:none;position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:5px;min-width:210px;z-index:80}
   .tm-grp.open .tm-drop{display:block}
   .tm-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:#fff;color:#334155;border:none;border-radius:7px;padding:9px 11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .tm-item:hover{background:var(--barbg)}
   .tm-item .ic{width:22px;text-align:center;font-size:14px}
-  .tm-spacer{flex:1}
-  .tm-sales{background:#fff;border:1px solid var(--line);color:var(--accent);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;margin-left:4px}
+  .tm-spacer{flex:1 1 auto;min-width:8px}
+  .tm-sales{background:#fff;border:1px solid var(--line);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;margin-left:4px}
   .tm-sales:hover{background:var(--barbg);border-color:var(--accent)}
-  .perbar{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
-  .per-btn{border:none;background:#fff;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569;border-right:1px solid var(--line);white-space:nowrap}
+  .perbar{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .per-btn{border:none;background:#fff;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569;border-right:1px solid var(--line);white-space:nowrap}
   .per-btn:last-child{border-right:none}
   .per-btn:hover{background:var(--barbg)}
   .per-btn.on{background:var(--navy);color:#fff}
-  .per-sel{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px;font-family:inherit;background:#fff;color:#334155;outline:0;margin-left:5px;display:none}
+  .per-sel{border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#334155;outline:0;margin-left:5px;display:none}
   .per-custom{display:none;align-items:center;gap:5px;margin-left:5px}
   .per-custom input{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;outline:0}
   /* ---------- layout ---------- */
@@ -983,7 +987,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-08-23';
-const VERNO='v62 · 자동로그인';
+const VERNO='v63 · 관리자업로드';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -7066,6 +7070,15 @@ var DS = { owner:'', auto:false, lastPull:'', lastPush:'', manifest:null, months
 async function dsRestore(){ try{ var v=await idbGet(DS_KEY); if(v&&typeof v==='object')DS=Object.assign(DS,v); }catch(_e){} }
 async function dsPersist(){ try{ await idbSet(DS_KEY,JSON.parse(JSON.stringify(DS))); }catch(_e){} }
 function dsUser(){ return ((state.gsync&&state.gsync.user)||'').trim(); }
+/* v63: 업로드 담당 판정 — 로그인 이름/아이디도 함께 인정하고, 관리자는 항상 올릴 수 있습니다. */
+function dsIsAdmin(){ try{ return (typeof auCan==='function') ? !!auCan('admin') : false; }catch(_e){ return false; } }
+function dsIsOwnerMe(owner){
+  if(!owner)return true;
+  var o=String(owner).trim(); if(o===dsUser())return true;
+  try{ if(typeof AU==='object'&&AU){ if(AU.name&&o===String(AU.name).trim())return true; if(AU.id&&o===String(AU.id).trim())return true; } }catch(_e){}
+  return false;
+}
+function dsCanUpload(owner){ return dsIsOwnerMe(owner)||dsIsAdmin(); }
 /* v416: 로그인과 반드시 같은 서버를 보도록 auUrl() 을 우선 사용합니다.
    (예전에는 구글 동기화 칸에 저장돼 있던 옛 주소로 요청이 나갔습니다) */
 function dsUrl(){ try{ if(typeof auUrl==='function'){ var u=auUrl(); if(u)return u; } }catch(_e){}
@@ -7206,10 +7219,11 @@ function dsRender(){
  var local=dsLocalMonths(), lk=Object.keys(local).sort();
  var rm=(mf&&mf.months)||{}, rk=Object.keys(rm).sort();
  var all=Array.from(new Set(lk.concat(rk))).sort();
+ var _mine=dsIsOwnerMe(owner), _adm=dsIsAdmin();
  var ownTxt = owner
-   ? ('<b style="color:'+(owner===me?'#0f766e':'#b45309')+'">👑 업로드 담당: '+esc(owner)+'</b>'+(owner===me?' <span style="color:#0f766e">(나)</span>':' <span style="color:#b45309">— 나는 받기 전용</span>'))
+   ? ('<b style="color:'+((_mine||_adm)?'#0f766e':'#b45309')+'">👑 업로드 담당: '+esc(owner)+'</b>'+(_mine?' <span style="color:#0f766e">(나)</span>':(_adm?' <span style="color:#0f766e">— 나는 관리자라 올릴 수 있습니다</span>':' <span style="color:#b45309">— 나는 받기 전용</span>')))
    : '<b style="color:#b45309">👑 업로드 담당 미지정</b> <button type="button" id="dsClaimHere" class="btn" style="background:#fef3c7;color:#b45309;border-color:#fcd34d;padding:2px 9px;font-size:11.5px;margin-left:4px">여기를 눌러 나를 담당으로 지정</button>';
- var canEdit=(!owner||owner===me);
+ var canEdit=dsCanUpload(owner);
  var rows=all.map(function(ym){
   var L=local[ym]?local[ym].length:0, R=rm[ym]?(rm[ym].rows||0):0;
   var st = (!R)?['<span style="color:#b45309">올릴 것</span>','#fffbeb']
@@ -7280,7 +7294,7 @@ async function dsPush(){
  var me=dsUser(); if(!me){ dsSet('먼저 「내 이름(작성자)」을 입력하세요.','#dc2626'); return; }
  if(!(datasets&&datasets.length)){ dsSet('올릴 매입자료가 없습니다. 먼저 엑셀을 불러오세요.','#dc2626'); return; }
  var mf=DS.manifest||await dsCheck(true); var owner=(mf&&mf.owner)||'';
- if(owner&&owner!==me){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자만 올릴 수 있습니다.','#dc2626'); return; }
+ if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 올릴 수 있습니다.','#dc2626'); return; }
  if(!owner){ if(!await uiConfirm('업로드 담당이 지정되어 있지 않습니다.\n「'+me+'」(으)로 담당을 지정하고 올릴까요?'))return;
   var c=await dsCall({action:'dsClaim',by:me}); DS.manifest=c.manifest; mf=c.manifest; }
 
@@ -7327,7 +7341,7 @@ async function dsPush(){
 async function dsPushOne(ym){
  var me=dsUser(); if(!me){ dsSet('먼저 로그인하세요.','#dc2626'); return; }
  var mf=DS.manifest||await dsCheck(true).catch(function(){return null;}) , owner=(mf&&mf.owner)||'';
- if(owner&&owner!==me){ dsSet('업로드 담당이 「'+owner+'」입니다.','#dc2626'); return; }
+ if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 올릴 수 있습니다.','#dc2626'); return; }
  if(!owner){ var c=await dsCall({action:'dsClaim',by:me}); DS.manifest=c.manifest; }
  var local=dsLocalMonths(), rows=local[ym];
  if(!rows||!rows.length){ dsSet(ym+' 자료가 내 PC에 없습니다. 지우기(🗑)를 쓰세요.','#dc2626'); return; }
@@ -7347,7 +7361,7 @@ async function dsPushOne(ym){
 async function dsDelOne(ym){
  var me=dsUser(); if(!me){ dsSet('먼저 로그인하세요.','#dc2626'); return; }
  var mf=DS.manifest||await dsCheck(true).catch(function(){return null;}) , owner=(mf&&mf.owner)||'';
- if(owner&&owner!==me){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자만 지울 수 있습니다.','#dc2626'); return; }
+ if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 지울 수 있습니다.','#dc2626'); return; }
  var info=((mf&&mf.months)||{})[ym]; if(!info){ dsSet(ym+' 은 서버에 없습니다.','#dc2626'); return; }
  if(!await uiConfirm('서버에서 '+ym+' 자료를 지웁니다.\n\n  · '+(info.rows||0).toLocaleString()+'행 · '+(info.file||('purchase-'+ym+'.b64'))+
    '\n\n다른 사람이 「받기」를 하면 이 달 자료가 사라집니다.\n(내 PC 자료는 그대로 남습니다.)\n\n진행할까요?'))return;
