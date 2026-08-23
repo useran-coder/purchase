@@ -48,6 +48,13 @@
   .header-sync-btn.sync-unconfigured{background:#f8fafc;border-color:#cbd5e1;color:#475569}
   .header-sync-btn .sync-time{color:#94a3b8;font-weight:600}
   .appver{align-self:center;font-size:11px;color:#0f766e;font-weight:800;white-space:nowrap;padding:3px 7px;border:1px solid #99f6e4;border-radius:6px;background:#f0fdfa}
+  /* v59: 상단 우측 칩들의 높이를 매출분석 도구 칩에 맞춰 통일 */
+  .salesLink,.productCostLink,.header-history-btn,.header-sync-btn,.appver,.huser{
+    display:inline-flex;align-items:center;justify-content:center;
+    height:32px;padding:0 11px;box-sizing:border-box;line-height:1;align-self:center}
+  .appver{font-size:11px;padding:0 9px;border-radius:8px}
+  .huser{gap:5px;background:#fff;border:1px solid var(--line);border-radius:8px;font-weight:700}
+  .header-sync-btn{gap:3px}
   .huser b{color:var(--navy);font-weight:800}
   #userLbl{cursor:pointer}
   .gs-config-grid{display:grid;grid-template-columns:minmax(420px,2fr) minmax(220px,.8fr) minmax(220px,.8fr);gap:8px;margin-top:8px;align-items:center}
@@ -749,7 +756,7 @@
     <a class="productCostLink" href="https://useran-coder.github.io/product" target="_blank" rel="noopener">제품제조원가</a>
     <button id="headerElogBtn" class="header-history-btn" type="button" title="수정이력">🕘 수정이력</button>
     <button id="gsSyncBtn" class="header-sync-btn sync-unconfigured" type="button" title="구글시트 동기화"><span class="sync-main">🔄 동기화</span><span class="sync-time"> · 미설정</span></button>
-    <span class="appver" id="appVer">ver16 · 2026-08-04</span>
+    <span class="appver" id="appVer">v62 · 자동로그인</span>
     <span class="huser" id="userLbl" title="파일·관리에서 이름을 입력하세요">👤 <b id="userName">이름 미설정</b></span>
   </div>
   <nav class="topmenu" id="topMenu">
@@ -822,7 +829,9 @@
 
 <div class="wrap" id="app">
   <div id="loading" class="hidden"><div class="spinner"></div><div id="loadMsg">파일 처리 중…</div></div>
-  <div id="drop" class="drop">
+<style>@keyframes bootspin{to{transform:rotate(360deg)}}@keyframes bootbar{0%{margin-left:-40%}100%{margin-left:100%}}</style>
+<div id="bootWait" style="max-width:960px;margin:34px auto;padding:36px 20px 32px;text-align:center;border:0;background:transparent;box-shadow:none"><img src="data:image/jpeg;base64,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" alt="(주)동방파스텍" style="height:56px;display:block;margin:0 auto 12px"><div style="font-size:16px;font-weight:800;color:#1e3a5f;letter-spacing:-.02em">(주)동방파스텍 <span style="color:#0f766e">매입 분석 도구</span></div><div style="font-size:12px;color:#94a3b8;margin-top:3px">방화문부자재사업부</div><div style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;font-weight:700;color:#475569"><span id="bootSpin" style="width:15px;height:15px;border:2.5px solid #cbd5e1;border-top-color:#0f766e;border-radius:50%;display:inline-block;animation:bootspin .8s linear infinite"></span>저장된 데이터를 불러오는 중입니다…</div><div style="height:4px;width:200px;margin:14px auto 0;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="height:100%;width:40%;background:#0f766e;border-radius:3px;animation:bootbar 1.2s ease-in-out infinite"></div></div></div>
+  <div id="drop" class="drop hidden">
     <h2>📥 매입 데이터를 불러오세요</h2>
     <p>ERP 매입현황 엑셀 파일(.xls / .xlsx)을 끌어다 놓거나 선택하세요.</p>
     <button class="btn" id="pickBtn">파일 선택</button>
@@ -882,9 +891,14 @@
 <!-- File / management panel -->
 <div class="overlay" id="overlay"></div>
 <div class="filepanel" id="filePanel">
-  <button class="fp-close" id="fpClose">✕</button>
   <h3>📁 파일 · 관리</h3>
   <div class="sub2">데이터 로드 · 구글시트 동기화 · 기준정보 관리</div>
+
+<div class="fp-sec">
+    <h4>🔐 로그인</h4>
+    <div id="auBar" style="font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:7px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc"></div>
+    <div id="auAdmin" style="display:none;margin-top:10px"></div>
+  </div>
 
   <div class="fp-sec">
     <h4>📄 매입 데이터 파일</h4>
@@ -892,6 +906,19 @@
     <button class="btn ghost sm" id="fpClear" style="margin-left:6px">전체 초기화</button>
     <div id="fileList" style="margin-top:9px"><span class="sub2">불러온 파일이 없습니다.</span></div>
   </div>
+  <div class="fp-sec">
+    <h4>📦 매입자료 공유 <span class="sub2" style="font-weight:400">(매입 원본을 구글 드라이브로 공유 — 올리기는 담당자 1명만)</span></h4>
+    <div class="gs-config-actions" style="margin-top:2px">
+      <button class="btn sm" id="dsPullBtn" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">⬇ 매입자료 받기</button>
+      <button class="btn sm" id="dsPushBtn" style="background:#ccfbf1;color:#0f766e;border-color:#5eead4">⬆ 매입자료 올리기</button>
+      <button class="btn sm" id="dsClaimBtn" style="background:#fef3c7;color:#b45309;border-color:#fcd34d">👑 업로드 담당 지정</button>
+      <button class="btn ghost sm" id="dsCheckBtn">🔄 서버 확인</button>
+      <span class="sub2" id="dsStatus" style="font-weight:600"></span>
+    </div>
+    <div id="dsInfo" style="width:100%;margin-top:8px;font-size:11.5px;color:#475569"></div>
+    <div class="sub2" style="margin-top:6px;line-height:1.6">위 구글시트 동기화의 URL·비밀키·내 이름을 그대로 사용합니다. 매입 원본은 <b>월별로 나눠 압축(사전압축+gzip)</b>해서 드라이브에 저장합니다. 표 오른쪽 <b style="color:#047857">⬆ 올리기</b>는 새로 올리기, <b style="color:#1d4ed8">🔄 교체</b>는 덮어쓰기, <b style="color:#b91c1c">🗑 삭제</b>는 서버에서 그 달만 지우기입니다(내 PC 자료는 그대로). <b>받기</b>를 하면 내 PC의 매입 데이터가 서버 자료로 교체됩니다.</div>
+  </div>
+
 
   <div class="fp-sec">
     <h4>📊 매출 연동 (방화문부자재)</h4>
@@ -955,8 +982,8 @@
    ============================================================ */
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
-const BUILD='2026-08-12';
-const VERNO='ver49';
+const BUILD='2026-08-23';
+const VERNO='v62 · 자동로그인';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -1756,8 +1783,20 @@ async function addOneFile(file,quiet,salesType='bf'){
   if(exIdx>=0){ RAWMEM[datasets[exIdx].uid]=sheets; datasets[exIdx].recs=recs; datasets[exIdx].sheetNames=sheetNames; }
   else { const uid=uidSeq++; RAWMEM[uid]=sheets; datasets.push({uid,fileName:file.name,sheetName:chosen,sheetNames,recs}); }
 }
+function pcBootDone(){ try{ var b=document.getElementById('bootWait'); if(b&&b.parentNode)b.parentNode.removeChild(b); }catch(_e){} }
+/* 어떤 경로로 화면이 그려지든 로딩화면이 남지 않도록 감시합니다 */
+(function(){
+ var t0=Date.now();
+ var tick=setInterval(function(){
+  var b=document.getElementById('bootWait'); if(!b){ clearInterval(tick); return; }
+  var c=document.getElementById('content'), d=document.getElementById('drop');
+  var painted=(c&&c.children.length>0)||(d&&!d.classList.contains('hidden'))||(typeof CUR!=='undefined'&&CUR&&CUR.length);
+  if(painted||Date.now()-t0>4000){ pcBootDone(); clearInterval(tick); }
+ },150);
+})();
 function afterDataChanged(){
   rebuildCUR(); refreshPurchaseMonthlySync(); persistData(); if(typeof gsAutoPush==='function')gsAutoPush();
+  pcBootDone();
   if(!CUR.length){ $('#drop').classList.remove('hidden'); $('#content').innerHTML=''; renderFileList(); return; }
   $('#drop').classList.add('hidden');
   renderFileList(); gsUpdateBtn(); renderDivBtn(); renderPerBar();
@@ -5185,7 +5224,7 @@ const ACTS={
   'trend':trendView,'div-purchase':divisionPurchaseCompare
 };
 function setAct(a,opts={}){ if(a==='price-trend'&&!opts.keepTrendBack)state.priceTrendBack=null; if(state.act!==a){ state.sortKey=null; state.chipVal=null; state.catDrill=null; state.catDrill2=null; } state._search=''; state.act=a; _activeViewRefresh=null; _activeViewAct=null; runAct(true); highlightMenu(a); }
-function runAct(forceRoute=false){ const fn=!forceRoute&&_activeViewRefresh&&_activeViewAct===state.act?_activeViewRefresh:(ACTS[state.act]||homeDashboard); try{ fn(); }catch(e){ console.error('render error',e); $('#content').innerHTML=`<div class="note warn">화면 표시 중 오류: ${esc(e.message||e)}</div>`; } window.scrollTo(0,0); }
+function runAct(forceRoute=false){ try{ if(typeof pcBootDone==='function')pcBootDone(); }catch(_e){} const fn=!forceRoute&&_activeViewRefresh&&_activeViewAct===state.act?_activeViewRefresh:(ACTS[state.act]||homeDashboard); try{ fn(); }catch(e){ console.error('render error',e); $('#content').innerHTML=`<div class="note warn">화면 표시 중 오류: ${esc(e.message||e)}</div>`; } window.scrollTo(0,0); }
 function clearActiveMenu(){ $$('.tm-item').forEach(b=>b.style.background=''); }
 function highlightMenu(a){ clearActiveMenu(); const b=[...$$('.tm-item')].find(x=>x.dataset.act===a); if(b)b.style.background='var(--barbg)'; }
 
@@ -5218,7 +5257,7 @@ function wireFilePanel(){
   const open=()=>{ panel.classList.add('open'); $('#fileToggle').classList.add('open'); $('#fileToggle').textContent='📁 파일·관리 ▴'; content.style.display='none'; if(drop)drop.classList.add('hidden'); window.scrollTo({top:0,behavior:'smooth'}); };
   const close=()=>{ panel.classList.remove('open'); $('#fileToggle').classList.remove('open'); $('#fileToggle').textContent='📁 파일·관리 ▾'; content.style.display=''; if(drop)drop.classList.toggle('hidden',!!CUR.length||state.act==='matprice'); };
   window.openPurchaseFilePanel=open; window.closePurchaseFilePanel=close;
-  $('#fileToggle').onclick=()=>panel.classList.contains('open')?close():open(); $('#fpClose').onclick=close; $('#overlay').onclick=close;
+  $('#fileToggle').onclick=()=>panel.classList.contains('open')?close():open(); {const _x=$('#fpClose'); if(_x)_x.onclick=close;} $('#overlay').onclick=close;
   $('#pickBtn').onclick=()=>$('#fileInput').click();
   $('#fpPick').onclick=()=>$('#fileInput').click();
   $('#fileInput').onchange=e=>{ if(e.target.files.length)handleFiles(e.target.files); e.target.value=''; };
@@ -5409,6 +5448,7 @@ async function init(){
   const ds=await idbGet('datasets');
   if(ds&&ds.length){ datasets=ds.map(d=>({...d,uid:uidSeq++})); rebuildCUR(); $('#drop').classList.add('hidden'); renderFileList(); renderDivBtn(); renderPerBar(); state.act=state.act||'home'; runAct(); }
   else { $('#drop').classList.remove('hidden'); }
+  pcBootDone();
   // 기존 매입 파일의 기준 스냅샷을 덮어쓰지 않고, 저장된 동기화 기준을 먼저 복원합니다.
   await window.ensureBase();
   window.gsStartPoll();
@@ -7015,5 +7055,789 @@ window.__matPriceApi={getDb:getDb,latest:function(k,y){return latest(getDb(),k,y
     font-size:14px !important;
   }
 </style>
+<script>/* ═══════════════════════════════════════════════════════════════════
+   v60 · 매입자료 공유 (구글 드라이브) — 월별 분할 + 사전압축 + gzip
+   · 업로드는 「담당자 1명」만. 나머지는 받기 전용.
+   · 3분 자동 확인은 manifest(수 KB)만 받고, 바뀐 달 파일만 내려받습니다.
+   ═══════════════════════════════════════════════════════════════════ */
+var DS_KEY='dsync_purchase_v1';
+var DS = { owner:'', auto:false, lastPull:'', lastPush:'', manifest:null, months:{}, lastRaw:'', ver:'' };
+
+async function dsRestore(){ try{ var v=await idbGet(DS_KEY); if(v&&typeof v==='object')DS=Object.assign(DS,v); }catch(_e){} }
+async function dsPersist(){ try{ await idbSet(DS_KEY,JSON.parse(JSON.stringify(DS))); }catch(_e){} }
+function dsUser(){ return ((state.gsync&&state.gsync.user)||'').trim(); }
+/* v416: 로그인과 반드시 같은 서버를 보도록 auUrl() 을 우선 사용합니다.
+   (예전에는 구글 동기화 칸에 저장돼 있던 옛 주소로 요청이 나갔습니다) */
+function dsUrl(){ try{ if(typeof auUrl==='function'){ var u=auUrl(); if(u)return u; } }catch(_e){}
+ return ((state.gsync&&state.gsync.url)||'').trim(); }
+function dsPass(){ return (state.gsync&&state.gsync.key)||''; }
+function dsIsOwner(){ var o=(DS.manifest&&DS.manifest.owner)||''; return !o || (dsUser() && o===dsUser()); }
+
+/* ── 사전압축: 반복 문자열을 사전 배열 + 정수 인덱스로 ── */
+var DS_STR=['vendor','vcode','code','name','spec','unit','big','mid','small','group','mgmt','project','mgr','po','bigo'];
+var DS_NUM=['qty','price','supply','vat','total'];
+function dsPack(recs){
+ var dict=[], idx=Object.create(null);
+ var I=function(v){ v=(v==null?'':String(v)); var k='#'+v; var n=idx[k];
+  if(n===undefined){ n=dict.length; idx[k]=n; dict.push(v); } return n; };
+ var cols={d:[]};
+ DS_STR.forEach(function(f){ cols[f]=[]; }); DS_NUM.forEach(function(f){ cols[f]=[]; });
+ for(var i=0;i<recs.length;i++){ var r=recs[i];
+  cols.d.push(r.d);
+  DS_STR.forEach(function(f){ cols[f].push(I(r[f])); });
+  DS_NUM.forEach(function(f){ cols[f].push(+r[f]||0); });
+ }
+ return {v:2,kind:'purchase',n:recs.length,dict:dict,cols:cols};
+}
+/* 엑셀에서 읽어온 원본과 키 순서까지 같게 복원합니다 */
+var DS_ORDER=['d','vendor','vcode','code','name','spec','unit','qty','price','supply','vat','total',
+              'big','mid','small','group','mgmt','project','mgr','po','bigo'];
+var DS_ISNUM={qty:1,price:1,supply:1,vat:1,total:1};
+function dsUnpack(p){
+ if(!p||!p.cols)return [];
+ var D=p.dict||[], C=p.cols, out=[], n=p.n||((C.d||[]).length);
+ for(var i=0;i<n;i++){
+  var o={};
+  for(var k=0;k<DS_ORDER.length;k++){ var f=DS_ORDER[k];
+   if(f==='d')o.d=C.d[i];
+   else if(DS_ISNUM[f])o[f]=(C[f]||[])[i]||0;
+   else o[f]=D[(C[f]||[])[i]]||'';
+  }
+  out.push(o);
+ }
+ return out;
+}
+
+/* ── gzip + base64 (미지원 브라우저는 raw base64로 자동 대체) ── */
+function dsB64enc(u8){ var s='',CH=0x8000; for(var i=0;i<u8.length;i+=CH)s+=String.fromCharCode.apply(null,u8.subarray(i,i+CH)); return btoa(s); }
+function dsB64dec(b64){ var s=atob(b64), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return u; }
+async function dsEncode(obj){
+ var txt=JSON.stringify(obj), u8=new TextEncoder().encode(txt);
+ if(typeof CompressionStream==='function'){
+  try{ var cs=new CompressionStream('gzip');
+   var buf=await new Response(new Blob([u8]).stream().pipeThrough(cs)).arrayBuffer();
+   return {enc:'gz',data:dsB64enc(new Uint8Array(buf))};
+  }catch(_e){}
+ }
+ return {enc:'raw',data:dsB64enc(u8)};
+}
+async function dsDecode(enc,b64){
+ var u8=dsB64dec(b64);
+ if(enc==='gz'){
+  if(typeof DecompressionStream!=='function')throw new Error('이 브라우저는 압축 해제를 지원하지 않습니다. 크롬/엣지에서 열어 주세요.');
+  var ds=new DecompressionStream('gzip');
+  var buf=await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+  u8=new Uint8Array(buf);
+ }
+ return JSON.parse(new TextDecoder().decode(u8));
+}
+function dsHash(s){ var h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0; } return ('0000000'+h.toString(16)).slice(-8); }
+
+/* ── 통신 ── */
+async function dsCall(payload){
+ var u=dsUrl(); if(!u)throw new Error('구글 동기화 URL을 먼저 입력하세요.');
+ payload.key=dsPass(); payload.kind='purchase';
+ var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+ var tx=await r.text(); DS.lastRaw=String(tx||'').slice(0,300); var d;
+ try{ d=JSON.parse(tx); }catch(_){ throw new Error('응답 형식 오류 — 서버가 JSON 이 아닌 것을 돌려줬습니다.\n\n서버 응답: '+DS.lastRaw); }
+ if(d&&d.error)throw new Error(d.error);
+ if(String(payload.action||'').indexOf('ds')===0 && !d.ver && !d.manifest){
+  var diag=await dsProbe();
+  throw new Error(diag);
+ }
+ return d;
+}
+
+/* ── 같은 배포에 auth 는 있는데 dsync 만 없는지 가려냅니다 ── */
+async function dsProbe(){
+ var u=dsUrl(), au='', ds='';
+ var ask=async function(act){
+  try{ var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:act,key:AU_KEY||((state.gsync&&state.gsync.key)||''),token:AU.token})});
+   var t=await r.text(); if(/^\s*</.test(t))return '__HTML__';
+   var j=JSON.parse(t); return (j&&j.ver)||''; }catch(_e){ return ''; }
+ };
+ au=await ask('auVer'); ds=await ask('dsVer');
+ if(au==='__HTML__'||ds==='__HTML__')
+  return '⚠ 서버가 HTML 을 돌려줍니다.\n배포 → 액세스 권한을 「모든 사용자」로 바꾸고 다시 배포하세요.';
+ var head='── 서버 점검 결과 ──\n'+
+  '  auth  : '+(au?(au+'  ✅'):'없음  ❌')+'\n'+
+  '  dsync : '+(ds?(ds+'  ✅'):'없음  ❌')+'\n\n';
+ if(au&&!ds)
+  return head+'▶ 원인 : 이 배포에 auth 는 있는데 dsync 가 없습니다.\n'+
+   '   배포·주소 문제가 아니라 dsync.gs 파일 문제입니다.\n\n'+
+   '   1) dsync.gs 를 열고 Ctrl+A → Delete\n'+
+   '   2) 새 dsync.gs 전체를 붙여넣기\n'+
+   '   3) Ctrl+S 저장\n'+
+   '   4) 배포 → 배포 관리 → 연필 → 버전 「새 버전」 → 배포';
+ if(!au&&!ds)
+  return head+'▶ 원인 : 이 배포에 auth·dsync 둘 다 없습니다.\n'+
+   '   저장은 됐지만 재배포가 안 됐거나, 앱이 옛 주소를 보고 있습니다.\n\n'+
+   '   1) 배포 → 배포 관리 → 연필 → 버전 「새 버전」 → 배포\n'+
+   '   2) 그래도 안 되면 배포 관리의 「웹 앱 URL」을 복사해\n'+
+   '      🔌 서버 연결 진단 → 주소 바꾸기 에 붙여넣으세요.\n\n'+
+   '   지금 주소: '+u;
+ return head+'▶ 코드는 있는데 응답이 이상합니다.\n\n서버 응답: '+DS.lastRaw;
+}
+
+/* ── 로컬 데이터를 월별로 묶기 ── */
+function dsLocalMonths(){
+ var m={};
+ (datasets||[]).forEach(function(ds){ (ds.recs||[]).forEach(function(r){
+  var ym=String(r.d||'').slice(0,7); if(ym.length!==7)return; (m[ym]=m[ym]||[]).push(r); }); });
+ return m;
+}
+/* 같은 달이 두 개 이상의 파일에 들어 있으면 매입이 이중 계상됩니다 — 올리기 전에 잡아 줍니다. */
+function dsDupMonths(){
+ var src={};
+ (datasets||[]).forEach(function(ds){ var seen={};
+  (ds.recs||[]).forEach(function(r){ var ym=String(r.d||'').slice(0,7); if(ym.length!==7||seen[ym])return; seen[ym]=1;
+   (src[ym]=src[ym]||[]).push(ds.fileName||'(이름없음)'); }); });
+ var out=[]; for(var ym in src){ if(src[ym].length>1)out.push({ym:ym,files:src[ym]}); }
+ return out.sort(function(a,b){return a.ym<b.ym?-1:1;});
+}
+
+/* ── 상태 표시 ── */
+function dsSet(msg,color){ var el=document.getElementById('dsStatus');
+ if(el){ el.style.color=color||'#64748b'; el.style.whiteSpace='pre-line'; el.style.lineHeight='1.65'; el.style.wordBreak='break-all'; el.textContent=msg||''; } }
+function dsRender(){
+ var box=document.getElementById('dsInfo'); if(!box)return;
+ var mf=DS.manifest, me=dsUser(), owner=(mf&&mf.owner)||'';
+ var local=dsLocalMonths(), lk=Object.keys(local).sort();
+ var rm=(mf&&mf.months)||{}, rk=Object.keys(rm).sort();
+ var all=Array.from(new Set(lk.concat(rk))).sort();
+ var ownTxt = owner
+   ? ('<b style="color:'+(owner===me?'#0f766e':'#b45309')+'">👑 업로드 담당: '+esc(owner)+'</b>'+(owner===me?' <span style="color:#0f766e">(나)</span>':' <span style="color:#b45309">— 나는 받기 전용</span>'))
+   : '<b style="color:#b45309">👑 업로드 담당 미지정</b> <button type="button" id="dsClaimHere" class="btn" style="background:#fef3c7;color:#b45309;border-color:#fcd34d;padding:2px 9px;font-size:11.5px;margin-left:4px">여기를 눌러 나를 담당으로 지정</button>';
+ var canEdit=(!owner||owner===me);
+ var rows=all.map(function(ym){
+  var L=local[ym]?local[ym].length:0, R=rm[ym]?(rm[ym].rows||0):0;
+  var st = (!R)?['<span style="color:#b45309">올릴 것</span>','#fffbeb']
+        : (!L)?['<span style="color:#1d4ed8">받을 것</span>','#eff6ff']
+        : (L===R)?['<span style="color:#059669">동일</span>','']
+        : ['<span style="color:#dc2626">다름</span>','#fef2f2'];
+  var info=rm[ym]||{};
+  var fn=info.file||(R?('purchase-'+ym+'.b64'):'');
+  var sz=info.size?((info.size/1024).toFixed(0)+'KB'):'';
+  var at=String(info.at||'').replace('T',' ').slice(0,16);
+  return '<tr style="background:'+st[1]+'"><td style="padding:3px 8px;font-weight:800">'+esc(ym)+'</td>'+
+   '<td style="padding:3px 8px;text-align:right;font-family:ui-monospace,monospace;font-size:10.5px;color:'+(fn?'#334155':'#cbd5e1')+'">'+esc(fn||'—')+'</td>'+
+   '<td style="padding:3px 8px;text-align:right">'+(L?L.toLocaleString()+'행':'-')+'</td>'+
+   '<td style="padding:3px 8px;text-align:right">'+(R?R.toLocaleString()+'행':'-')+'</td>'+
+   '<td style="padding:3px 8px;text-align:right;color:#94a3b8;font-size:10.5px">'+esc(sz||'-')+'</td>'+
+   '<td style="padding:3px 8px;text-align:right">'+st[0]+'</td>'+
+   '<td style="padding:3px 8px;text-align:right;font-size:10.5px;color:#475569;font-weight:700">'+esc(info.by||'-')+'</td>'+
+   '<td style="padding:3px 8px;text-align:right;color:#94a3b8;font-size:10.5px;white-space:nowrap">'+esc(at||'-')+'</td>'+
+   '<td style="padding:3px 8px;text-align:right;white-space:nowrap">'+
+    (canEdit&&L?('<button type="button" class="btn" data-dsup="'+esc(ym)+'" style="padding:2px 10px;font-size:11px;font-weight:800;background:'+(R?'#eff6ff':'#ecfdf5')+';color:'+(R?'#1d4ed8':'#047857')+';border-color:'+(R?'#bfdbfe':'#a7f3d0')+'" title="'+(R?'서버 자료를 내 PC 자료로 교체합니다':'이 달을 서버에 올립니다')+'">'+(R?'🔄 교체':'⬆ 올리기')+'</button> '):'')+
+    (canEdit&&R?('<button type="button" class="btn" data-dsdel="'+esc(ym)+'" style="padding:2px 10px;font-size:11px;font-weight:800;background:#fef2f2;color:#b91c1c;border-color:#fecaca" title="서버에서 이 달 자료를 지웁니다 (내 PC 자료는 유지)">🗑 삭제</button>'):'')+
+    (canEdit&&!L&&!R?'<span style="color:#cbd5e1;font-size:10.5px">—</span>':'')+
+   '</td></tr>';
+ }).join('');
+ var dup=dsDupMonths();
+ var dupHtml = dup.length ? ('<div style="margin:6px 0;padding:7px 10px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#b91c1c;font-size:11.5px;line-height:1.6">'+
+   '<b>⚠ 같은 달이 여러 파일에 들어 있습니다 — 매입이 이중으로 잡힙니다.</b><br>'+
+   dup.map(function(d){ return '· <b>'+esc(d.ym)+'</b> : '+esc(d.files.join(' + ')); }).join('<br>')+
+   '<br>📁 파일 목록에서 겹치는 파일을 지운 뒤 올려 주세요.</div>') : '';
+ box.innerHTML = '<div style="margin-bottom:5px">'+ownTxt+
+   (mf&&mf.updatedAt?(' <span class="sub2">· 서버 최종 '+esc(String(mf.updatedAt).slice(0,16).replace('T',' '))+'</span>'):'')+'</div>'+
+   dupHtml+
+   (all.length? ('<div style="max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:8px">'+
+     '<table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:1000px"><thead><tr style="background:#f1f5f9">'+
+     ['월','파일 이름','내 PC','서버','용량','상태','올린 사람','올린 일시','관리']
+      .map(function(h){ return '<th style="padding:4px 8px;text-align:right;color:#475569;white-space:nowrap">'+h+'</th>'; }).join('')+
+     '</tr></thead><tbody>'+rows+'</tbody></table></div>')
+    : '<div class="sub2">아직 공유된 매입자료가 없습니다.</div>');
+ var ch=document.getElementById('dsClaimHere'); if(ch)ch.onclick=function(){ Promise.resolve(dsClaim()).catch(function(){}); };
+ box.querySelectorAll('[data-dsup]').forEach(function(b){ b.onclick=function(){ Promise.resolve(dsPushOne(b.getAttribute('data-dsup'))).catch(function(){}); }; });
+ box.querySelectorAll('[data-dsdel]').forEach(function(b){ b.onclick=function(){ Promise.resolve(dsDelOne(b.getAttribute('data-dsdel'))).catch(function(){}); }; });
+}
+
+/* ── manifest 확인 ── */
+async function dsCheck(silent){
+ try{ dsSet('서버 확인 중…');
+  var d=await dsCall({action:'dsManifest'});
+  DS.manifest=d.manifest||{owner:'',months:{}}; DS.ver=d.ver||''; await dsPersist(); dsRender();
+  if(!silent)dsSet('확인 완료'+(d.ver?(' · 서버 dsync '+d.ver):''),'#0f766e'); else dsSet('');
+  return DS.manifest;
+ }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); throw e; }
+}
+
+/* ── 업로드 담당 지정 ── */
+async function dsClaim(){
+ var me=dsUser(); if(!me){ dsSet('먼저 「내 이름(작성자)」을 입력하세요.','#dc2626'); return; }
+ var mf=DS.manifest||await dsCheck(true); var cur=(mf&&mf.owner)||'';
+ if(cur&&cur!==me){ if(!await uiConfirm('현재 업로드 담당은 「'+cur+'」입니다.\n담당을 「'+me+'」(으)로 바꾸시겠습니까?\n\n두 사람이 번갈아 올리면 서로의 자료를 덮어쓸 수 있습니다.'))return; }
+ try{ dsSet('담당 지정 중…');
+  var d=await dsCall({action:'dsClaim',by:me});
+  if(!d||!d.manifest)throw new Error('서버가 결과를 돌려주지 않았습니다.\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
+  DS.manifest=d.manifest; await dsPersist(); dsRender(); dsSet('업로드 담당: '+me,'#0f766e');
+ }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
+}
+
+/* ── 올리기 (담당자만) ── */
+async function dsPush(){
+ var me=dsUser(); if(!me){ dsSet('먼저 「내 이름(작성자)」을 입력하세요.','#dc2626'); return; }
+ if(!(datasets&&datasets.length)){ dsSet('올릴 매입자료가 없습니다. 먼저 엑셀을 불러오세요.','#dc2626'); return; }
+ var mf=DS.manifest||await dsCheck(true); var owner=(mf&&mf.owner)||'';
+ if(owner&&owner!==me){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자만 올릴 수 있습니다.','#dc2626'); return; }
+ if(!owner){ if(!await uiConfirm('업로드 담당이 지정되어 있지 않습니다.\n「'+me+'」(으)로 담당을 지정하고 올릴까요?'))return;
+  var c=await dsCall({action:'dsClaim',by:me}); DS.manifest=c.manifest; mf=c.manifest; }
+
+ var local=dsLocalMonths(), rm=(mf&&mf.months)||{};
+ var todo=[], del=[];
+ var lkeys=Object.keys(local).sort();
+ for(var _i=0;_i<lkeys.length;_i++){ var ym=lkeys[_i];
+  var packed=dsPack(local[ym]); var txt=JSON.stringify(packed); var h=dsHash(txt);
+  if(!rm[ym]||rm[ym].hash!==h) todo.push({ym:ym,packed:packed,hash:h,rows:local[ym].length});
+ }
+ Object.keys(rm).sort().forEach(function(k){ if(!local[k]) del.push(k); });
+ if(!todo.length&&!del.length){ dsSet('서버와 동일합니다. 올릴 것이 없습니다.','#0f766e'); dsRender(); return; }
+ var dup=dsDupMonths();
+ if(dup.length){
+  if(!await uiConfirm('⚠ 같은 달이 여러 파일에 들어 있습니다 — 매입이 이중으로 잡힌 상태입니다.\n\n'+
+   dup.map(function(d){return '  · '+d.ym+' : '+d.files.join(' + ');}).join('\n')+
+   '\n\n이대로 올리면 다른 사람도 이중 계상된 자료를 받게 됩니다.\n📁 파일 목록에서 겹치는 파일을 먼저 지우시는 것을 권합니다.\n\n그래도 진행할까요?'))return;
+ }
+ var tot=todo.reduce(function(a,t){return a+t.rows;},0);
+ var msg='서버에 올립니다 — '+todo.length+'개 월 · 총 '+tot.toLocaleString()+'행\n'+
+   (todo.length?('  ('+todo[0].ym+' ~ '+todo[todo.length-1].ym+')\n'):'')+'\n'+
+   todo.map(function(t){ return '  · '+t.ym+'   '+String(t.rows.toLocaleString()).padStart(7,' ')+'행'+(rm[t.ym]?'   (교체)':''); }).join('\n')+
+   (del.length?('\n\n서버에서 지울 달 '+del.length+'개\n'+del.map(function(k){return '  · '+k;}).join('\n')):'')+
+   '\n\n진행할까요?';
+ if(!await uiConfirm(msg))return;
+
+ try{
+  var done=0, sent=0;
+  for(var i=0;i<todo.length;i++){
+   var t=todo[i]; dsSet('올리는 중… '+(i+1)+'/'+todo.length+' ('+t.ym+')');
+   var e=await dsEncode(t.packed); sent+=e.data.length;
+   var r=await dsCall({action:'dsPut',ym:t.ym,enc:e.enc,data:e.data,rows:t.rows,hash:t.hash,by:me});
+   if(!r||!r.manifest)throw new Error('서버가 저장 결과를 돌려주지 않았습니다 ('+t.ym+').\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
+   DS.manifest=r.manifest; done++;
+  }
+  for(var j=0;j<del.length;j++){ dsSet('서버에서 지우는 중… '+del[j]);
+   var r2=await dsCall({action:'dsDel',ym:del[j],by:me}); DS.manifest=r2.manifest; }
+  DS.lastPush=new Date().toISOString(); await dsPersist(); dsRender();
+  dsSet('업로드 완료 — '+done+'개 월 · 전송량 약 '+(sent/1024/1024).toFixed(2)+'MB','#0f766e');
+ }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
+}
+
+/* ── 이 달만 올리기 (교체) ── */
+async function dsPushOne(ym){
+ var me=dsUser(); if(!me){ dsSet('먼저 로그인하세요.','#dc2626'); return; }
+ var mf=DS.manifest||await dsCheck(true).catch(function(){return null;}) , owner=(mf&&mf.owner)||'';
+ if(owner&&owner!==me){ dsSet('업로드 담당이 「'+owner+'」입니다.','#dc2626'); return; }
+ if(!owner){ var c=await dsCall({action:'dsClaim',by:me}); DS.manifest=c.manifest; }
+ var local=dsLocalMonths(), rows=local[ym];
+ if(!rows||!rows.length){ dsSet(ym+' 자료가 내 PC에 없습니다. 지우기(🗑)를 쓰세요.','#dc2626'); return; }
+ var had=((DS.manifest&&DS.manifest.months)||{})[ym];
+ if(!await uiConfirm(ym+' 자료를 서버에 '+(had?'교체':'올리기')+' 합니다.\n\n  · 내 PC '+rows.length.toLocaleString()+'행'+
+   (had?('\n  · 서버 '+(had.rows||0).toLocaleString()+'행 → 덮어씁니다'):'')+'\n\n진행할까요?'))return;
+ try{ dsSet(ym+' 올리는 중…');
+  var packed=dsPack(rows), h=dsHash(JSON.stringify(packed)), e=await dsEncode(packed);
+  var r=await dsCall({action:'dsPut',ym:ym,enc:e.enc,data:e.data,rows:rows.length,hash:h,by:me});
+  if(!r||!r.manifest)throw new Error('서버가 저장 결과를 돌려주지 않았습니다.\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
+  DS.manifest=r.manifest; await dsPersist(); dsRender();
+  dsSet(ym+' '+(had?'교체':'업로드')+' 완료','#0f766e');
+ }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
+}
+
+/* ── 서버에서 이 달 지우기 ── */
+async function dsDelOne(ym){
+ var me=dsUser(); if(!me){ dsSet('먼저 로그인하세요.','#dc2626'); return; }
+ var mf=DS.manifest||await dsCheck(true).catch(function(){return null;}) , owner=(mf&&mf.owner)||'';
+ if(owner&&owner!==me){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자만 지울 수 있습니다.','#dc2626'); return; }
+ var info=((mf&&mf.months)||{})[ym]; if(!info){ dsSet(ym+' 은 서버에 없습니다.','#dc2626'); return; }
+ if(!await uiConfirm('서버에서 '+ym+' 자료를 지웁니다.\n\n  · '+(info.rows||0).toLocaleString()+'행 · '+(info.file||('purchase-'+ym+'.b64'))+
+   '\n\n다른 사람이 「받기」를 하면 이 달 자료가 사라집니다.\n(내 PC 자료는 그대로 남습니다.)\n\n진행할까요?'))return;
+ try{ dsSet(ym+' 지우는 중…');
+  var r=await dsCall({action:'dsDel',ym:ym,by:me});
+  if(!r||!r.manifest)throw new Error('서버가 결과를 돌려주지 않았습니다.\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
+  DS.manifest=r.manifest; await dsPersist(); dsRender(); dsSet(ym+' 서버에서 삭제 완료','#0f766e');
+ }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
+}
+
+/* ── 받기 ── */
+async function dsPull(){
+ var mf=await dsCheck(true); var rm=(mf&&mf.months)||{}; var keys=Object.keys(rm).sort();
+ if(!keys.length){ dsSet('서버에 공유된 매입자료가 없습니다.','#dc2626'); return; }
+ var total=keys.reduce(function(a,k){return a+(rm[k].rows||0);},0);
+ if(!await uiConfirm('서버의 매입자료를 받습니다.\n\n  · '+keys.length+'개 월 · 총 '+total.toLocaleString()+'행\n  · '+keys[0]+' ~ '+keys[keys.length-1]+
+   '\n\n지금 내 PC에 불러와 둔 매입 데이터는 모두 지워지고 이 자료로 교체됩니다.\n(담당자·신용등급·목표 등 설정값은 그대로입니다.)\n\n진행할까요?'))return;
+ try{
+  var next=[];
+  for(var i=0;i<keys.length;i++){
+   var ym=keys[i]; dsSet('받는 중… '+(i+1)+'/'+keys.length+' ('+ym+')');
+   var d=await dsCall({action:'dsGet',ym:ym});
+   var packed=await dsDecode(d.enc||'gz',d.data||'');
+   next.push({uid:'shared-'+ym, fileName:'공유 매입 '+ym, sheetName:'', sheetNames:[], recs:dsUnpack(packed)});
+  }
+  datasets=next; RAWMEM={};
+  DS.lastPull=new Date().toISOString(); await dsPersist();
+  try{ afterDataChanged(); }catch(_e){ try{ rebuildCUR(); await persistData(); }catch(_x){} }
+  dsRender(); dsSet('받기 완료 — '+keys.length+'개 월 · '+CUR.length.toLocaleString()+'행','#0f766e');
+ }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
+}
+
+/* ── UI 바인딩 ── */
+function dsBind(){
+ var b;
+ if(b=document.getElementById('dsPullBtn'))b.onclick=function(){Promise.resolve(dsPull()).catch(function(){});};
+ if(b=document.getElementById('dsPushBtn'))b.onclick=function(){Promise.resolve(dsPush()).catch(function(){});};
+ if(b=document.getElementById('dsClaimBtn'))b.onclick=function(){Promise.resolve(dsClaim()).catch(function(){});};
+ if(b=document.getElementById('dsCheckBtn'))b.onclick=function(){dsCheck().catch(function(){});};
+ dsRender();
+}
+(async function(){ try{ await dsRestore(); }catch(_e){}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',dsBind,{once:true}); else setTimeout(dsBind,300);
+})();</script>
+
+<script>
+/* uiConfirm 이 없는 문서에서도 동작하도록 */
+function auAsk(m){ try{ if(typeof uiConfirm==='function')return uiConfirm(m); }catch(_e){} return Promise.resolve(window.confirm(m)); }
+/* ═══════════════════════════════════════════════════════════════════
+   v58 · 로그인 (서버 계정 + 권한등급) — 매입분석 · 매출분석과 동일 계정
+   · 앱스스크립트가 아이디/비밀번호를 검증하고 토큰(12시간)을 발급합니다.
+   · 토큰이 없으면 서버가 어떤 자료도 내주지 않습니다.
+   · 권한 : 관리자 / 업로더 / 일반
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ▼▼▼ 배포 전에 이 줄만 채워서 직원들에게 파일을 나눠 주세요 ▼▼▼ */
+var AU_URL = 'https://script.google.com/macros/s/AKfycbyEjIY0ScWDuSkKZgP3PSmo9hBZ-CduYTjvPXpZGhLozhcMh8hHi24X75j7mHAx9OqvXw/exec';
+var AU_KEY = 'dbang2026!';
+/* ▲▲▲ 여기까지 ▲▲▲ */
+
+var AU_STORE='auth_v1';
+var AU_AUTO='auth_auto_v1';   /* 자동 로그인 (아이디·비밀번호 이 PC 저장) */
+function auMask(s){ try{ s=String(s||''); var k='dbps@2026#au'; var o=''; for(var i=0;i<s.length;i++)o+=String.fromCharCode(s.charCodeAt(i)^k.charCodeAt(i%k.length)); return btoa(unescape(encodeURIComponent(o))); }catch(_e){ return ''; } }
+function auUnmask(s){ try{ var t=decodeURIComponent(escape(atob(String(s||'')))); var k='dbps@2026#au'; var o=''; for(var i=0;i<t.length;i++)o+=String.fromCharCode(t.charCodeAt(i)^k.charCodeAt(i%k.length)); return o; }catch(_e){ return ''; } }
+async function auAutoGet(){ try{ var v=await idbGet(AU_AUTO); return (v&&v.id)?v:null; }catch(_e){ return null; } }
+async function auAutoSet(id,pw){ try{ await idbSet(AU_AUTO,{id:String(id||''),p:auMask(pw)}); }catch(_e){} }
+async function auAutoClear(){ try{ await idbSet(AU_AUTO,null); }catch(_e){} }
+/* 저장된 아이디·비밀번호로 조용히 로그인합니다 (토큰이 만료됐을 때) */
+async function auTryAuto(){
+  var a=await auAutoGet(); if(!a||!a.id)return false;
+  var pw=auUnmask(a.p); if(!pw)return false;
+  try{
+    var d=await auCall({action:'auLogin',id:a.id,pw:pw});
+    if(!d||!d.token||!d.user)return false;
+    AU.token=d.token; AU.id=d.user.id; AU.name=d.user.name; AU.role=d.user.role; AU.exp=d.exp;
+    await auPersist(); return true;
+  }catch(e){ AU._autoErr=String((e&&e.message)||e); await auAutoClear(); return false; }
+}
+var AU={ token:'', id:'', name:'', role:'', exp:0, ready:false, urlOverride:'' };
+var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'};
+
+async function auRestore(){ try{ var v=await idbGet(AU_STORE); if(v&&typeof v==='object')AU=Object.assign(AU,v); }catch(_e){} }
+async function auPersist(){ try{ await idbSet(AU_STORE,{token:AU.token,id:AU.id,name:AU.name,role:AU.role,exp:AU.exp,urlOverride:AU.urlOverride||''}); }catch(_e){} }
+function auUrl(){ return (AU.urlOverride||AU_URL||((state.gsync&&state.gsync.url)||'')).trim(); }
+async function auSetUrl(u){
+  u=String(u||'').trim();
+  AU.urlOverride=u; AU.token=''; AU.exp=0;
+  try{ await idbSet(AU_STORE,{token:'',id:'',name:'',role:'',exp:0,urlOverride:u}); }catch(_e){}
+  try{ state.gsync=state.gsync||{}; state.gsync.url=u||AU_URL; }catch(_e){}
+  location.reload();
+}
+function auValid(){ return !!(AU.token && AU.exp && Date.now()<AU.exp); }
+function auCan(what){
+  if(!auValid())return false;
+  if(what==='admin')return AU.role==='admin';
+  if(what==='upload')return AU.role==='admin'||AU.role==='uploader';
+  return true;
+}
+
+/* ── 모든 서버 요청에 토큰을 자동으로 실어 보냅니다 ── */
+(function(){
+  var _f=window.fetch.bind(window);
+  function isEp(u){ if(!u)return false; var base=auUrl(); return (base&&u.indexOf(base)===0)||u.indexOf('/macros/s/')>=0||u.indexOf('script.google.com')>=0; }
+  window.fetch=function(input,init){
+    try{
+      var url=(typeof input==='string')?input:((input&&input.url)||'');
+      if(AU.token&&isEp(url)){
+        var isPost=init&&init.method&&String(init.method).toUpperCase()==='POST';
+        if(isPost&&typeof init.body==='string'){
+          try{ var b=JSON.parse(init.body); if(b&&typeof b==='object'&&!b.token){ b.token=AU.token; init=Object.assign({},init,{body:JSON.stringify(b)}); } }catch(_){}
+        }else if(url.indexOf('token=')<0){
+          var nu=url+(url.indexOf('?')>=0?'&':'?')+'token='+encodeURIComponent(AU.token);
+          if(typeof input==='string')input=nu; else input=new Request(nu,input);
+        }
+      }
+    }catch(_e){}
+    return _f(input,init);
+  };
+})();
+
+async function auCall(payload){
+  var u=auUrl(); if(!u)throw new Error('서버 주소가 설정되지 않았습니다. 관리자에게 문의하세요.');
+  payload.key=AU_KEY||((state.gsync&&state.gsync.key)||'');
+  var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  var tx=await r.text(); var d;
+  try{ d=JSON.parse(tx); }catch(_){ throw new Error('응답 형식 오류 — 앱스스크립트에 로그인 코드가 설치되었는지 확인하세요.'); }
+  if(d&&d.error)throw new Error(d.error);
+  return d;
+}
+
+/* ── 로그인 화면 ── */
+function auGateHtml(){
+  return '<div id="auGate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#f8fafc,#eef2f8);display:flex;align-items:center;justify-content:center;padding:20px">'+
+   '<form id="auForm" style="width:100%;max-width:380px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 12px 40px rgba(15,23,42,.10);padding:28px 26px 22px">'+
+    '<div style="text-align:center;margin-bottom:18px">'+
+     '<div style="font-size:17px;font-weight:900;color:#1e3a5f;letter-spacing:-.02em">(주)동방파스텍 <span style="color:#0f766e">매입 분석 도구</span></div>'+
+     '<div style="font-size:12px;color:#94a3b8;margin-top:3px">방화문부자재사업부</div></div>'+
+    '<div id="auLoginBox">'+
+    '<label style="display:block;font-size:11.5px;font-weight:800;color:#475569;margin-bottom:4px">아이디</label>'+
+    '<input id="auId" type="text" autocomplete="username" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit;font-size:13.5px;margin-bottom:11px">'+
+    '<label style="display:block;font-size:11.5px;font-weight:800;color:#475569;margin-bottom:4px">비밀번호</label>'+
+    '<input id="auPw" type="password" autocomplete="current-password" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit;font-size:13.5px">'+
+    '<label style="display:flex;align-items:center;gap:6px;margin-top:11px;font-size:11.5px;color:#0f766e;font-weight:800;cursor:pointer"><input type="checkbox" id="auAuto" style="cursor:pointer"> 자동 로그인 <span style="color:#94a3b8;font-weight:600">— 이 PC에서 다음부터 바로 접속</span></label>'+
+    '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11.5px;color:#64748b;font-weight:600;cursor:pointer"><input type="checkbox" id="auKeep" checked style="cursor:pointer"> 이 PC에서 로그인 유지 (12시간)</label>'+
+    '<button type="submit" id="auBtn" style="width:100%;margin-top:14px;padding:11px;border:0;border-radius:10px;background:#1e3a5f;color:#fff;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer">로그인</button></div>'+
+    '<div id="auMsg" style="margin-top:10px;font-size:11.5px;font-weight:700;text-align:center;min-height:16px;color:#dc2626;line-height:1.6;white-space:pre-line"></div>'+
+    '<div id="auVerWarn" style="display:none;margin-top:11px;padding:10px 12px;border:1px solid #fca5a5;background:#fef2f2;border-radius:9px;font-size:11.5px;font-weight:700;color:#b91c1c;line-height:1.65;white-space:pre-line"></div>'+
+    '<div style="text-align:center;margin-top:10px;display:flex;gap:14px;justify-content:center">'+
+     '<button type="button" id="auJoinBtn" style="border:0;background:none;color:#0d6d66;font-family:inherit;font-size:11.5px;font-weight:800;text-decoration:underline;cursor:pointer">＋ 계정 신청</button>'+
+     '<button type="button" id="auDiagBtn" style="border:0;background:none;color:#64748b;font-family:inherit;font-size:11.5px;font-weight:700;text-decoration:underline;cursor:pointer">🔌 서버 연결 진단</button></div>'+
+    '<div id="auJoin" style="display:none;margin-top:11px;padding:12px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc">'+
+     '<div style="font-size:12px;font-weight:800;color:#1e3a5f;margin-bottom:8px">계정 신청 <span style="font-weight:600;color:#64748b">— 관리자 승인 후 사용할 수 있습니다</span></div>'+
+     '<input id="auJId" type="text" placeholder="아이디 (영문·숫자)" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:12.5px;margin-bottom:6px">'+
+     '<input id="auJName" type="text" placeholder="이름" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:12.5px;margin-bottom:6px">'+
+     '<input id="auJPw" type="password" placeholder="사용할 비밀번호" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:12.5px">'+
+     '<button type="button" id="auJSend" style="width:100%;margin-top:9px;padding:9px;border:0;border-radius:8px;background:#0d6d66;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">신청하기</button>'+
+     '<div id="auJMsg" style="margin-top:8px;font-size:11.5px;font-weight:700;text-align:center;line-height:1.6;white-space:pre-line"></div></div>'+
+    '<div id="auDiag" style="display:none;margin-top:9px;padding:9px 11px;border-radius:8px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:11px;line-height:1.65;color:#334155;white-space:pre-wrap;word-break:break-all;max-height:210px;overflow:auto"></div>'+
+    '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0;font-size:11px;color:#94a3b8;line-height:1.6">계정은 관리자에게 요청하세요. 비밀번호는 서버에 암호화(SHA-256)되어 저장되며, 로그인하면 12시간 동안 유지됩니다.<br><b style="color:#b45309">자동 로그인</b>을 켜면 아이디·비밀번호가 <b>이 PC의 브라우저에만</b> 저장되어 다음부터 바로 접속합니다. 공용 PC에서는 켜지 마세요. (로그아웃하면 해제됩니다)</div>'+
+   '</form></div>';
+}
+function auShowGate(){
+  if(document.getElementById('auGate'))return;
+  document.body.insertAdjacentHTML('beforeend',auGateHtml());
+  var f=document.getElementById('auForm'), msg=document.getElementById('auMsg');
+  document.getElementById('auId').focus();
+  /* 자동 로그인 실패 안내 */
+  if(AU._autoErr){ msg.style.color='#dc2626'; msg.textContent='자동 로그인에 실패했습니다. 다시 로그인해 주세요.\n('+AU._autoErr+')'; AU._autoErr=''; }
+  /* 저장된 자동 로그인 정보 채우기 */
+  (async function(){ try{
+    var a=await auAutoGet(); if(!a)return;
+    var i=document.getElementById('auId'), p=document.getElementById('auPw');
+    var k=document.getElementById('auKeep'), au=document.getElementById('auAuto');
+    if(i&&!i.value)i.value=a.id;
+    var pw=auUnmask(a.p); if(p&&!p.value&&pw)p.value=pw;
+    if(au)au.checked=true; if(k)k.checked=true;
+    var bt=document.getElementById('auBtn'); if(bt&&pw)bt.focus();
+  }catch(_e){} })();
+  var _aa=document.getElementById('auAuto');
+  if(_aa)_aa.addEventListener('change',function(){ var k=document.getElementById('auKeep'); if(_aa.checked&&k)k.checked=true; });
+  var db=document.getElementById('auDiagBtn');
+  if(db)db.addEventListener('click',function(){ auDiag(); });
+  var jb=document.getElementById('auJoinBtn');
+  if(jb)jb.addEventListener('click',function(){
+    var x=document.getElementById('auJoin'), lb=document.getElementById('auLoginBox');
+    var open=(getComputedStyle(x).display==='none');
+    x.style.display=open?'':'none';
+    if(lb)lb.style.display=open?'none':'';
+    jb.textContent=open?'← 로그인으로 돌아가기':'＋ 계정 신청';
+    jb.style.color=open?'#64748b':'#0d6d66';
+    document.getElementById('auMsg').textContent='';
+    if(open)setTimeout(function(){ var f=document.getElementById('auJId'); if(f)f.focus(); },50);
+  });
+  var js=document.getElementById('auJSend');
+  if(js)js.addEventListener('click',async function(){
+    var m=document.getElementById('auJMsg');
+    var id=(document.getElementById('auJId').value||'').trim();
+    var nm=(document.getElementById('auJName').value||'').trim();
+    var pw=document.getElementById('auJPw').value||'';
+    if(!id||!nm||!pw){ m.style.color='#dc2626'; m.textContent='아이디·이름·비밀번호를 모두 입력하세요.'; return; }
+    if(!/^[A-Za-z0-9_.-]{3,20}$/.test(id)){ m.style.color='#dc2626'; m.textContent='아이디는 영문·숫자 3~20자로 입력하세요.'; return; }
+    js.disabled=true; js.textContent='신청 중…'; m.style.color='#64748b'; m.textContent='';
+    try{ try{ await auCall({action:'auSignup',newId:id,name:nm,pw:pw}); }
+      catch(e1){ if(/로그인이 필요합니다/.test(e1.message||''))throw new Error('서버의 auth 코드가 예전 버전입니다.\n앱스스크립트 auth 파일을 새 「2_로그인」 코드로 교체하고\n「배포 관리 → 연필 → 새 버전 → 배포」 하세요.'); throw e1; }
+      m.style.color='#0d6d66'; m.textContent='신청되었습니다.\n관리자 승인 후 로그인할 수 있습니다.';
+      document.getElementById('auJId').value=''; document.getElementById('auJName').value=''; document.getElementById('auJPw').value='';
+    }catch(e){ m.style.color='#dc2626'; m.textContent=(e.message||e); }
+    finally{ js.disabled=false; js.textContent='신청하기'; }
+  });
+  f.addEventListener('submit',async function(ev){
+    ev.preventDefault();
+    var id=document.getElementById('auId').value.trim(), pw=document.getElementById('auPw').value;
+    var keep=document.getElementById('auKeep').checked;
+    if(!id||!pw){ msg.style.color='#dc2626'; msg.textContent='아이디와 비밀번호를 입력하세요.'; return; }
+    var btn=document.getElementById('auBtn'); btn.disabled=true; btn.textContent='확인 중…';
+    msg.style.color='#64748b'; msg.textContent='';
+    try{
+      var d=await auCall({action:'auLogin',id:id,pw:pw});
+      if(!d||!d.token||!d.user)throw new Error('서버가 로그인 요청을 처리하지 못했습니다.\n앱스스크립트를 「배포 관리 → 연필 → 버전: 새 버전 → 배포」로 재배포했는지 확인하세요.');
+      AU.token=d.token; AU.id=d.user.id; AU.name=d.user.name; AU.role=d.user.role; AU.exp=d.exp;
+      if(keep)await auPersist(); else { try{ await idbSet(AU_STORE,null); }catch(_e){} }
+      var _autoOn=!!(document.getElementById('auAuto')||{}).checked;
+      if(_autoOn)await auAutoSet(id,pw); else await auAutoClear();
+      auHideGate(); auApply();
+      msg.textContent='';
+    }catch(e){ msg.style.color='#dc2626'; msg.textContent=(e.message||e); }
+    finally{ btn.disabled=false; btn.textContent='로그인'; }
+  });
+}
+function auHideGate(){ var g=document.getElementById('auGate'); if(g)g.remove(); }
+
+/* ── 서버 auth 코드 버전 확인 (로그인 화면 진입 시 자동) ── */
+async function auVerCheck(){
+  var el=document.getElementById('auVerWarn'); if(!el)return;
+  var u=auUrl(); if(!u)return;
+  var ver='';
+  try{ var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'auVer'})});
+    var d=JSON.parse(await r.text()); if(d&&d.ver)ver=d.ver; }catch(_e){ return; }
+  if(ver){ el.style.display='none'; return; }
+  el.style.display='';
+  el.textContent='⚠ 서버의 auth 코드가 예전 버전입니다.\n계정 신청·승인·비밀번호 변경이 동작하지 않습니다.\n\n관리자 조치 — 앱스스크립트에서\n  ① auth 파일 내용을 새 「2_로그인」 코드로 전부 교체\n  ② 저장 (Ctrl+S)\n  ③ 배포 → 배포 관리 → 연필 → 버전: 새 버전 → 배포';
+}
+
+/* ── 서버 연결 진단 ── */
+async function auDiag(){
+  var box=document.getElementById('auDiag'); if(!box)return;
+  box.style.display=''; box.textContent='진단 중…';
+  var u=auUrl();
+  var out=[];
+  out.push('주소  : '+(u||'(비어 있음)'));
+  try{ var gu=((state.gsync&&state.gsync.url)||'');
+    if(gu&&gu!==u)out.push('※ 구글 동기화 칸 주소가 다릅니다 : '+gu); }catch(_e){}
+  if(!u){ box.textContent=out.join('\n')+'\n\n▶ HTML 파일의 AU_URL 이 비어 있습니다.'; return; }
+  if(!/\/exec\s*$/.test(u))out.push('※ 주소가 /exec 로 끝나지 않습니다 — /dev 주소는 본인만 접속됩니다.');
+  var raw='',stat='';
+  try{
+    var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'auMe',token:'__diag__',key:AU_KEY||((state.gsync&&state.gsync.key)||'')})});
+    stat=r.status+' '+r.statusText; raw=(await r.text()).slice(0,600);
+  }catch(e){ box.textContent=out.join('\n')+'\n\n▶ 연결 실패: '+(e.message||e)+'\n   인터넷 또는 주소를 확인하세요.'; return; }
+  var sv=''; try{ var rv=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'auVer'})});
+    var jv=JSON.parse(await rv.text()); if(jv&&jv.ver)sv=jv.ver; }catch(_e){}
+  out.push('서버 auth : '+(sv?(sv+'  ✅ 최신'):'구버전 또는 미설치  ❌'));
+  out.push('응답  : '+stat);
+  out.push('내용  : '+raw);
+  var verdict;
+  if(/요청한 파일이 없습니다|file you have requested does not exist/.test(raw)) verdict='▶ 이 주소의 배포가 존재하지 않습니다.\n   배포가 삭제됐거나 「새 배포」로 만들어 주소가 바뀐 것입니다.\n   배포 → 배포 관리 → 활성 배포의 「웹 앱 URL」을 복사해\n   HTML 파일의 AU_URL 에 다시 넣으세요.';
+  else if(/^\s*</.test(raw)) verdict='▶ HTML 페이지가 돌아왔습니다.\n   배포 → 액세스 권한을 「모든 사용자」로 바꾸고 다시 배포하세요.';
+  else if(/로그인이 필요합니다/.test(raw)) verdict='✅ 새 로그인 코드가 정상 작동 중입니다.\n   아이디·비밀번호를 확인하세요. (초기값 admin / dongbang!2026)\n   비밀번호를 잊었다면 편집기에서 auResetAll 실행.';
+  else if(/auRoute|is not defined|ReferenceError/.test(raw)) verdict='▶ auth 파일이 없거나 이름이 잘못됐습니다.\n   파일 목록에 auth 가 있는지, 내용이 2_로그인 코드인지 확인하세요.';
+  else verdict='▶ 예전 코드가 응답하고 있습니다.\n   ① 배포 관리에서 이 URL의 배포를 「새 버전」으로 다시 배포\n   ② auth·dsync 파일에 doPost/doGet 이 들어 있지 않은지 확인\n      (Code.gs 의 doPost 가 덮어써집니다)';
+  box.textContent=out.join('\n')+'\n\n'+verdict;
+  var wrap=document.createElement('div');
+  wrap.style.cssText='margin-top:10px;padding-top:9px;border-top:1px dashed #cbd5e1';
+  wrap.innerHTML='<div style="font-weight:800;color:#334155;margin-bottom:5px">서버 주소 바꾸기 <span style="font-weight:600;color:#94a3b8">— 새로 배포해 주소가 바뀐 경우</span></div>'+
+   '<input id="auUrlIn" type="text" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:11px;box-sizing:border-box">'+
+   '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" id="auUrlSave" style="flex:1;padding:7px;border:0;border-radius:7px;background:#1e3a5f;color:#fff;font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer">이 주소로 저장하고 다시 열기</button>'+
+   '<button type="button" id="auUrlReset" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#64748b;font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer">기본값</button></div>';
+  box.appendChild(wrap);
+  var inp=document.getElementById('auUrlIn'); if(inp)inp.value=AU.urlOverride||'';
+  var sv=document.getElementById('auUrlSave'); if(sv)sv.onclick=function(){ auSetUrl(document.getElementById('auUrlIn').value); };
+  var rs=document.getElementById('auUrlReset'); if(rs)rs.onclick=function(){ auSetUrl(''); };
+}
+
+async function auLogout(){
+  try{ if(AU.token)await auCall({action:'auLogout'}); }catch(_e){}
+  try{ await auAutoClear(); }catch(_e){}   /* 로그아웃하면 자동 로그인도 해제 */
+  AU={token:'',id:'',name:'',role:'',exp:0,ready:true};
+  try{ await idbSet(AU_STORE,null); }catch(_e){}
+  location.reload();
+}
+
+/* ── 권한 반영 ── */
+function auApply(){
+  /* 로그인을 쓰지 않는 상태(AU_URL 미설정)에서는 아무것도 잠그지 않습니다 */
+  var noAuth=!auUrl();
+  var canUp=noAuth||auCan('upload'), isAdmin=!noAuth&&auCan('admin');
+  var hide=function(id,ok){ var e=document.getElementById(id); if(e)e.style.display=ok?'':'none'; };
+  hide('dsPushBtn',canUp); hide('dsClaimBtn',canUp); hide('gsSave',canUp);
+  hide('auAdminBtn',isAdmin);
+  var gu=document.getElementById('gsUser');
+  if(gu&&AU.name){ gu.value=AU.name; gu.readOnly=true; gu.style.background='#f1f5f9'; }
+  if(AU.name){ state.gsync=state.gsync||{}; state.gsync.user=AU.name;
+    try{ if(typeof renderUserLbl==='function')renderUserLbl(); }catch(_e){}
+    try{ if(typeof saveSettings==='function')saveSettings(); }catch(_e){}
+    try{ if(typeof refreshElogBtns==='function')refreshElogBtns(); }catch(_e){} }
+  /* v416: 내장 주소가 있으면 저장돼 있던 옛 주소를 덮어씁니다 — 모든 기능이 같은 서버를 보게 */
+  var _u=(AU.urlOverride||AU_URL||'');
+  if(_u){ state.gsync=state.gsync||{};
+    if(state.gsync.url!==_u){ state.gsync.url=_u; try{ if(typeof saveSettings==='function')saveSettings(); }catch(_e){} }
+    var _gu=document.getElementById('gsUrl'); if(_gu&&_gu.value!==_u)_gu.value=_u; }
+  if(AU_KEY){ state.gsync=state.gsync||{};
+    if(state.gsync.key!==AU_KEY){ state.gsync.key=AU_KEY; try{ if(typeof saveSettings==='function')saveSettings(); }catch(_e){} }
+    var _gk=document.getElementById('gsKey'); if(_gk&&_gk.value!==AU_KEY)_gk.value=AU_KEY; }
+  var pend=AU.pending||0;
+  var bar=document.getElementById('auBar');
+  if(bar&&noAuth){ bar.innerHTML='<span class="sub2">로그인 미사용 — 서버 주소가 설정되지 않았습니다</span>'; return; }
+  if(bar)bar.innerHTML = auValid()
+    ? ('<b style="color:#0f766e">'+esc(AU.name||AU.id)+'</b> <span class="sub2">('+esc(AU_ROLE[AU.role]||AU.role)+')</span>'+
+       ' <button class="btn" id="auAdminBtn" type="button" style="background:#eef2ff;color:#4338ca;border-color:#c7d2fe;padding:4px 10px;font-size:11.5px'+(isAdmin?'':';display:none')+'">👥 계정 관리</button>'+
+       ' <button class="btn" id="auMyPwBtn" type="button" style="background:#f0fdfa;color:#0d6d66;border-color:#99f6e4;padding:4px 10px;font-size:11.5px">🔑 비밀번호 변경</button>'+
+       ' <button class="btn" id="auOutBtn" type="button" style="background:#fef2f2;color:#b91c1c;border-color:#fecaca;padding:4px 10px;font-size:11.5px">로그아웃</button>'+
+       (pend?(' <span id="auPendTag" style="font-size:11px;font-weight:800;color:#a4530b;background:#fdf1e0;border-radius:999px;padding:3px 9px">승인 대기 '+pend+'명</span>'):''))
+    : '<span class="sub2">로그인되지 않음</span>';
+  var ab=document.getElementById('auAdminBtn'); if(ab)ab.onclick=auAdminOpen;
+  var ob=document.getElementById('auOutBtn'); if(ob)ob.onclick=function(){ auLogout(); };
+  var mb=document.getElementById('auMyPwBtn'); if(mb)mb.onclick=auMyPwOpen;
+  if(isAdmin)auPendCheck();
+  try{ if(typeof dsRender==='function')dsRender(); }catch(_e){}
+}
+
+/* ── 내 비밀번호 변경 ── */
+function auMyPwOpen(){
+  var box=document.getElementById('auAdmin'); if(!box)return;
+  box.style.display='';
+  box.innerHTML='<div style="max-width:420px;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:#f8fafc">'+
+   '<div style="font-size:12.5px;font-weight:800;color:#1e3a5f;margin-bottom:9px">🔑 내 비밀번호 변경 <span style="font-weight:600;color:#64748b">— '+esc(AU.name||AU.id)+'</span></div>'+
+   '<input id="auCur" type="password" placeholder="현재 비밀번호" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:12.5px;margin-bottom:6px">'+
+   '<input id="auNew1" type="password" placeholder="새 비밀번호 (4자 이상)" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:12.5px;margin-bottom:6px">'+
+   '<input id="auNew2" type="password" placeholder="새 비밀번호 확인" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:12.5px">'+
+   '<div style="display:flex;gap:6px;margin-top:9px"><button class="btn" id="auPwSave" type="button" style="background:#0d6d66;color:#fff;border-color:#0d6d66">변경</button>'+
+   '<button class="btn" id="auPwCancel" type="button">취소</button>'+
+   '<span id="auPwMsg" class="sub2" style="font-weight:700;align-self:center"></span></div></div>';
+  var msg=function(t,c){ var e=document.getElementById('auPwMsg'); if(e){e.style.color=c||'#0d6d66';e.textContent=t||'';} };
+  document.getElementById('auPwCancel').onclick=function(){ box.style.display='none'; box.innerHTML=''; };
+  document.getElementById('auPwSave').onclick=async function(){
+    var c=document.getElementById('auCur').value, n1=document.getElementById('auNew1').value, n2=document.getElementById('auNew2').value;
+    if(!c||!n1){ msg('빈칸을 채우세요.','#dc2626'); return; }
+    if(n1.length<4){ msg('새 비밀번호는 4자 이상이어야 합니다.','#dc2626'); return; }
+    if(n1!==n2){ msg('새 비밀번호가 서로 다릅니다.','#dc2626'); return; }
+    try{ await auCall({action:'auMyPw',curPw:c,pw:n1}); msg('변경되었습니다.');
+      setTimeout(function(){ box.style.display='none'; box.innerHTML=''; },1200);
+    }catch(e){ msg(e.message||String(e),'#dc2626'); }
+  };
+  document.getElementById('auCur').focus();
+}
+
+/* ── 승인 대기 인원 확인 ── */
+async function auPendCheck(){
+  if(!auCan('admin'))return;
+  try{ var d=await auCall({action:'auList'});
+    var n=(d.users||[]).filter(function(u){return u.pending;}).length;
+    if(n!==AU.pending){ AU.pending=n; auApply(); }
+  }catch(_e){}
+}
+
+/* ── 계정 관리 (관리자) ── */
+async function auAdminOpen(){
+  if(!auCan('admin'))return;
+  var box=document.getElementById('auAdmin'); if(!box)return;
+  var wasHidden=(getComputedStyle(box).display==='none');
+  box.style.display=wasHidden?'':'none';
+  if(!wasHidden)return;
+  await auAdminRender();
+}
+async function auAdminRender(){
+  var box=document.getElementById('auAdmin'); if(!box)return;
+  box.innerHTML='<div class="sub2">불러오는 중…</div>';
+  try{
+    var d=await auCall({action:'auList'});
+    var all=d.users||[];
+    var pend=all.filter(function(u){return u.pending;});
+    AU.pending=pend.length;
+    var pendHtml = pend.length ? ('<div style="margin-bottom:12px;padding:11px 13px;border:1px solid #fcd34d;background:#fffbeb;border-radius:10px">'+
+      '<div style="font-size:12.5px;font-weight:800;color:#a4530b;margin-bottom:8px">🔔 승인 대기 '+pend.length+'명</div>'+
+      '<div style="border:1px solid #fde68a;border-radius:8px;overflow:hidden;background:#fff">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#fef3c7">'+
+      ['아이디','이름','신청일','부여할 권한',''].map(function(h){return '<th style="padding:5px 8px;text-align:right;color:#78350f">'+h+'</th>';}).join('')+
+      '</tr></thead><tbody>'+pend.map(function(u){
+        return '<tr><td style="padding:5px 8px;font-weight:800">'+esc(u.id)+'</td><td style="padding:5px 8px">'+esc(u.name||'')+'</td>'+
+         '<td style="padding:5px 8px;color:#94a3b8;font-size:10.5px">'+esc(String(u.createdAt||'').slice(0,16).replace('T',' '))+'</td>'+
+         '<td style="padding:5px 8px"><select data-aupr="'+esc(u.id)+'" style="font-family:inherit;font-size:11.5px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px"><option value="user">일반</option><option value="uploader">업로더</option><option value="admin">관리자</option></select></td>'+
+         '<td style="padding:5px 8px;white-space:nowrap"><button class="btn" data-auok="'+esc(u.id)+'" type="button" style="padding:3px 11px;font-size:11px;background:#0d6d66;color:#fff;border-color:#0d6d66">승인</button> '+
+         '<button class="btn" data-auno="'+esc(u.id)+'" type="button" style="padding:3px 9px;font-size:11px;background:#fef2f2;color:#b91c1c;border-color:#fecaca">거절</button></td></tr>';
+      }).join('')+'</tbody></table></div></div>') : '';
+    var rows=all.filter(function(u){return !u.pending;}).map(function(u){
+      return '<tr'+(u.active?'':' style="opacity:.45"')+'><td style="padding:4px 8px;font-weight:800">'+esc(u.id)+'</td>'+
+       '<td style="padding:4px 8px">'+esc(u.name||'')+'</td>'+
+       '<td style="padding:4px 8px"><select data-aurole="'+esc(u.id)+'" style="font-family:inherit;font-size:11.5px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px">'+
+        ['admin','uploader','user'].map(function(r){return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+AU_ROLE[r]+'</option>';}).join('')+'</select></td>'+
+       '<td style="padding:4px 8px;color:#94a3b8;font-size:10.5px">'+esc(String(u.lastLogin||'').slice(0,16).replace('T',' '))+'</td>'+
+       '<td style="padding:4px 8px;white-space:nowrap">'+
+        '<button class="btn" data-aupw="'+esc(u.id)+'" type="button" style="padding:2px 8px;font-size:11px">비번변경</button> '+
+        '<button class="btn" data-auact="'+esc(u.id)+'" type="button" style="padding:2px 8px;font-size:11px;background:'+(u.active?'#fffbeb':'#ecfdf5')+'">'+(u.active?'사용중지':'사용재개')+'</button> '+
+        '<button class="btn" data-audel="'+esc(u.id)+'" type="button" style="padding:2px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border-color:#fecaca">삭제</button></td></tr>';
+    }).join('');
+    box.innerHTML= pendHtml +
+     '<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+
+      '<input id="auNId" placeholder="아이디" style="width:110px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:12px">'+
+      '<input id="auNName" placeholder="이름" style="width:110px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:12px">'+
+      '<input id="auNPw" placeholder="비밀번호" type="text" style="width:130px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:12px">'+
+      '<select id="auNRole" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:12px"><option value="user">일반</option><option value="uploader">업로더</option><option value="admin">관리자</option></select>'+
+      '<button class="btn" id="auAddBtn" type="button" style="background:#ccfbf1;color:#0f766e;border-color:#5eead4">＋ 계정 추가</button>'+
+      '<span id="auAdmMsg" class="sub2" style="font-weight:700"></span></div>'+
+     '<div style="border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:260px">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#f1f5f9">'+
+      ['아이디','이름','권한','최근 로그인',''].map(function(h){return '<th style="padding:5px 8px;text-align:right;color:#475569">'+h+'</th>';}).join('')+
+      '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+     '<div class="sub2" style="margin-top:6px">권한 — <b>관리자</b>: 전부 + 계정 관리 · <b>업로더</b>: 매출자료 올리기·설정 저장 · <b>일반</b>: 받기·보기만</div>';
+    auAdminBind();
+  }catch(e){ box.innerHTML='<div style="color:#dc2626;font-size:11.5px">'+esc(e.message||String(e))+'</div>'; }
+}
+function auAdmMsg(t,c){ var e=document.getElementById('auAdmMsg'); if(e){e.style.color=c||'#0f766e';e.textContent=t||'';} }
+function auAdminBind(){
+  var add=document.getElementById('auAddBtn');
+  if(add)add.onclick=async function(){
+    var id=(document.getElementById('auNId').value||'').trim(), nm=(document.getElementById('auNName').value||'').trim();
+    var pw=document.getElementById('auNPw').value||'', role=document.getElementById('auNRole').value;
+    if(!id||!pw){ auAdmMsg('아이디와 비밀번호를 입력하세요.','#dc2626'); return; }
+    try{ await auCall({action:'auAdd',newId:id,name:nm||id,pw:pw,role:role}); auAdmMsg('추가되었습니다.'); await auAdminRender(); }
+    catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); }
+  };
+  document.querySelectorAll('[data-aurole]').forEach(function(sel){
+    sel.onchange=async function(){ try{ await auCall({action:'auSet',targetId:sel.getAttribute('data-aurole'),role:sel.value}); auAdmMsg('권한이 바뀌었습니다.'); }
+      catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); await auAdminRender(); } };
+  });
+  document.querySelectorAll('[data-aupw]').forEach(function(b){
+    b.onclick=async function(){ var id=b.getAttribute('data-aupw'); var pw=prompt('「'+id+'」의 새 비밀번호를 입력하세요.'); if(!pw)return;
+      try{ await auCall({action:'auPw',targetId:id,pw:pw}); auAdmMsg('비밀번호가 변경되었습니다.'); }catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); } };
+  });
+  document.querySelectorAll('[data-auact]').forEach(function(b){
+    b.onclick=async function(){ var id=b.getAttribute('data-auact');
+      try{ await auCall({action:'auToggle',targetId:id}); await auAdminRender(); }catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); } };
+  });
+  document.querySelectorAll('[data-auok]').forEach(function(b){
+    b.onclick=async function(){ var id=b.getAttribute('data-auok');
+      var sel=document.querySelector('[data-aupr="'+id+'"]'); var role=sel?sel.value:'user';
+      try{ await auCall({action:'auApprove',targetId:id,role:role}); await auAdminRender(); auApply(); auAdmMsg('「'+id+'」 승인 완료 — 이제 로그인할 수 있습니다.'); }
+      catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); } };
+  });
+  document.querySelectorAll('[data-auno]').forEach(function(b){
+    b.onclick=async function(){ var id=b.getAttribute('data-auno');
+      if(!await auAsk('「'+id+'」 신청을 거절할까요?\n계정이 삭제됩니다.'))return;
+      try{ await auCall({action:'auReject',targetId:id}); await auAdminRender(); auApply(); auAdmMsg('거절했습니다.'); }
+      catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); } };
+  });
+  document.querySelectorAll('[data-audel]').forEach(function(b){
+    b.onclick=async function(){ var id=b.getAttribute('data-audel');
+      if(!await auAsk('「'+id+'」 계정을 삭제할까요?\n삭제하면 즉시 접속이 차단됩니다.'))return;
+      try{ await auCall({action:'auDel',targetId:id}); auAdmMsg('삭제되었습니다.'); await auAdminRender(); }catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); } };
+  });
+}
+
+/* ── 시작 ── */
+async function auBoot(){
+  {
+    var _bu=(AU.urlOverride||AU_URL||'');
+    if(_bu){ state.gsync=state.gsync||{}; state.gsync.url=_bu; if(AU_KEY)state.gsync.key=AU_KEY; }
+    if(!auUrl()){ AU.ready=true; auApply(); return; }          /* 서버 미설정이면 로그인 없이 사용 */
+    if(auValid()){
+      try{ var d=await auCall({action:'auMe'}); if(!d||!d.user)throw new Error('bad'); AU.name=d.user.name; AU.role=d.user.role; AU.id=d.user.id; AU.exp=d.exp||AU.exp; await auPersist(); }
+      catch(_e){ AU.token=''; AU.exp=0; try{ await idbSet(AU_STORE,null); }catch(_x){} }
+    }
+    if(!auValid()){ try{ await auTryAuto(); }catch(_e){} }   /* 자동 로그인 */
+    AU.ready=true;
+    if(auValid())auApply(); else { auShowGate(); auVerCheck(); }
+  }
+}
+window.auBoot=auBoot;
+(async function(){
+  try{ await auRestore(); }catch(_e){}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(auBoot,400);},{once:true});
+  else setTimeout(auBoot,400);
+  /* 나중에 서버 주소를 입력하면 그때 로그인을 요구합니다 */
+  setTimeout(function(){ var u=document.getElementById('gsUrl');
+    if(u)u.addEventListener('change',function(){ setTimeout(function(){ if(!auValid())auBoot(); },300); });
+  },900);
+})();
+</script>
+
+<script>setTimeout(function(){try{if(typeof pcBootDone==='function')pcBootDone();var d=document.getElementById("drop");if(d&&(typeof CUR==="undefined"||!CUR.length))d.classList.remove("hidden");}catch(_e){}},5000);</script>
 </body>
 </html>
