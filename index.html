@@ -56,6 +56,8 @@
   .huser{gap:5px;background:#fff;border:1px solid var(--line);border-radius:8px;font-weight:700}
   .header-sync-btn{gap:3px}
   .huser b{color:var(--navy);font-weight:800}
+  /* v64: 상단 바로가기·동기화·버전·사용자 칩 글자 크기 통일 */
+  .salesLink,.productCostLink,.header-history-btn,.header-sync-btn,.appver,.huser,.huser b{font-size:11.5px!important}
   #userLbl{cursor:pointer}
   .gs-config-grid{display:grid;grid-template-columns:minmax(420px,2fr) minmax(220px,.8fr) minmax(220px,.8fr);gap:8px;margin-top:8px;align-items:center}
   .gs-config-grid input{width:100%;min-width:0;height:35px;padding:7px 10px;border:1px solid #cfd8e5;border-radius:7px;background:#fff;color:#26364d;font-family:inherit;font-size:12px;outline:0}
@@ -78,9 +80,9 @@
   .modal-box h3{margin:0 0 10px;color:var(--navy);font-size:16px}
   /* ---------- top menu ---------- */
   nav.topmenu{background:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:5px;row-gap:6px;padding:7px 16px;max-width:1720px;margin:0 auto;border-top:1px solid var(--line)}
-  /* 기간 버튼줄은 항상 아래로 내려 2줄로 보이게 합니다 (매출분석과 동일한 느낌) */
-  nav.topmenu .tm-spacer{flex:0 0 100%!important;min-width:100%!important;height:0}
-  nav.topmenu #fileToggle{margin-left:auto!important}
+  /* v64: 기간설정 + 파일·관리를 메뉴와 같은 줄에 배치 */
+  nav.topmenu .tm-spacer{flex:1 1 auto!important;min-width:8px!important;height:auto}
+  nav.topmenu #fileToggle{margin-left:6px!important}
   @media (max-width:700px){ nav.topmenu{padding:7px 10px} .tm-top,.tm-direct,.tm-sales,.per-btn{padding:8px 11px;font-size:12.5px} }
   .tm-direct{background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
   .tm-direct:hover{filter:brightness(1.1)}
@@ -92,6 +94,18 @@
   .tm-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:#fff;color:#334155;border:none;border-radius:7px;padding:9px 11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .tm-item:hover{background:var(--barbg)}
   .tm-item .ic{width:22px;text-align:center;font-size:14px}
+  /* v68: 상단 메뉴를 매출분석 도구와 동일한 색상·hover·선택 상태로 통일 */
+  nav.topmenu{position:sticky;top:0;z-index:50;background:#fff;border:1px solid #e3e8ef;border-radius:12px;padding:7px 12px;margin-top:6px;margin-bottom:6px;box-shadow:0 2px 8px rgba(15,23,42,.05)}
+  nav.topmenu .tm-top{background:#f1f5f9!important;border:1px solid #e2e8f0!important;color:#1e3a5f!important;font-weight:700;border-radius:9px;transition:background .12s,color .12s,border-color .12s,box-shadow .12s}
+  nav.topmenu .tm-top:hover,nav.topmenu .tm-grp.open>.tm-top,nav.topmenu .tm-top.section-active{background:#1e3a5f!important;color:#fff!important;border-color:#1e3a5f!important;box-shadow:0 0 0 2px rgba(30,58,95,.16)!important;filter:none!important}
+  nav.topmenu .tm-drop{top:calc(100% + 5px);background:#fff;border:1px solid #e3e8ef;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.18);padding:6px}
+  nav.topmenu .tm-item{background:none!important;color:#1f2937!important;border:none!important;padding:9px 12px;border-radius:7px;transition:background .12s,color .12s}
+  nav.topmenu .tm-item:hover{background:#eef2f8!important;color:#1e3a5f!important;filter:none!important;box-shadow:none!important;transform:none!important}
+  nav.topmenu .tm-item.active{background:#1e3a5f!important;color:#fff!important}
+  nav.topmenu #homeBtn{background:#f1f5f9!important;color:#1e3a5f!important;border-color:#e2e8f0!important}
+  nav.topmenu #homeBtn:hover,nav.topmenu #homeBtn.section-active{background:#1e3a5f!important;color:#fff!important;border-color:#1e3a5f!important;filter:none!important;box-shadow:0 0 0 2px rgba(30,58,95,.16)!important}
+  nav.topmenu #fileToggle{background:#14b8a6!important;color:#fff!important;border-color:#14b8a6!important}
+  nav.topmenu #fileToggle:hover,nav.topmenu #fileToggle.section-active{background:#0f9f93!important;border-color:#0f9f93!important;filter:none!important;box-shadow:0 0 0 3px rgba(20,184,166,.24)!important}
   .tm-spacer{flex:1 1 auto;min-width:8px}
   .tm-sales{background:#fff;border:1px solid var(--line);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;margin-left:4px}
   .tm-sales:hover{background:var(--barbg);border-color:var(--accent)}
@@ -697,6 +711,8 @@
   .dcmp-natshare .nums b.pd{color:#ea580c;font-weight:800}
   .dcmp-natshare .nums .sep{color:#cbd5e1;font-weight:700}
   .dcmp-natshare .dcmp-split{width:100%}
+  /* v65: 매입구분별 매입비교 — '치우침'과 '방화문 / PD 비중' 사이 구분선 */
+  table.divcmp-table th.dcmp-natshare-col,table.divcmp-table td.dcmp-natshare-col{border-left:2px solid #cbd5e1!important}
   /* v47: 매출대비 매입비율 표의 매입구분 행 — 클릭하면 그 구분의 상세 리스트가 펼쳐집니다. */
   tr.ratio-natpick{cursor:pointer}
   tr.ratio-natpick:hover{background:#f8fafc}
@@ -920,7 +936,7 @@
       <span class="sub2" id="dsStatus" style="font-weight:600"></span>
     </div>
     <div id="dsInfo" style="width:100%;margin-top:8px;font-size:11.5px;color:#475569"></div>
-    <div class="sub2" style="margin-top:6px;line-height:1.6">위 구글시트 동기화의 URL·비밀키·내 이름을 그대로 사용합니다. 매입 원본은 <b>월별로 나눠 압축(사전압축+gzip)</b>해서 드라이브에 저장합니다. 표 오른쪽 <b style="color:#047857">⬆ 올리기</b>는 새로 올리기, <b style="color:#1d4ed8">🔄 교체</b>는 덮어쓰기, <b style="color:#b91c1c">🗑 삭제</b>는 서버에서 그 달만 지우기입니다(내 PC 자료는 그대로). <b>받기</b>를 하면 내 PC의 매입 데이터가 서버 자료로 교체됩니다.</div>
+    <div class="sub2" style="margin-top:6px;line-height:1.6">로그인 계정을 우선 사용하며, 담당 지정·올리기·받기는 <b>서버 저장값을 다시 확인</b>한 뒤 완료로 표시합니다. 매입 원본은 <b>월별로 나눠 압축(사전압축+gzip)</b>해서 드라이브에 저장합니다. 표 오른쪽 <b style="color:#047857">⬆ 올리기</b>는 새로 올리기, <b style="color:#1d4ed8">🔄 교체</b>는 덮어쓰기, <b style="color:#b91c1c">🗑 삭제</b>는 서버에서 그 달만 지우기입니다(내 PC 자료는 그대로). <b>받기</b>를 하면 내 PC의 매입 데이터가 서버 자료로 교체됩니다.</div>
   </div>
 
 
@@ -987,7 +1003,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-08-23';
-const VERNO='v63 · 관리자업로드';
+const VERNO='v67 · 관리자업로드';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -1545,7 +1561,11 @@ function normalize(headers,rows){
 function rebuildCUR(){
   CUR=[];
   migrateLegacyAutoUnclassified();
-  for(const ds of datasets) for(const r of ds.recs){
+  /* v67: 서로 다른 파일에 동일 거래행이 겹치면 기준 파일 1곳의 행만 분석에 반영합니다.
+     같은 파일 안의 동일행은 실제 반복 거래일 수 있어 그대로 유지합니다. */
+  const _dupPlan=dsDupPlan();
+  datasets.forEach((ds,di)=>{ for(const r of (ds.recs||[])){
+    if(dsDupShouldSkip(_dupPlan,ds,di,r))continue;
     const [Y,M,D]=r.d.split('-').map(Number); const dt=new Date(Y,M-1,D);
     const autoNat=autoNatureKey(r);
     const categoryNat=effectiveCategoryBigOverride(r);
@@ -1569,7 +1589,7 @@ function rebuildCUR(){
       nat:manualNat, natCls:rawMaterial?'raw':natInfo.cls, sourceDiv, div:(hasTxnDivision?state.txnDivisionOverride[txnKey]:productDiv), cs:(rawMaterial?coilSheet(r):''),
       mgr: (state.mgrOverride[r.code]||state.mgrOverride[r.vendor]||r.mgr||'미지정'),
       amt: state.basis==='total'?r.total:r.supply });
-  }
+  }});
 }
 
 /* amount accessor honoring basis + overhead filter */
@@ -4415,7 +4435,7 @@ function projectView(){
 
 function openProjectManager(){
   const modal=$('#projectModal'),body=$('#projectModalBody');
-  const sourceRows=datasets.flatMap(d=>d.recs||[]);
+  const sourceRows=dsEffectiveRawRows();
   let managerDivision='방화문부자재';
   let managerProject='전체';
   let projectNameEditOpen=false;
@@ -5105,7 +5125,7 @@ function divisionPurchaseCompare(){
       <td style="color:#ea580c;font-weight:800">${o.sharePd.toFixed(1)}%</td>
       <td><b>${won(o.pd)}</b></td>
       <td class="c">${dcmpGapChip(o.gap)}</td>
-      <td class="c">${dcmpNatShare(o)}</td>
+      <td class="c dcmp-natshare-col">${dcmpNatShare(o)}</td>
       ${hasEtc?`<td style="color:#94a3b8">${o.etc>0?won(o.etc):'-'}</td>`:''}
       <td>${won(o.tot)}</td>
     </tr>`;
@@ -5119,12 +5139,12 @@ function divisionPurchaseCompare(){
         <th class="c" style="min-width:210px">사업부 안에서의 비중 비교</th>
         <th>구성비</th><th>🟠 PD사업부</th>
         <th class="c">치우침</th>
-        <th class="c" style="min-width:118px">방화문 / PD 비중</th>
+        <th class="c dcmp-natshare-col" style="min-width:118px">방화문 / PD 비중</th>
         ${hasEtc?'<th>기타</th>':''}
         <th>합계</th>
       </tr></thead>
       <tbody>${natRowHtml}
-      <tr class="total-row"><td class="l">합계</td><td>${won(T.bf)}</td><td>100.0%</td><td></td><td>100.0%</td><td>${won(T.pd)}</td><td></td><td class="c">${dcmpNatShare(T)}</td>${hasEtc?`<td>${won(T.etc)}</td>`:''}<td>${won(T.tot)}</td></tr>
+      <tr class="total-row"><td class="l">합계</td><td>${won(T.bf)}</td><td>100.0%</td><td></td><td>100.0%</td><td>${won(T.pd)}</td><td></td><td class="c dcmp-natshare-col">${dcmpNatShare(T)}</td>${hasEtc?`<td>${won(T.etc)}</td>`:''}<td>${won(T.tot)}</td></tr>
       </tbody></table></div>
     <div class="dcmp-legend">
       <span><i class="dcmp-dot bf"></i>방화문부자재</span><span><i class="dcmp-dot pd"></i>PD사업부</span>
@@ -5229,8 +5249,16 @@ const ACTS={
 };
 function setAct(a,opts={}){ if(a==='price-trend'&&!opts.keepTrendBack)state.priceTrendBack=null; if(state.act!==a){ state.sortKey=null; state.chipVal=null; state.catDrill=null; state.catDrill2=null; } state._search=''; state.act=a; _activeViewRefresh=null; _activeViewAct=null; runAct(true); highlightMenu(a); }
 function runAct(forceRoute=false){ try{ if(typeof pcBootDone==='function')pcBootDone(); }catch(_e){} const fn=!forceRoute&&_activeViewRefresh&&_activeViewAct===state.act?_activeViewRefresh:(ACTS[state.act]||homeDashboard); try{ fn(); }catch(e){ console.error('render error',e); $('#content').innerHTML=`<div class="note warn">화면 표시 중 오류: ${esc(e.message||e)}</div>`; } window.scrollTo(0,0); }
-function clearActiveMenu(){ $$('.tm-item').forEach(b=>b.style.background=''); }
-function highlightMenu(a){ clearActiveMenu(); const b=[...$$('.tm-item')].find(x=>x.dataset.act===a); if(b)b.style.background='var(--barbg)'; }
+function clearActiveMenu(){
+  $$('#topMenu .tm-item').forEach(function(b){b.classList.remove('active');});
+  $$('#topMenu .tm-top,#topMenu .tm-direct').forEach(function(b){b.classList.remove('section-active');});
+}
+function highlightMenu(a){
+  clearActiveMenu();
+  if(a==='home'){var h=$('#homeBtn');if(h)h.classList.add('section-active');return;}
+  const b=[...$$('#topMenu .tm-item')].find(x=>x.dataset.act===a);
+  if(b){b.classList.add('active');const g=b.closest('.tm-grp'),top=g&&g.querySelector('.tm-top');if(top)top.classList.add('section-active');}
+}
 
 /* ============================================================
    Event wiring
@@ -5242,6 +5270,18 @@ function wireMenus(){
   $('#homeBtn').onclick=()=>{ if(window.closePurchaseFilePanel)window.closePurchaseFilePanel(); setHomeCurrentPeriod(); };
 }
 function closeDrops(){ $$('#topMenu .tm-grp').forEach(g=>g.classList.remove('open')); }
+
+/* 파일·관리 버튼도 매출분석 도구처럼 열린 상태를 선택색으로 표시합니다. */
+(function(){
+ function syncPurchaseMenuState(){
+  var fp=document.getElementById('filePanel'),fb=document.getElementById('fileToggle'),isOpen=!!(fp&&fp.classList.contains('open'));
+  if(fb)fb.classList.toggle('section-active',isOpen);
+  if(isOpen){$$('#topMenu .tm-top,#topMenu #homeBtn').forEach(function(x){x.classList.remove('section-active');});}
+  else highlightMenu(state.act||'home');
+ }
+ document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('#topMenu'))setTimeout(syncPurchaseMenuState,0);},true);
+ window.addEventListener('load',function(){highlightMenu(state.act||'home');syncPurchaseMenuState();},{once:true});
+})();
 
 function syncHomeTopPeriodWithPeriod(){
   if(state.act!=='home')return;
@@ -7069,8 +7109,18 @@ var DS = { owner:'', auto:false, lastPull:'', lastPush:'', manifest:null, months
 
 async function dsRestore(){ try{ var v=await idbGet(DS_KEY); if(v&&typeof v==='object')DS=Object.assign(DS,v); }catch(_e){} }
 async function dsPersist(){ try{ await idbSet(DS_KEY,JSON.parse(JSON.stringify(DS))); }catch(_e){} }
-function dsUser(){ return ((state.gsync&&state.gsync.user)||'').trim(); }
-/* v63: 업로드 담당 판정 — 로그인 이름/아이디도 함께 인정하고, 관리자는 항상 올릴 수 있습니다. */
+/* v64: 공유자료의 작성자는 동기화 설정값보다 실제 로그인 계정을 우선합니다.
+   state.gsync.user 는 서버 동기화 과정에서 다른 PC의 값이 들어올 수 있으므로 담당자 판정에 단독 사용하지 않습니다. */
+function dsUser(){
+  try{
+    if(typeof AU==='object'&&AU){
+      if(AU.name&&(!AU.exp||Date.now()<AU.exp))return String(AU.name).trim();
+      if(AU.id&&(!AU.exp||Date.now()<AU.exp))return String(AU.id).trim();
+    }
+  }catch(_e){}
+  return ((state.gsync&&state.gsync.user)||'').trim();
+}
+/* v64: 업로드 담당 판정 — 로그인 이름/아이디도 함께 인정하고, 관리자는 항상 올릴 수 있습니다. */
 function dsIsAdmin(){ try{ return (typeof auCan==='function') ? !!auCan('admin') : false; }catch(_e){ return false; } }
 function dsIsOwnerMe(owner){
   if(!owner)return true;
@@ -7083,7 +7133,7 @@ function dsCanUpload(owner){ return dsIsOwnerMe(owner)||dsIsAdmin(); }
    (예전에는 구글 동기화 칸에 저장돼 있던 옛 주소로 요청이 나갔습니다) */
 function dsUrl(){ try{ if(typeof auUrl==='function'){ var u=auUrl(); if(u)return u; } }catch(_e){}
  return ((state.gsync&&state.gsync.url)||'').trim(); }
-function dsPass(){ return (state.gsync&&state.gsync.key)||''; }
+function dsPass(){ try{ if(typeof AU_KEY!=='undefined'&&AU_KEY)return AU_KEY; }catch(_e){} return (state.gsync&&state.gsync.key)||''; }
 function dsIsOwner(){ var o=(DS.manifest&&DS.manifest.owner)||''; return !o || (dsUser() && o===dsUser()); }
 
 /* ── 사전압축: 반복 문자열을 사전 배열 + 정수 인덱스로 ── */
@@ -7149,8 +7199,11 @@ function dsHash(s){ var h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCode
 /* ── 통신 ── */
 async function dsCall(payload){
  var u=dsUrl(); if(!u)throw new Error('구글 동기화 URL을 먼저 입력하세요.');
- payload.key=dsPass(); payload.kind='purchase';
- var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+ /* v64: fetch 래퍼에만 의존하지 않고 토큰·키를 요청 본문에 직접 넣습니다. */
+ payload=Object.assign({},payload||{});
+ payload.key=dsPass(); payload.kind='purchase'; payload._nonce=Date.now();
+ try{ if(typeof AU==='object'&&AU&&AU.token&&!payload.token)payload.token=AU.token; }catch(_e){}
+ var r=await fetch(u,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
  var tx=await r.text(); DS.lastRaw=String(tx||'').slice(0,300); var d;
  try{ d=JSON.parse(tx); }catch(_){ throw new Error('응답 형식 오류 — 서버가 JSON 이 아닌 것을 돌려줬습니다.\n\n서버 응답: '+DS.lastRaw); }
  if(d&&d.error)throw new Error(d.error);
@@ -7195,19 +7248,89 @@ async function dsProbe(){
 
 /* ── 로컬 데이터를 월별로 묶기 ── */
 function dsLocalMonths(){
- var m={};
- (datasets||[]).forEach(function(ds){ (ds.recs||[]).forEach(function(r){
+ var m={}, plan=dsDupPlan();
+ (datasets||[]).forEach(function(ds,di){ (ds.recs||[]).forEach(function(r){
+  if(dsDupShouldSkip(plan,ds,di,r))return;
   var ym=String(r.d||'').slice(0,7); if(ym.length!==7)return; (m[ym]=m[ym]||[]).push(r); }); });
  return m;
 }
-/* 같은 달이 두 개 이상의 파일에 들어 있으면 매입이 이중 계상됩니다 — 올리기 전에 잡아 줍니다. */
-function dsDupMonths(){
- var src={};
- (datasets||[]).forEach(function(ds){ var seen={};
-  (ds.recs||[]).forEach(function(r){ var ym=String(r.d||'').slice(0,7); if(ym.length!==7||seen[ym])return; seen[ym]=1;
-   (src[ym]=src[ym]||[]).push(ds.fileName||'(이름없음)'); }); });
- var out=[]; for(var ym in src){ if(src[ym].length>1)out.push({ym:ym,files:src[ym]}); }
- return out.sort(function(a,b){return a.ym<b.ym?-1:1;});
+/* v67: 실제 거래행 중복 판정 + 자동 1회 반영
+   · 서로 다른 파일에 아래 핵심 거래값이 모두 같은 행이 있을 때만 중복으로 판단합니다.
+   · 같은 파일 내부의 동일행은 실제 반복 거래일 수 있으므로 자동 제거하지 않습니다.
+   · 여러 파일이 겹치면 동일 거래행이 가장 많이 들어 있는 파일을 기준 파일로 삼고,
+     다른 파일의 같은 행만 제외합니다. 동률이면 파일 목록에서 먼저 불러온 파일을 기준으로 합니다.
+   기준: 입고일자 + 매입처 + 품번 + 품명 + 규격 + 수량 + 단가 + 공급가 + 합계액 */
+function dsDupNormText(v){ return String(v==null?'':v).trim().replace(/\s+/g,' '); }
+function dsDupNormNum(v){
+ var n=Number(v); if(!isFinite(n))n=0;
+ return String(Math.round(n*1000000)/1000000);
+}
+function dsDupRowKey(r){
+ return JSON.stringify([
+  dsDupNormText(r&&r.d), dsDupNormText(r&&r.vendor), dsDupNormText(r&&r.code),
+  dsDupNormText(r&&r.name), dsDupNormText(r&&r.spec), dsDupNormNum(r&&r.qty),
+  dsDupNormNum(r&&r.price), dsDupNormNum(r&&r.supply), dsDupNormNum(r&&r.total)
+ ]);
+}
+function dsDatasetId(ds,di){ return String((ds&&ds.uid)!=null?ds.uid:('dataset-'+di)); }
+function dsDupPlan(){
+ var buckets=new Map();
+ (datasets||[]).forEach(function(ds,di){
+  var fileId=dsDatasetId(ds,di), fileName=(ds&&ds.fileName)||'(이름없음)';
+  (ds&&ds.recs||[]).forEach(function(r,ri){
+   var ym=String(r&&r.d||'').slice(0,7); if(!/^\d{4}-\d{2}$/.test(ym))return;
+   var key=dsDupRowKey(r), b=buckets.get(key);
+   if(!b){ b={ym:ym,key:key,files:new Map(),firstOrder:di}; buckets.set(key,b); }
+   var f=b.files.get(fileId); if(!f){ f={fileId:fileId,fileName:fileName,di:di,occ:[]}; b.files.set(fileId,f); }
+   f.occ.push({row:ri+1,r:r});
+  });
+ });
+ var skipPairs=new Set(), groups=[];
+ buckets.forEach(function(b){
+  var files=Array.from(b.files.values()); if(files.length<2)return;
+  files.sort(function(a,b2){ return (b2.occ.length-a.occ.length)||(a.di-b2.di); });
+  var keep=files[0], removed=files.slice(1), removedCount=removed.reduce(function(a,f){return a+f.occ.length;},0);
+  if(!removedCount)return;
+  removed.forEach(function(f){ skipPairs.add(f.fileId+'\u001f'+b.key); });
+  groups.push({ym:b.ym,key:b.key,keep:keep,removed:removed,count:removedCount,files:files});
+ });
+ return {skipPairs:skipPairs,groups:groups};
+}
+function dsDupShouldSkip(plan,ds,di,r){
+ if(!plan||!plan.skipPairs||!plan.skipPairs.size)return false;
+ return plan.skipPairs.has(dsDatasetId(ds,di)+'\u001f'+dsDupRowKey(r));
+}
+function dsEffectiveRawRows(){
+ var out=[], plan=dsDupPlan();
+ (datasets||[]).forEach(function(ds,di){ (ds&&ds.recs||[]).forEach(function(r){
+  if(!dsDupShouldSkip(plan,ds,di,r))out.push(r);
+ }); });
+ return out;
+}
+function dsDupRows(){
+ var plan=dsDupPlan(), byMonth={};
+ (plan.groups||[]).forEach(function(g){
+  var m=byMonth[g.ym]||(byMonth[g.ym]={ym:g.ym,count:0,files:{},items:[]});
+  m.count+=g.count;
+  g.files.forEach(function(f){m.files[f.fileName]=1;});
+  var kr=(g.keep.occ[0]&&g.keep.occ[0].r)||{};
+  g.removed.forEach(function(f){
+   f.occ.forEach(function(o){
+    var r=o.r||kr||{};
+    m.items.push({
+     ym:g.ym,d:r.d||'',vendor:r.vendor||'',code:r.code||'',name:r.name||'',spec:r.spec||'',
+     qty:+r.qty||0,price:+r.price||0,supply:+r.supply||0,total:+r.total||0,
+     keepFile:g.keep.fileName, keepRows:g.keep.occ.length, dupFile:f.fileName, dupRow:o.row
+    });
+   });
+  });
+ });
+ return Object.keys(byMonth).sort().map(function(ym){
+  var m=byMonth[ym]; m.files=Object.keys(m.files); return m;
+ });
+}
+function dsDupItems(dup){
+ var out=[]; (dup||dsDupRows()).forEach(function(m){ (m.items||[]).forEach(function(x){out.push(x);}); }); return out;
 }
 
 /* ── 상태 표시 ── */
@@ -7248,11 +7371,21 @@ function dsRender(){
     (canEdit&&!L&&!R?'<span style="color:#cbd5e1;font-size:10.5px">—</span>':'')+
    '</td></tr>';
  }).join('');
- var dup=dsDupMonths();
+ var dup=dsDupRows();
+ var dupTotal=dup.reduce(function(a,d){return a+(d.count||0);},0);
+ var dupItems=dsDupItems(dup);
+ var dupListHtml=dupItems.length?('<details style="margin-top:6px" open><summary style="cursor:pointer;font-weight:800;color:#991b1b">중복 리스트 '+dupTotal.toLocaleString()+'건 보기</summary>'+ 
+   '<div style="max-height:250px;overflow:auto;margin-top:6px;border:1px solid #fecaca;border-radius:7px;background:#fff">'+
+   '<table style="width:100%;border-collapse:collapse;font-size:10.5px;min-width:1220px"><thead><tr style="background:#fff1f2">'+
+   ['월','입고일자','매입처','품번','품명','규격','수량','단가','공급가','합계액','반영 파일','중복 제외 파일','행'].map(function(h){return '<th style="padding:4px 6px;text-align:right;white-space:nowrap;color:#7f1d1d;border-bottom:1px solid #fecaca">'+h+'</th>';}).join('')+
+   '</tr></thead><tbody>'+dupItems.map(function(x){return '<tr>'+[
+    esc(x.ym),esc(x.d),esc(x.vendor),esc(x.code),esc(x.name),esc(x.spec),Number(x.qty||0).toLocaleString(),Number(x.price||0).toLocaleString(),Number(x.supply||0).toLocaleString(),Number(x.total||0).toLocaleString(),esc(x.keepFile),esc(x.dupFile),Number(x.dupRow||0).toLocaleString()
+   ].map(function(v,i){return '<td style="padding:4px 6px;text-align:'+(i>=2&&i<=5?'left':'right')+';white-space:nowrap;border-bottom:1px solid #fff1f2">'+v+'</td>';}).join('')+'</tr>';}).join('')+
+   '</tbody></table></div></details>') : '';
  var dupHtml = dup.length ? ('<div style="margin:6px 0;padding:7px 10px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#b91c1c;font-size:11.5px;line-height:1.6">'+
-   '<b>⚠ 같은 달이 여러 파일에 들어 있습니다 — 매입이 이중으로 잡힙니다.</b><br>'+
-   dup.map(function(d){ return '· <b>'+esc(d.ym)+'</b> : '+esc(d.files.join(' + ')); }).join('<br>')+
-   '<br>📁 파일 목록에서 겹치는 파일을 지운 뒤 올려 주세요.</div>') : '';
+   '<b>⚠ 동일 거래행 중복 '+dupTotal.toLocaleString()+'건이 발견되었습니다.</b> <b style="color:#047857">중복행은 자동 제외되어 1회만 반영됩니다.</b><br>'+ 
+   dup.map(function(d){ return '· <b>'+esc(d.ym)+'</b> : <b>'+Number(d.count||0).toLocaleString()+'건 제외</b> · '+esc(d.files.join(' + ')); }).join('<br>')+
+   '<div style="margin-top:4px;color:#7f1d1d">판정 기준: 입고일자·매입처·품번·품명·규격·수량·단가·공급가·합계액이 모두 같은 행입니다.<br>같은 파일 안의 동일행은 유지하고, 서로 다른 파일에서 겹친 행만 자동 제외합니다.</div>'+dupListHtml+'</div>') : '';
  box.innerHTML = '<div style="margin-bottom:5px">'+ownTxt+
    (mf&&mf.updatedAt?(' <span class="sub2">· 서버 최종 '+esc(String(mf.updatedAt).slice(0,16).replace('T',' '))+'</span>'):'')+'</div>'+
    dupHtml+
@@ -7277,15 +7410,72 @@ async function dsCheck(silent){
  }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); throw e; }
 }
 
+/* v64: 담당/업로드/삭제는 서버 값을 다시 읽어 실제 저장 여부까지 확인합니다. */
+function dsSleep(ms){ return new Promise(function(resolve){setTimeout(resolve,ms);}); }
+function dsOwnerMatches(owner,me){
+  var o=String(owner||'').trim(), m=String(me||'').trim();
+  if(!o)return false;
+  if(m&&o===m)return true;
+  try{
+    if(typeof AU==='object'&&AU){
+      if(AU.name&&o===String(AU.name).trim())return true;
+      if(AU.id&&o===String(AU.id).trim())return true;
+    }
+  }catch(_e){}
+  return false;
+}
+async function dsFreshManifest(){
+  var d=await dsCall({action:'dsManifest',fresh:Date.now()});
+  DS.manifest=d.manifest||{owner:'',months:{}}; DS.ver=d.ver||DS.ver||'';
+  await dsPersist(); dsRender();
+  return DS.manifest;
+}
+async function dsClaimVerified(me){
+  var d=await dsCall({action:'dsClaim',by:me,owner:me,user:me});
+  if(d&&d.manifest){ DS.manifest=d.manifest; await dsPersist(); dsRender(); }
+  var delays=[0,220,650], mf=null;
+  for(var i=0;i<delays.length;i++){
+    if(delays[i])await dsSleep(delays[i]);
+    mf=await dsFreshManifest();
+    if(dsOwnerMatches((mf&&mf.owner)||'',me))return mf;
+  }
+  throw new Error('업로드 담당 변경 요청은 전송됐지만 서버에 저장되지 않았습니다.\n현재 서버 담당: '+(((mf&&mf.owner)||'미지정'))+
+    '\n\nApps Script의 dsClaim 저장 코드가 예전 버전이거나 새 버전 배포가 안 된 상태입니다.');
+}
+function dsMonthOk(mf,ym,rows,hash){
+  var x=((mf&&mf.months)||{})[ym]; if(!x)return false;
+  if(rows!=null && Number(x.rows||0)!==Number(rows||0))return false;
+  if(hash && x.hash && String(x.hash)!==String(hash))return false;
+  return true;
+}
+async function dsVerifyMonth(ym,rows,hash){
+  var mf=await dsFreshManifest();
+  if(dsMonthOk(mf,ym,rows,hash))return mf;
+  throw new Error(ym+' 자료를 전송했지만 서버 저장값이 확인되지 않았습니다.\n다시 「서버 확인」 후 재시도해 주세요.');
+}
+async function dsVerifyDeleted(ym){
+  var mf=await dsFreshManifest();
+  if(!(((mf&&mf.months)||{})[ym]))return mf;
+  throw new Error(ym+' 삭제 요청 후에도 서버 자료가 남아 있습니다. 서버 dsync 배포 버전을 확인해 주세요.');
+}
+
+/* v65: 공통 확인창 함수가 없는 단독 HTML에서도 매입자료 공유 버튼이 동작하도록 합니다. */
+function dsAsk(msg){
+ try{ if(typeof window.uiConfirm==='function')return Promise.resolve(window.uiConfirm(msg)); }catch(_e){}
+ try{ return Promise.resolve(window.confirm(msg)); }catch(_e2){ return Promise.resolve(false); }
+}
+
 /* ── 업로드 담당 지정 ── */
 async function dsClaim(){
- var me=dsUser(); if(!me){ dsSet('먼저 「내 이름(작성자)」을 입력하세요.','#dc2626'); return; }
- var mf=DS.manifest||await dsCheck(true); var cur=(mf&&mf.owner)||'';
- if(cur&&cur!==me){ if(!await uiConfirm('현재 업로드 담당은 「'+cur+'」입니다.\n담당을 「'+me+'」(으)로 바꾸시겠습니까?\n\n두 사람이 번갈아 올리면 서로의 자료를 덮어쓸 수 있습니다.'))return; }
- try{ dsSet('담당 지정 중…');
-  var d=await dsCall({action:'dsClaim',by:me});
-  if(!d||!d.manifest)throw new Error('서버가 결과를 돌려주지 않았습니다.\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
-  DS.manifest=d.manifest; await dsPersist(); dsRender(); dsSet('업로드 담당: '+me,'#0f766e');
+ var me=dsUser(); if(!me){ dsSet('먼저 로그인하거나 「내 이름(작성자)」을 입력하세요.','#dc2626'); return; }
+ try{
+  var mf=await dsFreshManifest(), cur=(mf&&mf.owner)||'';
+  if(cur&&!dsOwnerMatches(cur,me)){
+    if(!await dsAsk('현재 업로드 담당은 「'+cur+'」입니다.\n담당을 「'+me+'」(으)로 바꾸시겠습니까?\n\n두 사람이 번갈아 올리면 서로의 자료를 덮어쓸 수 있습니다.'))return;
+  }
+  dsSet('담당 지정 중… · 서버 저장 확인');
+  await dsClaimVerified(me);
+  dsSet('업로드 담당 지정 완료 · 서버 확인됨: '+me,'#0f766e');
  }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
 }
 
@@ -7293,10 +7483,10 @@ async function dsClaim(){
 async function dsPush(){
  var me=dsUser(); if(!me){ dsSet('먼저 「내 이름(작성자)」을 입력하세요.','#dc2626'); return; }
  if(!(datasets&&datasets.length)){ dsSet('올릴 매입자료가 없습니다. 먼저 엑셀을 불러오세요.','#dc2626'); return; }
- var mf=DS.manifest||await dsCheck(true); var owner=(mf&&mf.owner)||'';
+ var mf=await dsFreshManifest(); var owner=(mf&&mf.owner)||'';
  if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 올릴 수 있습니다.','#dc2626'); return; }
- if(!owner){ if(!await uiConfirm('업로드 담당이 지정되어 있지 않습니다.\n「'+me+'」(으)로 담당을 지정하고 올릴까요?'))return;
-  var c=await dsCall({action:'dsClaim',by:me}); DS.manifest=c.manifest; mf=c.manifest; }
+ if(!owner){ if(!await dsAsk('업로드 담당이 지정되어 있지 않습니다.\n「'+me+'」(으)로 담당을 지정하고 올릴까요?'))return;
+  mf=await dsClaimVerified(me); owner=(mf&&mf.owner)||''; }
 
  var local=dsLocalMonths(), rm=(mf&&mf.months)||{};
  var todo=[], del=[];
@@ -7307,11 +7497,12 @@ async function dsPush(){
  }
  Object.keys(rm).sort().forEach(function(k){ if(!local[k]) del.push(k); });
  if(!todo.length&&!del.length){ dsSet('서버와 동일합니다. 올릴 것이 없습니다.','#0f766e'); dsRender(); return; }
- var dup=dsDupMonths();
+ var dup=dsDupRows();
  if(dup.length){
-  if(!await uiConfirm('⚠ 같은 달이 여러 파일에 들어 있습니다 — 매입이 이중으로 잡힌 상태입니다.\n\n'+
-   dup.map(function(d){return '  · '+d.ym+' : '+d.files.join(' + ');}).join('\n')+
-   '\n\n이대로 올리면 다른 사람도 이중 계상된 자료를 받게 됩니다.\n📁 파일 목록에서 겹치는 파일을 먼저 지우시는 것을 권합니다.\n\n그래도 진행할까요?'))return;
+  var dupTotal=dup.reduce(function(a,d){return a+(d.count||0);},0);
+  if(!await dsAsk('⚠ 동일 거래행 중복 '+dupTotal.toLocaleString()+'건이 발견되었습니다.\n\n'+
+   dup.map(function(d){return '  · '+d.ym+' : '+Number(d.count||0).toLocaleString()+'건 자동 제외 · '+d.files.join(' + ');}).join('\n')+
+   '\n\n중복행은 분석과 서버 업로드에서 자동 제외되어 1회만 반영됩니다.\n같은 파일 안의 동일행은 유지하고, 서로 다른 파일에서 겹친 행만 제외합니다.\n\n중복 리스트는 「📁 파일·관리 → 매입자료 공유」에서 계속 확인할 수 있습니다.\n\n계속 올릴까요?'))return;
  }
  var tot=todo.reduce(function(a,t){return a+t.rows;},0);
  var msg='서버에 올립니다 — '+todo.length+'개 월 · 총 '+tot.toLocaleString()+'행\n'+
@@ -7319,7 +7510,7 @@ async function dsPush(){
    todo.map(function(t){ return '  · '+t.ym+'   '+String(t.rows.toLocaleString()).padStart(7,' ')+'행'+(rm[t.ym]?'   (교체)':''); }).join('\n')+
    (del.length?('\n\n서버에서 지울 달 '+del.length+'개\n'+del.map(function(k){return '  · '+k;}).join('\n')):'')+
    '\n\n진행할까요?';
- if(!await uiConfirm(msg))return;
+ if(!await dsAsk(msg))return;
 
  try{
   var done=0, sent=0;
@@ -7328,69 +7519,80 @@ async function dsPush(){
    var e=await dsEncode(t.packed); sent+=e.data.length;
    var r=await dsCall({action:'dsPut',ym:t.ym,enc:e.enc,data:e.data,rows:t.rows,hash:t.hash,by:me});
    if(!r||!r.manifest)throw new Error('서버가 저장 결과를 돌려주지 않았습니다 ('+t.ym+').\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
-   DS.manifest=r.manifest; done++;
+   DS.manifest=r.manifest; await dsVerifyMonth(t.ym,t.rows,t.hash); done++;
   }
   for(var j=0;j<del.length;j++){ dsSet('서버에서 지우는 중… '+del[j]);
-   var r2=await dsCall({action:'dsDel',ym:del[j],by:me}); DS.manifest=r2.manifest; }
+   var r2=await dsCall({action:'dsDel',ym:del[j],by:me}); if(r2&&r2.manifest)DS.manifest=r2.manifest; await dsVerifyDeleted(del[j]); }
   DS.lastPush=new Date().toISOString(); await dsPersist(); dsRender();
-  dsSet('업로드 완료 — '+done+'개 월 · 전송량 약 '+(sent/1024/1024).toFixed(2)+'MB','#0f766e');
+  dsSet('업로드 완료 · 서버 저장 확인됨 — '+done+'개 월 · 전송량 약 '+(sent/1024/1024).toFixed(2)+'MB','#0f766e');
  }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
 }
 
 /* ── 이 달만 올리기 (교체) ── */
 async function dsPushOne(ym){
  var me=dsUser(); if(!me){ dsSet('먼저 로그인하세요.','#dc2626'); return; }
- var mf=DS.manifest||await dsCheck(true).catch(function(){return null;}) , owner=(mf&&mf.owner)||'';
- if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 올릴 수 있습니다.','#dc2626'); return; }
- if(!owner){ var c=await dsCall({action:'dsClaim',by:me}); DS.manifest=c.manifest; }
- var local=dsLocalMonths(), rows=local[ym];
- if(!rows||!rows.length){ dsSet(ym+' 자료가 내 PC에 없습니다. 지우기(🗑)를 쓰세요.','#dc2626'); return; }
- var had=((DS.manifest&&DS.manifest.months)||{})[ym];
- if(!await uiConfirm(ym+' 자료를 서버에 '+(had?'교체':'올리기')+' 합니다.\n\n  · 내 PC '+rows.length.toLocaleString()+'행'+
+ try{
+  var mf=await dsFreshManifest(), owner=(mf&&mf.owner)||'';
+  if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 올릴 수 있습니다.','#dc2626'); return; }
+  if(!owner)mf=await dsClaimVerified(me);
+  var local=dsLocalMonths(), rows=local[ym];
+  if(!rows||!rows.length){ dsSet(ym+' 자료가 내 PC에 없습니다. 지우기(🗑)를 쓰세요.','#dc2626'); return; }
+  var had=((mf&&mf.months)||{})[ym];
+  if(!await dsAsk(ym+' 자료를 서버에 '+(had?'교체':'올리기')+' 합니다.\n\n  · 내 PC '+rows.length.toLocaleString()+'행'+
    (had?('\n  · 서버 '+(had.rows||0).toLocaleString()+'행 → 덮어씁니다'):'')+'\n\n진행할까요?'))return;
- try{ dsSet(ym+' 올리는 중…');
+  dsSet(ym+' 올리는 중… · 서버 저장 확인');
   var packed=dsPack(rows), h=dsHash(JSON.stringify(packed)), e=await dsEncode(packed);
   var r=await dsCall({action:'dsPut',ym:ym,enc:e.enc,data:e.data,rows:rows.length,hash:h,by:me});
   if(!r||!r.manifest)throw new Error('서버가 저장 결과를 돌려주지 않았습니다.\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
-  DS.manifest=r.manifest; await dsPersist(); dsRender();
-  dsSet(ym+' '+(had?'교체':'업로드')+' 완료','#0f766e');
+  DS.manifest=r.manifest; await dsVerifyMonth(ym,rows.length,h); await dsPersist(); dsRender();
+  dsSet(ym+' '+(had?'교체':'업로드')+' 완료 · 서버 확인됨','#0f766e');
  }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
 }
 
 /* ── 서버에서 이 달 지우기 ── */
 async function dsDelOne(ym){
  var me=dsUser(); if(!me){ dsSet('먼저 로그인하세요.','#dc2626'); return; }
- var mf=DS.manifest||await dsCheck(true).catch(function(){return null;}) , owner=(mf&&mf.owner)||'';
- if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 지울 수 있습니다.','#dc2626'); return; }
- var info=((mf&&mf.months)||{})[ym]; if(!info){ dsSet(ym+' 은 서버에 없습니다.','#dc2626'); return; }
- if(!await uiConfirm('서버에서 '+ym+' 자료를 지웁니다.\n\n  · '+(info.rows||0).toLocaleString()+'행 · '+(info.file||('purchase-'+ym+'.b64'))+
+ try{
+  var mf=await dsFreshManifest(), owner=(mf&&mf.owner)||'';
+  if(!dsCanUpload(owner)){ dsSet('업로드 담당이 「'+owner+'」입니다. 담당자 또는 관리자만 지울 수 있습니다.','#dc2626'); return; }
+  var info=((mf&&mf.months)||{})[ym]; if(!info){ dsSet(ym+' 은 서버에 없습니다.','#dc2626'); return; }
+  if(!await dsAsk('서버에서 '+ym+' 자료를 지웁니다.\n\n  · '+(info.rows||0).toLocaleString()+'행 · '+(info.file||('purchase-'+ym+'.b64'))+
    '\n\n다른 사람이 「받기」를 하면 이 달 자료가 사라집니다.\n(내 PC 자료는 그대로 남습니다.)\n\n진행할까요?'))return;
- try{ dsSet(ym+' 지우는 중…');
+  dsSet(ym+' 지우는 중… · 서버 확인');
   var r=await dsCall({action:'dsDel',ym:ym,by:me});
-  if(!r||!r.manifest)throw new Error('서버가 결과를 돌려주지 않았습니다.\n\n서버 응답: '+(DS.lastRaw||'(없음)'));
-  DS.manifest=r.manifest; await dsPersist(); dsRender(); dsSet(ym+' 서버에서 삭제 완료','#0f766e');
+  if(r&&r.manifest)DS.manifest=r.manifest;
+  await dsVerifyDeleted(ym); await dsPersist(); dsRender(); dsSet(ym+' 서버에서 삭제 완료 · 확인됨','#0f766e');
  }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
 }
 
 /* ── 받기 ── */
 async function dsPull(){
- var mf=await dsCheck(true); var rm=(mf&&mf.months)||{}; var keys=Object.keys(rm).sort();
+ var mf=await dsFreshManifest(); var rm=(mf&&mf.months)||{}; var keys=Object.keys(rm).sort();
  if(!keys.length){ dsSet('서버에 공유된 매입자료가 없습니다.','#dc2626'); return; }
  var total=keys.reduce(function(a,k){return a+(rm[k].rows||0);},0);
- if(!await uiConfirm('서버의 매입자료를 받습니다.\n\n  · '+keys.length+'개 월 · 총 '+total.toLocaleString()+'행\n  · '+keys[0]+' ~ '+keys[keys.length-1]+
-   '\n\n지금 내 PC에 불러와 둔 매입 데이터는 모두 지워지고 이 자료로 교체됩니다.\n(담당자·신용등급·목표 등 설정값은 그대로입니다.)\n\n진행할까요?'))return;
+ if(!await dsAsk('서버의 매입자료를 받습니다.\n\n  · '+keys.length+'개 월 · 총 '+total.toLocaleString()+'행\n  · '+keys[0]+' ~ '+keys[keys.length-1]+
+  '\n\n지금 내 PC에 불러와 둔 매입 데이터는 모두 지워지고 이 자료로 교체됩니다.\n(담당자·신용등급·목표 등 설정값은 그대로입니다.)\n\n진행할까요?'))return;
  try{
-  var next=[];
+  var next=[], recv=0;
   for(var i=0;i<keys.length;i++){
-   var ym=keys[i]; dsSet('받는 중… '+(i+1)+'/'+keys.length+' ('+ym+')');
+   var ym=keys[i], info=rm[ym]||{}; dsSet('받는 중… '+(i+1)+'/'+keys.length+' ('+ym+') · 검증');
    var d=await dsCall({action:'dsGet',ym:ym});
+   if(!d||!d.data)throw new Error(ym+' 서버 파일 데이터가 비어 있습니다.');
    var packed=await dsDecode(d.enc||'gz',d.data||'');
-   next.push({uid:'shared-'+ym, fileName:'공유 매입 '+ym, sheetName:'', sheetNames:[], recs:dsUnpack(packed)});
+   if(info.hash){
+    var gotHash=dsHash(JSON.stringify(packed));
+    if(String(gotHash)!==String(info.hash))throw new Error(ym+' 서버 파일 해시가 manifest와 다릅니다. 받기를 중단했습니다.');
+   }
+   var recs=dsUnpack(packed);
+   if(info.rows!=null && Number(info.rows||0)!==recs.length)
+    throw new Error(ym+' 서버 행수 검증 실패 — manifest '+Number(info.rows||0).toLocaleString()+'행 / 받은 자료 '+recs.length.toLocaleString()+'행');
+   recv+=recs.length;
+   next.push({uid:'shared-'+ym, fileName:'공유 매입 '+ym, sheetName:'', sheetNames:[], recs:recs});
   }
   datasets=next; RAWMEM={};
   DS.lastPull=new Date().toISOString(); await dsPersist();
   try{ afterDataChanged(); }catch(_e){ try{ rebuildCUR(); await persistData(); }catch(_x){} }
-  dsRender(); dsSet('받기 완료 — '+keys.length+'개 월 · '+CUR.length.toLocaleString()+'행','#0f766e');
+  dsRender(); dsSet('받기 완료 · 서버 자료 검증됨 — '+keys.length+'개 월 · '+recv.toLocaleString()+'행','#0f766e');
  }catch(e){ dsSet('오류: '+(e.message||e),'#dc2626'); }
 }
 
@@ -7484,8 +7686,11 @@ function auCan(what){
 
 async function auCall(payload){
   var u=auUrl(); if(!u)throw new Error('서버 주소가 설정되지 않았습니다. 관리자에게 문의하세요.');
+  payload=Object.assign({},payload||{});
   payload.key=AU_KEY||((state.gsync&&state.gsync.key)||'');
-  var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  if(AU.token&&!payload.token)payload.token=AU.token;
+  payload._nonce=Date.now();
+  var r=await fetch(u,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
   var tx=await r.text(); var d;
   try{ d=JSON.parse(tx); }catch(_){ throw new Error('응답 형식 오류 — 앱스스크립트에 로그인 코드가 설치되었는지 확인하세요.'); }
   if(d&&d.error)throw new Error(d.error);
@@ -7760,7 +7965,7 @@ async function auAdminRender(){
     var rows=all.filter(function(u){return !u.pending;}).map(function(u){
       return '<tr'+(u.active?'':' style="opacity:.45"')+'><td style="padding:4px 8px;font-weight:800">'+esc(u.id)+'</td>'+
        '<td style="padding:4px 8px">'+esc(u.name||'')+'</td>'+
-       '<td style="padding:4px 8px"><select data-aurole="'+esc(u.id)+'" style="font-family:inherit;font-size:11.5px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px">'+
+       '<td style="padding:4px 8px"><select data-aurole="'+esc(u.id)+'" data-au-current="'+esc(u.role||'user')+'" style="font-family:inherit;font-size:11.5px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px">'+
         ['admin','uploader','user'].map(function(r){return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+AU_ROLE[r]+'</option>';}).join('')+'</select></td>'+
        '<td style="padding:4px 8px;color:#94a3b8;font-size:10.5px">'+esc(String(u.lastLogin||'').slice(0,16).replace('T',' '))+'</td>'+
        '<td style="padding:4px 8px;white-space:nowrap">'+
@@ -7775,7 +7980,7 @@ async function auAdminRender(){
       '<input id="auNPw" placeholder="비밀번호" type="text" style="width:130px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:12px">'+
       '<select id="auNRole" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:7px;font-family:inherit;font-size:12px"><option value="user">일반</option><option value="uploader">업로더</option><option value="admin">관리자</option></select>'+
       '<button class="btn" id="auAddBtn" type="button" style="background:#ccfbf1;color:#0f766e;border-color:#5eead4">＋ 계정 추가</button>'+
-      '<span id="auAdmMsg" class="sub2" style="font-weight:700"></span></div>'+
+      '<span id="auAdmMsg" class="sub2" style="font-weight:700;white-space:pre-line;line-height:1.55"></span></div>'+
      '<div style="border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:260px">'+
       '<table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#f1f5f9">'+
       ['아이디','이름','권한','최근 로그인',''].map(function(h){return '<th style="padding:5px 8px;text-align:right;color:#475569">'+h+'</th>';}).join('')+
@@ -7785,6 +7990,49 @@ async function auAdminRender(){
   }catch(e){ box.innerHTML='<div style="color:#dc2626;font-size:11.5px">'+esc(e.message||String(e))+'</div>'; }
 }
 function auAdmMsg(t,c){ var e=document.getElementById('auAdmMsg'); if(e){e.style.color=c||'#0f766e';e.textContent=t||'';} }
+/* v65: 권한 변경 후 auList를 다시 읽어 실제 서버 저장값까지 확인합니다.
+   일부 이전 auth 배포는 auSet을 성공처럼 응답하고 실제 role을 갱신하지 않아 화면을 다시 열면 원래 권한으로 보였습니다. */
+function auSleep(ms){ return new Promise(function(resolve){setTimeout(resolve,ms);}); }
+function auRoleOf(users,id){
+  users=users||[];
+  for(var i=0;i<users.length;i++)if(String(users[i].id)===String(id))return String(users[i].role||'');
+  return '';
+}
+async function auReadRole(id){
+  var d=await auCall({action:'auList',fresh:Date.now()});
+  return {role:auRoleOf(d.users||[],id),users:d.users||[]};
+}
+async function auSetRoleVerified(id,role){
+  var firstErr='';
+  try{
+    await auCall({action:'auSet',targetId:id,role:role});
+  }catch(e){ firstErr=String((e&&e.message)||e); }
+
+  var delays=[0,220,650], got='';
+  for(var i=0;i<delays.length;i++){
+    if(delays[i])await auSleep(delays[i]);
+    try{ got=(await auReadRole(id)).role; }catch(_e){}
+    if(got===role)break;
+  }
+
+  /* 구형 auth 서버 호환: 기존 계정의 role 변경을 auApprove가 처리하는 배포가 있어 한 번만 대체 시도합니다. */
+  if(got!==role){
+    try{ await auCall({action:'auApprove',targetId:id,role:role,forceRole:true}); }catch(_e2){}
+    await auSleep(250);
+    try{ got=(await auReadRole(id)).role; }catch(_e3){}
+  }
+
+  if(got!==role){
+    throw new Error('권한 변경 요청은 전송됐지만 서버 저장값이 바뀌지 않았습니다.'+
+      '\n요청: '+(AU_ROLE[role]||role)+' / 서버 현재값: '+(AU_ROLE[got]||got||'확인 안 됨')+
+      (firstErr?('\n첫 요청 오류: '+firstErr):'')+
+      '\n\nApps Script의 auth(2_로그인)에서 auSet 저장 로직을 확인하고 「새 버전」으로 재배포해 주세요.');
+  }
+  if(String(id)===String(AU.id)){
+    AU.role=role; await auPersist(); auApply();
+  }
+  return got;
+}
 function auAdminBind(){
   var add=document.getElementById('auAddBtn');
   if(add)add.onclick=async function(){
@@ -7795,8 +8043,28 @@ function auAdminBind(){
     catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); }
   };
   document.querySelectorAll('[data-aurole]').forEach(function(sel){
-    sel.onchange=async function(){ try{ await auCall({action:'auSet',targetId:sel.getAttribute('data-aurole'),role:sel.value}); auAdmMsg('권한이 바뀌었습니다.'); }
-      catch(e){ auAdmMsg(e.message||String(e),'#dc2626'); await auAdminRender(); } };
+    sel.onchange=async function(){
+      var id=sel.getAttribute('data-aurole'), role=sel.value;
+      var oldRole=sel.getAttribute('data-au-current')||role;
+      sel.disabled=true; sel.style.opacity='.72'; sel.style.borderColor='#94a3b8';
+      auAdmMsg('「'+id+'」 권한 저장 중… · 서버 재확인','#64748b');
+      try{
+        await auSetRoleVerified(id,role);
+        sel.setAttribute('data-au-current',role);
+        sel.style.borderColor='#86efac';
+        auAdmMsg('「'+id+'」 권한을 '+(AU_ROLE[role]||role)+'(으)로 변경했습니다. · 서버 저장 확인됨','#0f766e');
+      }catch(e){
+        /* 표 전체를 다시 그리지 않습니다. 서버의 실제 값만 이 셀에 복원해 표와 오류문구를 그대로 유지합니다. */
+        var actual='';
+        try{ actual=(await auReadRole(id)).role||''; }catch(_e){}
+        sel.value=actual||oldRole;
+        if(actual)sel.setAttribute('data-au-current',actual);
+        sel.style.borderColor='#fca5a5';
+        auAdmMsg('「'+id+'」 권한 변경 실패\n'+(e.message||String(e)),'#dc2626');
+      }finally{
+        sel.disabled=false; sel.style.opacity='1';
+      }
+    };
   });
   document.querySelectorAll('[data-aupw]').forEach(function(b){
     b.onclick=async function(){ var id=b.getAttribute('data-aupw'); var pw=prompt('「'+id+'」의 새 비밀번호를 입력하세요.'); if(!pw)return;
