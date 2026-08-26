@@ -823,11 +823,16 @@
       </div>
     </div>
     <span style="flex:1"></span>
+    <form class="hp-search" id="hpSearch" role="search" title="매입단가 · 품목/매입처 바로 검색">
+      <input type="search" id="hpSearchInput" placeholder="품번 · 품명 · 규격 검색" autocomplete="off" aria-label="매입단가 품목 검색">
+      <button type="button" id="hpModeBtn" class="hps-mode" aria-pressed="false" title="클릭하면 매입처명으로 검색 (매입처 단가)">🏢 업체명</button>
+      <button type="submit" aria-label="검색" title="검색"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg></button>
+    </form>
     <a class="salesLink" href="https://useran-coder.github.io/sales/" target="_blank" rel="noopener">📊 매출분석 도구</a>
     <a class="productCostLink" href="https://useran-coder.github.io/product" target="_blank" rel="noopener">제품제조원가</a>
     <button id="headerElogBtn" class="header-history-btn" type="button" title="수정이력">🕘 수정이력</button>
     <button id="gsSyncBtn" class="header-sync-btn sync-unconfigured" type="button" title="구글시트 동기화"><span class="sync-main">🔄 동기화</span><span class="sync-time"> · 미설정</span></button>
-    <span class="appver" id="appVer">v107 · 단가변동표 개선</span>
+    <span class="appver" id="appVer">v110 · 제품단가 검색 → 이전단가 이력</span>
     <span class="huser" id="userLbl" title="파일·관리에서 이름을 입력하세요">👤 <b id="userName">이름 미설정</b></span>
   </div>
   <nav class="topmenu" id="topMenu">
@@ -965,7 +970,7 @@
 
   <div class="fp-sec" style="margin-top:0;padding:7px 10px;background:#f8fafc">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap">
-      <b style="font-size:12.5px;color:#1e3a5f;flex:0 0 auto">🔐 로그인</b>
+      <span id="hdrMovedBox"></span><b style="font-size:12.5px;color:#1e3a5f;flex:0 0 auto">🔐 로그인</b>
       <div id="auBar" style="font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;padding:0;border:0;background:transparent;min-width:0;white-space:nowrap"></div>
     </div>
     <div id="auAdmin" style="display:none;margin-top:10px"></div>
@@ -1068,8 +1073,8 @@
    ============================================================ */
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
-const BUILD='2026-08-25';
-const VERNO='v107 · 단가변동표 개선';
+const BUILD='2026-08-26';
+const VERNO='v110 · 제품단가 검색 → 이전단가 이력';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -8474,5 +8479,220 @@ window.auBoot=auBoot;
 </script>
 
 <script>setTimeout(function(){try{if(typeof pcBootDone==='function')pcBootDone();var d=document.getElementById("drop");if(d&&(typeof CUR==="undefined"||!CUR.length))d.classList.remove("hidden");}catch(_e){}},5000);</script>
+
+<style id="pu-v108-style">
+/* v108 · 상단 매입단가 검색창 (매출분석 도구와 동일 사용법) */
+.hp-search{display:flex;align-items:center;gap:0;width:min(370px,30vw);min-width:230px;height:32px;
+  border:1px solid #cbd5e1;border-radius:8px;background:#fff;overflow:hidden;box-sizing:border-box;
+  transition:border-color .15s,box-shadow .15s;margin-left:auto}
+.hp-search:focus-within{border-color:#94a3b8;box-shadow:0 0 0 3px rgba(100,116,139,.10)}
+.hp-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;padding:0 11px;
+  font-family:inherit;font-size:12.5px;color:var(--txt)}
+.hp-search input::placeholder{color:#94a3b8}
+.hp-search button{display:flex;align-items:center;justify-content:center;width:38px;height:100%;padding:0;
+  border:0;border-left:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;font-family:inherit}
+.hp-search button svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hp-search button:hover{background:#eef2f6;color:#334155;transform:none;box-shadow:none;filter:none}
+.hp-search .hps-mode{width:auto;padding:0 10px;gap:5px;font-size:12.5px;font-weight:800;color:#475569;white-space:nowrap}
+.hp-search .hps-mode.on{background:#1e3a5f;color:#fff;border-left-color:#1e3a5f}
+.hp-search .hps-mode:hover{background:#eef2f6;color:#334155}
+.hp-search .hps-mode.on:hover{background:#17304f;color:#fff}
+.hbar>span[style*="flex:1"]{display:none}
+@media(max-width:1180px){.hp-search{width:210px;min-width:150px}}
+/* v108 · 동기화·버전 배지를 파일·관리 로그인 줄로 이동 */
+#hdrMovedBox{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto}
+#hdrMovedBox:empty{display:none}
+#hdrMovedBox .header-sync-btn{display:inline-flex!important;align-items:center;justify-content:center;gap:3px;
+  height:30px;box-sizing:border-box;padding:0 11px;border-radius:8px;font-family:inherit;line-height:1;
+  font-size:11.5px;font-weight:800;white-space:nowrap;margin:0!important;box-shadow:none}
+#hdrMovedBox .header-sync-btn .sync-time{color:#94a3b8;font-weight:600}
+#hdrMovedBox .header-sync-btn.sync-ok{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+#hdrMovedBox .header-sync-btn.sync-ok .sync-time{color:#059669}
+#hdrMovedBox .header-sync-btn.sync-error{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+#hdrMovedBox .header-sync-btn.sync-retry{background:#fffbeb;border-color:#fcd34d;color:#b45309}
+#hdrMovedBox .header-sync-btn.sync-unconfigured{background:#f8fafc;border-color:#cbd5e1;color:#475569}
+#hdrMovedBox .appver{display:inline-flex!important;align-items:center;height:30px;box-sizing:border-box;
+  font-size:11.5px;font-weight:800;padding:0 11px;border-radius:8px;white-space:nowrap;margin:0!important;
+  border:1px solid #a7f3d0;background:#ecfdf5;color:#047857}
+#hdrMovedBox+b{margin-left:4px;padding-left:11px;border-left:1px solid #dbe2ea}
+</style>
+<script id="pu-v108-script">
+(function(){
+'use strict';
+/* ── 동기화·버전 배지를 파일·관리 로그인 줄 왼쪽으로 이동 ── */
+function moveBadges(){
+  var box=document.getElementById('hdrMovedBox'); if(!box) return;
+  var sync=document.getElementById('gsSyncBtn'), ver=document.getElementById('appVer');
+  if(sync&&sync.parentNode!==box) box.appendChild(sync);
+  if(ver&&ver.parentNode!==box) box.appendChild(ver);
+}
+
+/* ── 상단 매입단가 검색 ── */
+function puQ(){ var i=document.getElementById('hpSearchInput'); return i?i.value.trim():''; }
+function puHasData(){ try{ return typeof CUR!=='undefined'&&CUR&&CUR.length>0; }catch(e){ return false; } }
+function puScroll(){ setTimeout(function(){ var c=document.getElementById('content'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); },0); }
+function puNorm(v){ return String(v==null?'':v).replace(/\s+/g,'').toLowerCase(); }
+
+/* CUR에서 품목(품번|품명|규격) 목록을 뽑아 검색어로 좁힌다 */
+function puFindItems(q,rows){
+  var m=new Map();
+  (rows||[]).forEach(function(r){
+    var k=(r.code||'')+'|'+(r.name||'')+'|'+(r.spec||'');
+    var o=m.get(k);
+    if(!o){ o={code:r.code||'',name:r.name||'',spec:r.spec||'',amt:0,n:0,vendors:{}}; m.set(k,o); }
+    o.amt+=(typeof amtOf==='function'?amtOf(r):(+r.supply||0)); o.n++;
+    if(r.vendor)o.vendors[r.vendor]=1;
+  });
+  var all=Array.from(m.values());
+  var hit=all.filter(function(o){
+    var hay=[o.code,o.name,o.spec,Object.keys(o.vendors).join(' ')].join(' ');
+    try{ return matchesSearchText(hay,q,o.spec); }
+    catch(e){ return hay.toLowerCase().indexOf(String(q).toLowerCase())>=0; }
+  });
+  hit.sort(function(a,b){ return b.amt-a.amt; });
+  return hit;
+}
+/* 품목(품번·품명·규격) → 📈 제품별 · 이전단가 이력 (여러 건이면 품목 단가 추이 목록) */
+function puSearchItem(){
+  var q=puQ(); if(!q){ var i=document.getElementById('hpSearchInput'); if(i)i.focus(); return; }
+  if(!puHasData()){ alert('먼저 매입 파일을 불러오세요.'); return; }
+  try{ if(typeof closeFilePanel==='function')closeFilePanel(); }catch(e){}
+  var rows=[]; try{ rows=activeRows(); }catch(e){ rows=CUR; }
+  var hits=puFindItems(q,rows);
+  state.priceTrendProject='전체'; state.priceTrendBig='전체'; state.priceTrendMid='전체'; state.priceTrendSmall='전체';
+  state.priceTrendItem=null; state.priceTrendBack=null; state.sortKey=null;
+  try{ setAct('price-trend'); }catch(e){}
+  state.priceTrendSearch=q; state.sortKey=null;
+  if(hits.length){
+    puOpenItemHistory(hits[0],hits,q);
+  }else{
+    try{ priceTrend(); }catch(e){ console.error(e); }
+    alert('[' + q + '] 에 해당하는 품목을 찾지 못했습니다.');
+  }
+  puScroll();
+}
+
+/* 검색된 품목의 📈 제품별 · 이전단가 이력 열기 (여러 건이면 위에 후보 선택줄을 붙인다) */
+function puOpenItemHistory(it,hits,q){
+  try{
+    vendorPriceHistory('',{code:it.code,name:it.name,spec:it.spec},
+      {allVendors:true,backLabel:'품목 단가 추이',
+       backAct:function(){ state.priceTrendSearch=q; state.priceTrendItem=null; priceTrend(); }});
+  }catch(e){ console.error(e); try{ priceTrend(); }catch(e2){} return; }
+  if(hits&&hits.length>1) setTimeout(function(){ puCandBar(hits,it,q); },20);
+}
+function puCandBar(hits,cur,q){
+  var c=document.getElementById('content'); if(!c) return;
+  var old=document.getElementById('puCandBar'); if(old&&old.parentNode)old.parentNode.removeChild(old);
+  var MAX=14, show=hits.slice(0,MAX);
+  var key=function(o){ return (o.code||'')+'|'+(o.name||'')+'|'+(o.spec||''); };
+  var curK=key(cur);
+  var chips=show.map(function(o,i){
+    var on=(key(o)===curK);
+    return '<button type="button" class="puCand" data-i="'+i+'" style="border:1px solid '+(on?'#0f766e':'#cbd5e1')
+      +';background:'+(on?'#0f766e':'#fff')+';color:'+(on?'#fff':'#334155')+';font-weight:'+(on?800:700)
+      +';font-size:12px;padding:5px 11px;border-radius:15px;font-family:inherit;white-space:nowrap;cursor:pointer">'
+      +esc(o.name||o.code)+(o.spec?(' <span style="font-weight:600;opacity:.85">'+esc(o.spec)+'</span>'):'')
+      +' <span style="font-weight:600;opacity:.75;font-size:11px">'+wonM(o.amt)+'</span></button>';
+  }).join('');
+  var more=(hits.length>MAX)?('<span style="font-size:11.5px;color:#64748b;font-weight:700">외 '+(hits.length-MAX)+'건</span>'):'';
+  var bar=document.createElement('div');
+  bar.id='puCandBar';
+  bar.style.cssText='display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 10px;padding:9px 12px;'
+    +'border:1px solid #99f6e4;border-radius:10px;background:#f0fdfa';
+  bar.innerHTML='<b style="font-size:12px;color:#0f766e;white-space:nowrap">🔎 ['+esc(q)+'] 검색 '+hits.length+'개 품목</b>'
+    +chips+more+'<span style="flex:1"></span>'
+    +'<button type="button" id="puCandList" class="btn sm" style="font-size:11.5px">💰 품목 단가 추이 목록</button>';
+  c.insertBefore(bar,c.firstChild);
+  Array.prototype.forEach.call(bar.querySelectorAll('.puCand'),function(b){
+    b.addEventListener('click',function(){ var o=show[+b.dataset.i]; if(o)puOpenItemHistory(o,hits,q); });
+  });
+  var lb=document.getElementById('puCandList');
+  if(lb)lb.addEventListener('click',function(){
+    state.priceTrendSearch=q; state.priceTrendItem=null; state.sortKey=null;
+    try{ setAct('price-trend'); state.priceTrendSearch=q; priceTrend(); }catch(e){ console.error(e); }
+  });
+}
+
+/* 매입처명 → 매입처 단가 (업체명 뒤에 품명·규격을 이어 적으면 그 업체 안에서 포함검색) */
+function puSearchVendor(){
+  var q=puQ(); if(!q){ var i=document.getElementById('hpSearchInput'); if(i)i.focus(); return; }
+  if(!puHasData()){ alert('먼저 매입 파일을 불러오세요.'); return; }
+  try{ if(typeof closeFilePanel==='function')closeFilePanel(); }catch(e){}
+  var rows=[]; try{ rows=activeRows(); }catch(e){ rows=CUR; }
+  var vendors=[]; try{ vendors=Array.from(new Set(rows.map(function(r){return r.vendor;}).filter(Boolean))); }catch(e){}
+  var toks=q.split(/\s+/).filter(Boolean);
+  var match=null, cands=[], candPrefix='', itemQ='';
+  for(var i=toks.length;i>=1;i--){
+    var pre=toks.slice(0,i), nq=puNorm(pre.join(''));
+    if(!nq) continue;
+    var ex=vendors.filter(function(c){return puNorm(c)===nq;})[0];
+    if(ex){ match=ex; itemQ=toks.slice(i).join(' '); break; }
+    var inc=vendors.filter(function(c){ return puNorm(c).indexOf(nq)>=0; });
+    if(!inc.length&&pre.length>1) inc=vendors.filter(function(c){ var nn=puNorm(c); return pre.every(function(t){return nn.indexOf(puNorm(t))>=0;}); });
+    if(inc.length===1){ match=inc[0]; itemQ=toks.slice(i).join(' '); break; }
+    if(inc.length>1&&!cands.length){ cands=inc; candPrefix=pre.join(' '); }
+  }
+  state.sortKey=null;
+  try{ setAct('vendor-price'); }catch(e){}
+  if(match){
+    state._search='';
+    try{ vendorPriceSummary(match,{backAct:vendorPriceRank,backLabel:'매입처 단가 목록'}); }
+    catch(e){ console.error(e); }
+    if(itemQ){
+      var vrows=rows.filter(function(r){ return r.vendor===match; });
+      var ih=puFindItems(itemQ,vrows);
+      if(ih.length===1){        /* 품목까지 1건으로 좁혀지면 바로 이전단가 이력 */
+        var it=ih[0], mv=match;
+        try{
+          vendorPriceHistory(mv,{code:it.code,name:it.name,spec:it.spec},
+            {backAct:function(){ vendorPriceSummary(mv,{backAct:vendorPriceRank,backLabel:'매입처 단가 목록'}); },
+             backLabel:mv+' 단가정리'});
+        }catch(e){ console.error(e); }
+      }else{                    /* 여러 건이면 그 업체 단가표에서 포함검색 */
+        var apply=function(){ var sb=document.getElementById('searchBox');
+          if(!sb) return false;
+          sb.value=itemQ; state._search=itemQ;
+          sb.dispatchEvent(new Event('input',{bubbles:true}));
+          return true; };
+        setTimeout(function(){ if(!apply()) setTimeout(apply,250); },40);
+        if(!ih.length) setTimeout(function(){
+          alert(match+' 에서 [' + itemQ + '] 품목의 매입 이력을 찾지 못했습니다. 업체명 버튼을 끄고 품목만으로 검색하면 전체 매입처 기준 이전단가 이력을 볼 수 있습니다.');
+        },320);
+      }
+    }
+  }else{
+    state._search=candPrefix||q;
+    try{ vendorPriceRank(); }catch(e){ console.error(e); }
+    if(cands.length) alert('\u201C'+candPrefix+'\u201D에 해당하는 매입처가 '+cands.length+'곳입니다.\n\n'
+      +cands.slice(0,10).join(' / ')+(cands.length>10?' …':'')+'\n\n목록에서 매입처를 클릭하면 단가정리 화면이 열립니다.');
+    else alert('\u201C'+q+'\u201D에 해당하는 매입처를 찾지 못했습니다.\n매입처 단가 목록에서 검색해 보세요.');
+  }
+  puScroll();
+}
+
+function bindSearch(){
+  var f=document.getElementById('hpSearch'), inp=document.getElementById('hpSearchInput'), mb=document.getElementById('hpModeBtn');
+  if(!f||f._puB) return; f._puB=1;
+  var mode='item';
+  var applyUI=function(){
+    var on=(mode==='vendor');
+    if(mb){ mb.classList.toggle('on',on); mb.setAttribute('aria-pressed',on?'true':'false');
+      mb.title=on?'매입처명 검색 켜짐 · 업체명 뒤에 품명·규격을 띄어쓰기로 이어 적으면 그 매입처 안에서 포함검색 (예: 포스코 EGI 1.6) · 클릭하면 품목 검색으로 전환'
+                 :'클릭하면 매입처명으로 검색 (매입처 단가)'; }
+    if(inp) inp.placeholder=on?'매입처명 검색 (＋품명·규격)':'품번 · 품명 · 규격 검색';
+  };
+  applyUI();
+  if(mb)mb.addEventListener('click',function(){ mode=(mode==='vendor')?'item':'vendor'; applyUI(); if(inp)inp.focus(); });
+  f.addEventListener('submit',function(e){ e.preventDefault(); if(mode==='vendor')puSearchVendor(); else puSearchItem(); });
+  if(inp)inp.addEventListener('keydown',function(e){ if(e.key==='Escape'){ inp.value=''; inp.focus(); } });
+}
+
+function boot(){ moveBadges(); bindSearch(); }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
+else boot();
+setTimeout(boot,600); setTimeout(boot,1800); setInterval(moveBadges,3000);
+})();
+</script>
 </body>
 </html>
