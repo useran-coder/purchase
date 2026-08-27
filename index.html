@@ -5249,11 +5249,25 @@ const APP_VERSION='purchase_v47_sync_v12';
   function responseData(d){if(own(d,'data'))return d.data&&typeof d.data==='object'?gclone(d.data):{};const o=gclone(d)||{};['ok','error','serverTime','jsonChars','revision','schema','retryable','retryAfterMs','requestId'].forEach(k=>delete o[k]);return o}
   function remoteSnapshot(base,remote){const out=gclone(base||{})||{};remote=remote&&typeof remote==='object'?remote:{};gsFields().forEach(([n])=>{if(own(remote,n))out[n]=cleanRemote(gclone(remote[n]))});return out}
   function restoreFull(snap){gsFields().forEach(([n,p,k])=>{if(!own(snap,n))return;if(n==='editLog'){p[k]=mergeEditLog(p[k]||[],Array.isArray(snap[n])?snap[n]:[]);refreshElogBtns();return}p[k]=gclone(snap[n])})}
-  function rerender(){const sx=window.scrollX||0,sy=window.scrollY||0,boxScroll=[...document.querySelectorAll('.tablewrap')].map(el=>({top:el.scrollTop,left:el.scrollLeft}));try{rebuildCUR();renderSalesSrc();renderDivBtn();renderPerBar();if(state.act)runAct()}catch(e){console.warn('sync render',e)}requestAnimationFrame(()=>{window.scrollTo(sx,sy);document.querySelectorAll('.tablewrap').forEach((el,i)=>{const s=boxScroll[i];if(s){el.scrollTop=s.top;el.scrollLeft=s.left;}})})}
+  /* v111 : 60초마다 도는 자동 동기화가 '바뀐 게 없어도' 화면 전체를 다시 그려서
+     가만히 있어도 화면이 새로고침되듯 움직였습니다. 적용 전/후 상태를 비교해
+     실제로 달라진 게 있을 때만 다시 그립니다. */
+  var _lastRenderSig='';
+  function rerender(force){
+    var sig=''; try{ sig=JSON.stringify(currentFull()); }catch(_e){}
+    if(!force&&sig&&sig===_lastRenderSig){ if(sig)_lastRenderSig=sig; return; }
+    if(sig)_lastRenderSig=sig;
+    const sx=window.scrollX||0,sy=window.scrollY||0,boxScroll=[...document.querySelectorAll('.tablewrap')].map(el=>({top:el.scrollTop,left:el.scrollLeft}));
+    try{rebuildCUR();renderSalesSrc();renderDivBtn();renderPerBar();if(state.act)runAct()}catch(e){console.warn('sync render',e)}
+    requestAnimationFrame(()=>{window.scrollTo(sx,sy);document.querySelectorAll('.tablewrap').forEach((el,i)=>{const s=boxScroll[i];if(s){el.scrollTop=s.top;el.scrollLeft=s.left;}})})
+  }
   async function persistOnly(){_gsApplying=true;try{await saveSettings()}finally{_gsApplying=false}}
   async function saveBase(snap){_gsBase=gclone(snap||currentFull());if(_gsBase&&own(_gsBase,'editLog'))_gsBase.editLog=canonLog(_gsBase.editLog);try{await idbSet(BASE_KEY,_gsBase)}catch(_){} }
   function ensureBase(){if(_baseReady)return _baseReady;_baseReady=(async()=>{let saved=null;try{saved=await idbGet(BASE_KEY)}catch(_){}if(!saved){for(const k of OLD_BASE_KEYS){try{saved=await idbGet(k)}catch(_){}if(saved)break}}if(saved&&typeof saved==='object')await saveBase(saved);else await saveBase(currentFull());return _gsBase})();return _baseReady}
-  async function applyAndPersist(snap){_gsApplying=true;try{restoreFull(snap);rerender();await saveSettings()}finally{_gsApplying=false}}
+  async function applyAndPersist(snap){_gsApplying=true;try{
+    /* 적용 전 상태를 기준으로 잡아 두면, 서버 자료를 적용해도 달라진 게 없을 때 화면을 그대로 둔다 */
+    try{ _lastRenderSig=JSON.stringify(currentFull()); }catch(_e){}
+    restoreFull(snap);rerender();await saveSettings()}finally{_gsApplying=false}}
   function setMode(mode,label){_uiMode=mode||'idle';_uiLabel=label||'';gsUpdateBtn()}
   function setSuccess(op,meta){state.gsync=state.gsync||{};const t=nowIso();state.gsync.lastAttempt=t;state.gsync.lastResult='ok';state.gsync.lastSync=t;state.gsync.lastError='';state.gsync.lastOp=op||'sync';state.gsync.lastServerTime=meta&&meta.serverTime||'';state.gsync.lastRevision=meta&&meta.revision!=null?meta.revision:(state.gsync.lastRevision||'');state.gsync.failStreak=0;state.gsync.syncCount=(state.gsync.syncCount||0)+1;_lastTransient=''}
   function setFailure(e,op){state.gsync=state.gsync||{};state.gsync.lastAttempt=nowIso();state.gsync.lastResult='error';state.gsync.lastError=String(e||'알 수 없는 오류');state.gsync.lastOp=op||'sync';state.gsync.failStreak=(state.gsync.failStreak||0)+1}
@@ -8692,6 +8706,35 @@ function boot(){ moveBadges(); bindSearch(); }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
 else boot();
 setTimeout(boot,600); setTimeout(boot,1800); setInterval(moveBadges,3000);
+})();
+</script>
+<script id="drag-guard-v111">
+/* ==========================================================
+   v111 · 드래그(범위 선택) 후에는 클릭이 일어나지 않도록 — 전 화면 공통
+   · 표 안에서 글자를 끌어 선택하고 마우스를 표 밖에서 놓아도 행이 열리지 않는다.
+   · 입력칸(input/textarea/select) 안에서 끌기 시작한 경우도 마찬가지.
+   · 버튼·링크·체크박스·입력칸 자체의 클릭은 그대로 동작한다.
+   ========================================================== */
+(function(){
+  var CTL='input,textarea,select,button,a,label,option,summary,[contenteditable=""],[contenteditable="true"],[role="button"]';
+  var sx=0, sy=0, moved=false, fromField=false, armed=false;
+  function isCtl(t){ try{ return !!(t&&t.closest&&t.closest(CTL)); }catch(e){ return false; } }
+  document.addEventListener('pointerdown',function(e){
+    if(e.button!==0){ armed=false; return; }
+    armed=true; moved=false; sx=e.clientX; sy=e.clientY; fromField=isCtl(e.target);
+  },true);
+  document.addEventListener('pointermove',function(e){
+    if(!armed||moved) return;
+    if(Math.abs(e.clientX-sx)>6||Math.abs(e.clientY-sy)>6) moved=true;
+  },true);
+  document.addEventListener('click',function(e){
+    var was=moved, wasField=fromField;
+    moved=false; fromField=false; armed=false;
+    if(isCtl(e.target)) return;
+    var sel=''; try{ sel=String((window.getSelection&&window.getSelection())||'').trim(); }catch(_){}
+    if(was||wasField||sel){ e.stopImmediatePropagation(); e.preventDefault(); }
+  },true);
+  document.addEventListener('pointerup',function(){ setTimeout(function(){ moved=false; fromField=false; armed=false; },0); },true);
 })();
 </script>
 </body>
