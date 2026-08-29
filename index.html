@@ -832,7 +832,7 @@
     <a class="productCostLink" href="https://useran-coder.github.io/product" target="_blank" rel="noopener">제품제조원가</a>
     <button id="headerElogBtn" class="header-history-btn" type="button" title="수정이력">🕘 수정이력</button>
     <button id="gsSyncBtn" class="header-sync-btn sync-unconfigured" type="button" title="구글시트 동기화"><span class="sync-main">🔄 동기화</span><span class="sync-time"> · 미설정</span></button>
-    <span class="appver" id="appVer">v110 · 제품단가 검색 → 이전단가 이력</span>
+    <span class="appver" id="appVer">v113 · 매입 분석 챗봇 · 전체 검색·전망</span>
     <span class="huser" id="userLbl" title="파일·관리에서 이름을 입력하세요">👤 <b id="userName">이름 미설정</b></span>
   </div>
   <nav class="topmenu" id="topMenu">
@@ -8708,7 +8708,161 @@ else boot();
 setTimeout(boot,600); setTimeout(boot,1800); setInterval(moveBadges,3000);
 })();
 </script>
-<script id="drag-guard-v111">
+<script id="purchase-chatbot-v113">
+/* ==========================================================
+   v113 · 매입 분석 챗봇 · 전체 검색·추세 전망
+   · 매입처·품목·원자재·매입구분·단가·월별 추이·매출대비를 CUR에서 직접 계산
+   · 외부 전송 없이 현재 파일에 올라온 데이터만 사용
+   ========================================================== */
+(function(){
+if(window.__purchaseCbInit)return; window.__purchaseCbInit=true;
+
+function ST(){try{return typeof state!=='undefined'?state:null}catch(_){return null}}
+function E(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function W(v){return Math.round(+v||0).toLocaleString('ko-KR')}
+function N(v,d){return (+v||0).toLocaleString('ko-KR',{maximumFractionDigits:d==null?1:d})}
+function A(r){try{if(typeof amtOf==='function')return +amtOf(r)||0}catch(_){}return +(r.supply||r.total||r.amt)||0}
+function NM(v){return String(v||'').replace(/\(주\)|\(유\)|㈜|주식회사|유한회사|[^0-9a-zA-Z가-힣ㄱ-ㅎㅏ-ㅣ]/g,'').toLowerCase()}
+function itemKey(r){return (r.code||'')+'│'+(r.name||'')+'│'+(r.spec||'')}
+function itemLabel(o){return (o.code?o.code+' ':'')+(o.name||'(미상)')+(o.spec?' / '+o.spec:'')}
+function baseRows(){
+  var s=ST(),src=[];try{src=(typeof CUR!=='undefined'&&CUR)?CUR.slice():[]}catch(_){return []}
+  if(s&&!s.inclOverhead)src=src.filter(function(r){return r.natCls!=='ovh'});
+  if(s&&s.division&&s.division!=='전체'){
+    try{if(typeof anySplitConfigured==='function'&&anySplitConfigured()&&typeof divisionAdjustedRows==='function')return divisionAdjustedRows(src,s.division)||[]}catch(_){}
+    src=src.filter(function(r){return r.div===s.division});
+  }
+  return src;
+}
+function months(){var z={};baseRows().forEach(function(r){if(r.ym)z[r.ym]=1});return Object.keys(z).sort()}
+function lastYm(){var a=months();return a[a.length-1]||''}
+function ymAdd(ym,d){var y=+ym.slice(0,4),m=+ym.slice(5,7)+d;y+=Math.floor((m-1)/12);m=((m-1)%12+12)%12+1;return y+'-'+String(m).padStart(2,'0')}
+function yearMonths(y){var a=[];for(var m=1;m<=12;m++)a.push(String(y)+'-'+String(m).padStart(2,'0'));return a}
+function ymLabel(ym){return ym?(+ym.slice(0,4)+'년 '+(+ym.slice(5,7))+'월'):'-'}
+function parsePeriod(q){
+  var ly=lastYm(),M;if(!ly)return null;var y=+ly.slice(0,4);
+  if((M=q.match(/(20\d{2})\s*[년.\-/]\s*(\d{1,2})\s*월?/))){var x=M[1]+'-'+String(+M[2]).padStart(2,'0');return {yms:[x],label:ymLabel(x),explicit:true}}
+  if((M=q.match(/최근\s*(\d+)\s*개월/))){var n=Math.max(1,+M[1]||3);return {yms:months().slice(-n),label:'최근 '+n+'개월',explicit:true}}
+  if(/(지난달|전월|저번달|지난 달)/.test(q)){var p=ymAdd(ly,-1);return {yms:[p],label:ymLabel(p),explicit:true}}
+  if(/(이번달|이달|금월|당월|최근달)/.test(q))return {yms:[ly],label:ymLabel(ly),explicit:true}
+  if(/(재작년)/.test(q))return {yms:yearMonths(y-2),label:(y-2)+'년',explicit:true}
+  if(/(작년|전년|지난해)/.test(q))return {yms:yearMonths(y-1),label:(y-1)+'년',explicit:true}
+  if(/(올해|금년|올 해|연간|누계)/.test(q))return {yms:yearMonths(y),label:y+'년',explicit:true}
+  if((M=q.match(/(상반기|하반기)/))){var a=M[1]==='상반기'?[1,6]:[7,12],ys=[];for(var i=a[0];i<=a[1];i++)ys.push(y+'-'+String(i).padStart(2,'0'));return {yms:ys,label:y+'년 '+M[1],explicit:true}}
+  if((M=q.match(/([1-4])\s*분기/))){var st=(+M[1]-1)*3+1,qs=[];for(var j=st;j<st+3;j++)qs.push(y+'-'+String(j).padStart(2,'0'));return {yms:qs,label:y+'년 '+M[1]+'분기',explicit:true}}
+  if((M=q.match(/(?:^|[^0-9])(\d{1,2})\s*월/))){var mm=+M[1],k=y+'-'+String(mm).padStart(2,'0');if(months().indexOf(k)<0&&months().indexOf((y-1)+'-'+String(mm).padStart(2,'0'))>=0)k=(y-1)+'-'+String(mm).padStart(2,'0');return {yms:[k],label:ymLabel(k),explicit:true}}
+  if((M=q.match(/(20\d{2})\s*년/)))return {yms:yearMonths(+M[1]),label:M[1]+'년',explicit:true};
+  return null;
+}
+function defaultPeriod(){var y=lastYm();return y?{yms:[y],label:ymLabel(y),def:true}:{yms:[],label:'-',def:true}}
+function prevPeriod(P){if(!P||!P.yms.length)return {yms:[],label:'-'};var n=P.yms.length,f=P.yms[0],a=[];for(var i=n;i>=1;i--)a.push(ymAdd(f,-i));return {yms:a,label:n===1?ymLabel(a[0]):a[0].replace('-','.')+'~'+a[a.length-1].replace('-','.')}}
+function inP(r,P){return P&&P.yms.indexOf(r.ym)>=0}
+function D(v){if(v==null||!isFinite(v))return '<span class="pcb-muted">-</span>';var c=v>0?'#dc2626':v<0?'#2563eb':'#64748b';return '<b style="color:'+c+'">'+(v>0?'+':'')+v.toFixed(1)+'%</b>'}
+function change(a,b){return b?(a-b)/Math.abs(b)*100:null}
+function sum(rs){return rs.reduce(function(a,r){return a+A(r)},0)}
+function kg(rs){return rs.reduce(function(a,r){try{return a+((typeof isKgRow==='function'&&isKgRow(r))?(+r.qty||0):0)}catch(_){return a+(r.natCls==='raw'?(+r.qty||0):0)}},0)}
+function T(head,rows,left){
+  if(!rows||!rows.length)return '<div class="pcb-none">해당하는 자료가 없습니다.</div>';
+  return '<div class="pcb-tablewrap"><table class="pcb-table"><thead><tr>'+head.map(function(h,i){return '<th'+(left&&left[i]?' class="l"':'')+'>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(left&&left[i]?' class="l"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+}
+function chips(a){return a&&a.length?'<div class="pcb-chips">'+a.map(function(q){return '<button class="pcb-chip" data-q="'+E(q)+'">'+E(q)+'</button>'}).join('')+'</div>':''}
+function GO(act,label){return {act:act,label:label}}
+function response(sumText,table,chipList,go){return {sum:sumText,tbl:table||'',chips:chipList||[],go:go||null}}
+
+function vendorList(){var m={};baseRows().forEach(function(r){var k=r.vendor||'(미상)';m[k]=(m[k]||0)+A(r)});return Object.keys(m).map(function(k){return {name:k,n:NM(k),amt:m[k]}}).sort(function(a,b){return b.amt-a.amt})}
+function productList(){var m={};baseRows().forEach(function(r){var k=itemKey(r),o=m[k]||(m[k]={key:k,code:r.code||'',name:r.name||'',spec:r.spec||'',amt:0,qty:0});o.amt+=A(r);o.qty+=+r.qty||0});return Object.keys(m).map(function(k){var o=m[k];o.n=NM((o.code||'')+(o.name||'')+(o.spec||''));o.nn=NM(o.name||'');return o}).sort(function(a,b){return b.amt-a.amt})}
+function findVendor(q){var nq=NM(q),a=vendorList().slice().sort(function(x,y){return y.n.length-x.n.length}),hit=null;for(var i=0;i<a.length;i++)if(a[i].n.length>=2&&nq.indexOf(a[i].n)>=0){hit=a[i].name;break}if(hit)return hit;var ts=String(q).split(/[\s,·]+/).map(NM).filter(function(t){return t.length>=2});for(var j=0;j<ts.length&&!hit;j++){var c=a.filter(function(v){return v.n.indexOf(ts[j])>=0}).sort(function(x,y){return y.amt-x.amt});if(c.length)hit=c[0].name}return hit}
+function findProduct(q){var nq=NM(q),up=String(q).toUpperCase(),a=productList(),hit=null;for(var i=0;i<a.length;i++)if(a[i].code&&a[i].code.length>=3&&up.indexOf(String(a[i].code).toUpperCase())>=0){hit=a[i];break}if(hit)return hit;a=a.slice().sort(function(x,y){return y.n.length-x.n.length});for(var j=0;j<a.length;j++)if(a[j].n.length>=3&&nq.indexOf(a[j].n)>=0)return a[j];var names={};a.forEach(function(o){if(o.nn.length>=2&&!names[o.nn])names[o.nn]=o});var ks=Object.keys(names).sort(function(x,y){return y.length-x.length});for(var k=0;k<ks.length;k++)if(nq.indexOf(ks[k])>=0)return names[ks[k]];return null}
+function findNature(q){var nq=NM(q),m={};baseRows().forEach(function(r){[r.nat,r.big,r.mid,r.small].forEach(function(v){if(v)m[v]=1})});var a=Object.keys(m).sort(function(x,y){return NM(y).length-NM(x).length});for(var i=0;i<a.length;i++)if(NM(a[i]).length>=2&&nq.indexOf(NM(a[i]))>=0)return a[i];return null}
+function findProject(q){var nq=NM(q),m={};baseRows().forEach(function(r){if(r.project&&r.project!=='미지정')m[r.project]=(m[r.project]||0)+A(r)});var a=Object.keys(m).sort(function(x,y){return NM(y).length-NM(x).length});for(var i=0;i<a.length;i++)if(NM(a[i]).length>=2&&nq.indexOf(NM(a[i]))>=0)return a[i];return null}
+function prodMatch(r,p){return p&&itemKey(r)===p.key}
+function topN(q){var m=String(q).match(/(?:상위|top)\s*(\d+)/i);return Math.max(1,Math.min(50,m?+m[1]:10))}
+function group(rs,keyFn){var m={};rs.forEach(function(r){var k=keyFn(r);if(k==null)return;var o=m[k]||(m[k]={key:k,amt:0,qty:0,n:0,rows:[],vendors:{}});o.amt+=A(r);o.qty+=+r.qty||0;o.n++;o.rows.push(r);if(r.vendor)o.vendors[r.vendor]=1});return Object.keys(m).map(function(k){var o=m[k];o.vendorN=Object.keys(o.vendors).length;return o}).sort(function(a,b){return b.amt-a.amt})}
+
+function summary(P){var rs=baseRows().filter(function(r){return inP(r,P)}),pv=prevPeriod(P),old=baseRows().filter(function(r){return inP(r,pv)});if(!rs.length)return response(E(P.label)+' 매입자료가 없습니다.','',['올해 총매입','최근 3개월 매입추이'],GO('home','🏠 홈'));
+  var amt=sum(rs),pa=sum(old),vs={},ps={};rs.forEach(function(r){vs[r.vendor]=1;ps[itemKey(r)]=1});var by=group(rs,function(r){return r.nat||r.big||'미분류'}).slice(0,8);
+  return response('<b>'+E(P.label)+'</b> 총매입 <b class="pcb-big">'+W(amt)+'</b>원 '+D(change(amt,pa))+'<div class="pcb-sub">매입처 '+W(Object.keys(vs).length)+'개 · 품목 '+W(Object.keys(ps).length)+'종 · 거래 '+W(rs.length)+'건 · 직전 '+E(pv.label)+' '+W(pa)+'원</div>',T(['매입구분','매입액','비중'],by.map(function(o){return [E(o.key),W(o.amt),(amt?o.amt/amt*100:0).toFixed(1)+'%']}),[1,0,0]),['매입처 상위 10개','품목 매입 순위','월별 매입추이','원자재 매입 현황'],GO('home','🏠 홈 대시보드'))}
+function topVendors(P,n){var rs=baseRows().filter(function(r){return inP(r,P)}),arr=group(rs,function(r){return r.vendor||'(미상)'}),tot=sum(rs);return response('<b>'+E(P.label)+'</b> 매입처 상위 <b>'+n+'개</b> · 총매입 <b class="pcb-big">'+W(tot)+'</b>원',T(['#','매입처','매입액','비중','품목'],arr.slice(0,n).map(function(o,i){var items={};o.rows.forEach(function(r){items[itemKey(r)]=1});return [i+1,E(o.key),W(o.amt),(tot?o.amt/tot*100:0).toFixed(1)+'%',W(Object.keys(items).length)]}),[0,1,0,0,0]),['이번달 품목 매입 순위','매입 집중도 화면 열어줘'],GO('rank-vendor','🏢 거래처별 매입'))}
+function vendorDetail(v,P){var all=baseRows(),rs=all.filter(function(r){return r.vendor===v&&inP(r,P)});if(!rs.length&&P.def){var ys=months().slice(-12);P={yms:ys,label:'최근 12개월'};rs=all.filter(function(r){return r.vendor===v&&inP(r,P)})}if(!rs.length)return response('<b>'+E(v)+'</b> · '+E(P.label)+' 매입이 없습니다.','',[v+' 올해 매입'],GO('rank-vendor','🏢 거래처별 매입'));
+  var pv=prevPeriod(P),old=all.filter(function(r){return r.vendor===v&&inP(r,pv)}),amt=sum(rs),pa=sum(old),items=group(rs,itemKey).slice(0,10);
+  return response('<b>'+E(v)+'</b> · '+E(P.label)+' 매입 <b class="pcb-big">'+W(amt)+'</b>원 '+D(change(amt,pa))+'<div class="pcb-sub">품목 '+W(items.length)+'종 이상 · 거래 '+W(rs.length)+'건 · 최근 입고 '+E(rs.map(function(r){return r.d}).sort().pop()||'-')+'</div>',T(['품목','규격','수량','매입액','비중'],items.map(function(o){var r=o.rows[0]||{};return [E(r.name||'(미상)'),E(r.spec||'-'),N(o.qty,1),W(o.amt),(amt?o.amt/amt*100:0).toFixed(1)+'%']}),[1,1,0,0,0]),[v+' 단가 변동',v+' 올해 매입'],GO('rank-vendor','🏢 거래처별 매입'))}
+function topProducts(P,n){var rs=baseRows().filter(function(r){return inP(r,P)}),arr=group(rs,itemKey),tot=sum(rs);return response('<b>'+E(P.label)+'</b> 품목 매입 상위 <b>'+n+'개</b> · 총매입 <b class="pcb-big">'+W(tot)+'</b>원',T(['#','품번','품명','규격','매입액','공급처'],arr.slice(0,n).map(function(o,i){var r=o.rows[0]||{};return [i+1,E(r.code||'-'),E(r.name||'(미상)'),E(r.spec||'-'),W(o.amt),W(o.vendorN)]}),[0,1,1,1,0,0]),['매입처 상위 10개','단가 오른 품목','구매주기 화면 열어줘'],GO('rank-item','📦 품번별 매입'))}
+function productDetail(p,P,vendor){var all=baseRows(),rs=all.filter(function(r){return prodMatch(r,p)&&(!vendor||r.vendor===vendor)&&inP(r,P)});if(!rs.length&&P.def){P={yms:months().slice(-12),label:'최근 12개월'};rs=all.filter(function(r){return prodMatch(r,p)&&(!vendor||r.vendor===vendor)&&inP(r,P)})}if(!rs.length)return response('<b>'+E(itemLabel(p))+'</b> · '+E(P.label)+' 매입이 없습니다.','',[itemLabel(p)+' 올해 매입'],GO('rank-item','📦 품번별 매입'));
+  var amt=sum(rs),qty=rs.reduce(function(a,r){return a+(+r.qty||0)},0),priced=rs.filter(function(r){return +r.qty>0&&+r.price>0}),avg=priced.reduce(function(a,r){return a+(+r.qty)*(+r.price)},0)/(priced.reduce(function(a,r){return a+(+r.qty||0)},0)||1),arr=group(rs,function(r){return r.vendor||'(미상)'}).slice(0,12),last=priced.slice().sort(function(a,b){return String(b.d).localeCompare(String(a.d))})[0];
+  return response((vendor?'<b>'+E(vendor)+'</b> · ':'')+'<b>'+E(itemLabel(p))+'</b> · '+E(P.label)+' 매입 <b class="pcb-big">'+W(amt)+'</b>원<div class="pcb-sub">수량·중량 '+N(qty,2)+' '+E((rs[0]||{}).unit||'')+' · 평균단가 '+W(avg)+'원 · 최근단가 '+W(last?last.price:0)+'원 ('+E(last?last.d:'-')+')</div>',T(['#','매입처','매입액','수량','평균단가','최근입고'],arr.map(function(o,i){var q=o.rows.reduce(function(a,r){return a+(+r.qty||0)},0),a=o.rows.reduce(function(a,r){return a+(+r.qty||0)*(+r.price||0)},0);return [i+1,E(o.key),W(o.amt),N(q,2),W(q?a/q:0),E(o.rows.map(function(r){return r.d}).sort().pop()||'-')]}),[0,1,0,0,0,0]),[itemLabel(p)+' 단가 변동','품목 단가 추이 화면 열어줘'],GO('price-trend','💰 품목 단가 추이'))}
+function trend(P){var ys=(P&&P.explicit&&P.yms.length>1)?P.yms:months().slice(-12),rs=baseRows(),rows=ys.map(function(ym){var x=rs.filter(function(r){return r.ym===ym}),am=sum(x),raw=sum(x.filter(function(r){return r.natCls==='raw'||r.nat==='원자재'}));return [ymLabel(ym),W(am),W(raw),am?(raw/am*100).toFixed(1)+'%':'-']}),tot=ys.reduce(function(a,ym){return a+sum(rs.filter(function(r){return r.ym===ym}))},0);return response('<b>월별 매입추이</b> · '+E(ys.length?ys[0].replace('-','.')+'~'+ys[ys.length-1].replace('-','.'):'-')+' · 합계 <b class="pcb-big">'+W(tot)+'</b>원',T(['월','총매입','원자재','원자재 비중'],rows,[1,0,0,0]),['최근 3개월 매입추이','전년 매입 비교'],GO('trend','📅 월별 매입추이'))}
+function natureSummary(P,nat){var rs=baseRows().filter(function(r){return inP(r,P)&&(!nat||(r.nat===nat||r.big===nat||r.mid===nat||r.small===nat))}),tot=sum(rs);if(!rs.length)return response(E(P.label)+' '+E(nat||'매입구분')+' 자료가 없습니다.','',[],GO('rank-nature','🧱 매입구분별 분석'));var arr=nat?group(rs,itemKey).slice(0,12):group(rs,function(r){return r.nat||r.big||'미분류'}).slice(0,12);return response('<b>'+E(P.label)+'</b> '+(nat?'<b>'+E(nat)+'</b> ':'')+'매입 <b class="pcb-big">'+W(tot)+'</b>원<div class="pcb-sub">거래 '+W(rs.length)+'건 · 중량 '+N(kg(rs),0)+'kg</div>',nat?T(['#','품명','규격','매입액','비중'],arr.map(function(o,i){var r=o.rows[0]||{};return [i+1,E(r.name),E(r.spec||'-'),W(o.amt),(tot?o.amt/tot*100:0).toFixed(1)+'%']}),[0,1,1,0,0]):T(['매입구분','매입액','비중','건수'],arr.map(function(o){return [E(o.key),W(o.amt),(tot?o.amt/tot*100:0).toFixed(1)+'%',W(o.n)]}),[1,0,0,0]),['원자재 매입 현황','매입구분별 분석 화면 열어줘'],GO('rank-nature','🧱 매입구분별 분석'))}
+function rawSummary(P){var rs=baseRows().filter(function(r){return inP(r,P)&&(r.natCls==='raw'||r.nat==='원자재')}),tot=sum(rs),totKg=kg(rs);if(!rs.length)return response(E(P.label)+' 원자재 매입자료가 없습니다.','',[],GO('rank-material','🏭 원자재 분석'));var arr=group(rs,itemKey).slice(0,12);return response('<b>'+E(P.label)+'</b> 원자재 매입 <b class="pcb-big">'+W(tot)+'</b>원 · <b>'+N(totKg,0)+'kg</b><div class="pcb-sub">평균 '+W(totKg?tot/totKg:0)+'원/kg · 품목 '+W(arr.length)+'종 이상 · 거래 '+W(rs.length)+'건</div>',T(['#','재질·품명','규격','중량(kg)','매입액','kg단가'],arr.map(function(o,i){var r=o.rows[0]||{},q=kg(o.rows);return [i+1,E(r.name),E(r.spec||'-'),N(q,0),W(o.amt),q?W(o.amt/q):'-']}),[0,1,1,0,0,0]),['단가 오른 원자재','원자재 분석 화면 열어줘'],GO('rank-material','🏭 원자재 분석'))}
+function projectSummary(P,project){var rs=baseRows().filter(function(r){return inP(r,P)&&(!project||r.project===project)}),tot=sum(rs);if(!rs.length)return response(E(P.label)+' 프로젝트 자료가 없습니다.','',[],GO('project','🏗️ 프로젝트·현장별'));var arr=project?group(rs,itemKey).slice(0,12):group(rs,function(r){return r.project||'미지정'}).slice(0,12);return response('<b>'+E(P.label)+'</b> '+(project?'<b>'+E(project)+'</b> ':'')+'프로젝트 매입 <b class="pcb-big">'+W(tot)+'</b>원',T(project?['#','품명','규격','매입액']:['프로젝트·현장','매입액','비중','건수'],project?arr.map(function(o,i){var r=o.rows[0]||{};return [i+1,E(r.name),E(r.spec||'-'),W(o.amt)]}):arr.map(function(o){return [E(o.key),W(o.amt),(tot?o.amt/tot*100:0).toFixed(1)+'%',W(o.n)]}),project?[0,1,1,0]:[1,0,0,0]),['프로젝트·현장별 화면 열어줘'],GO('project','🏗️ 프로젝트·현장별'))}
+function priceChange(P,vendor,dir){var PV=prevPeriod(P),cur={},old={};baseRows().forEach(function(r){if(+r.qty<=0||+r.price<=0||vendor&&r.vendor!==vendor)return;var k=(r.vendor||'')+'│'+itemKey(r),box=inP(r,P)?cur:(inP(r,PV)?old:null);if(!box)return;var o=box[k]||(box[k]={q:0,a:0,r:r});o.q+=+r.qty;o.a+=(+r.qty)*(+r.price)});var arr=Object.keys(cur).filter(function(k){return old[k]}).map(function(k){var c=cur[k].a/cur[k].q,p=old[k].a/old[k].q,r=cur[k].r;return {vendor:r.vendor,name:r.name,spec:r.spec,cur:c,prev:p,pct:p?(c-p)/p*100:0}}).filter(function(o){return Math.abs(o.pct)>=.5&&(dir==='up'?o.pct>0:dir==='down'?o.pct<0:true)}).sort(function(a,b){return Math.abs(b.pct)-Math.abs(a.pct)});return response('<b>'+E(P.label)+'</b> 단가 '+(dir==='up'?'인상':dir==='down'?'인하':'변동')+' <b class="pcb-big">'+W(arr.length)+'</b>건'+(vendor?' · '+E(vendor):'')+'<div class="pcb-sub">직전 '+E(PV.label)+' 대비 · 0.5% 이상 변동</div>',T(['#','매입처','품명','규격','직전','현재','변동'],arr.slice(0,15).map(function(o,i){return [i+1,E(o.vendor),E(o.name),E(o.spec||'-'),W(o.prev),W(o.cur),D(o.pct)]}),[0,1,1,1,0,0,0]),['단가 변동 감지 화면 열어줘','품목 단가 추이 화면 열어줘'],GO('price-alert','🚨 단가 변동 감지'))}
+function ratio(P){var rs=baseRows().filter(function(r){return inP(r,P)}),ys=P.yms,rows=[],sales=0,pur=0;ys.forEach(function(ym){var p=sum(rs.filter(function(r){return r.ym===ym})),s=0;try{if(typeof salesFor==='function')s=+salesFor(ym)||0}catch(_){}if(s>0){sales+=s;pur+=p}rows.push([ymLabel(ym),s?W(s):'-',W(p),s?(p/s*100).toFixed(1)+'%':'-'])});var rate=sales?pur/sales*100:null;return response('<b>'+E(P.label)+'</b> 매출대비 매입비율 <b class="pcb-big">'+(rate==null?'-':rate.toFixed(1)+'%')+'</b><div class="pcb-sub">매출 '+W(sales)+'원 · 같은 매출 입력월 매입 '+W(pur)+'원</div>',T(['월','매출','매입','비율'],rows,[1,0,0,0]),['매출대비 매입비율 화면 열어줘'],GO('cost-ratio','💹 매출대비 매입비율'))}
+function brief(){var P=defaultPeriod();if(!P.yms.length)return response('아직 매입자료가 없습니다. <b>📁 파일·관리</b>에서 매입 파일을 먼저 불러와 주세요.','',[],null);var rs=baseRows().filter(function(r){return inP(r,P)}),amt=sum(rs),v=group(rs,function(r){return r.vendor||'(미상)'})[0],raw=sum(rs.filter(function(r){return r.natCls==='raw'||r.nat==='원자재'}));return response('<b class="pcb-big">오늘의 매입 요약</b> · '+E(P.label),T(['항목','값','메모'],[['총매입',W(amt)+'원',W(rs.length)+'건'],['원자재',W(raw)+'원',amt?(raw/amt*100).toFixed(1)+'%':'-'],['1위 매입처',E(v?v.key:'-'),v?W(v.amt)+'원':'-'],['사업부',E((ST()||{}).division||'전체'),'금액기준 '+E((ST()||{}).basis==='total'?'합계':'공급가')]], [1,0,1]),['이번달 매입처 상위 10개','단가 오른 품목','최근 12개월 매입추이','매출대비 매입비율'],GO('home','🏠 홈 대시보드'))}
+
+var EXTRA=[['home','홈 대시보드',['홈','메인','대시보드']],['rank-vendor','거래처별 매입',['매입처','거래처별매입','업체별매입']],['rank-nature','매입구분별 분석',['매입구분','대분류']],['div-purchase','사업부 매입분석',['사업부매입']],['rank-material','원자재 분석',['원자재','소재','강종']],['rank-item','품번별 매입',['품목','품번']],['purchase-cycle','구매주기',['구매주기','발주주기']],['pareto','매입 집중도(파레토)',['파레토','집중도']],['price-trend','품목 단가 추이',['단가추이']],['price-alert','단가 변동 감지',['단가변동','인상']],['yoy','전월/전년 대비',['전년대비','전월대비']],['matprice','원자재 단가',['원자재단가']],['material-item-price','원자재 품목단가',['품목단가']],['vendor-price','매입처 단가',['매입처단가']],['last-vendor','거래처 최근입고',['최근입고']],['retain','거래 지속성 점검',['거래지속','중단']],['project','프로젝트·현장별',['프로젝트','현장']],['cost-ratio','매출대비 매입비율',['매출대비','원가율']],['laser-ratio','레이저 매입비율',['레이저비율']],['trend','월별 매입추이',['월별추이','매입추이']]];
+function pages(){var a=[],seen={};try{document.querySelectorAll('#topMenu [data-act]').forEach(function(b){var act=b.dataset.act,t=String(b.textContent||'').replace(/\s+/g,' ').trim();if(act&&t&&!seen[act]){seen[act]=1;a.push({act:act,label:t,n:NM(t),kw:[]})}})}catch(_){}EXTRA.forEach(function(x){var o={act:x[0],label:x[1],n:NM(x[1]),kw:x[2].map(NM)};if(!seen[o.act])a.push(o);else a.filter(function(p){return p.act===o.act}).forEach(function(p){p.kw=o.kw})});return a}
+function findPage(q){var nq=NM(q),best=null,len=0;pages().forEach(function(p){[p.n].concat(p.kw||[]).forEach(function(k){if(k.length>=2&&nq.indexOf(k)>=0&&k.length>len){best=p;len=k.length}})});return best}
+function help(){var h='<div class="pcb-sub">아래 질문을 누르거나 직접 입력하세요. 업체명·품명은 일부만 입력해도 찾습니다.</div>';[['매입 현황',['올해 총매입','이번달 매입처 상위 10개','최근 12개월 매입추이']],['품목·원자재',['품목 매입 순위','원자재 매입 현황','EGI 1.6 단가']],['단가·전략',['단가 오른 품목','매입 집중도 화면 열어줘','매출대비 매입비율']],['현장',['프로젝트·현장별 매입','거래처 최근입고 화면 열어줘']]].forEach(function(g){h+='<div class="pcb-tip">'+g[0]+'</div>'+chips(g[1])});h+='<div class="pcb-note">기간을 생략하면 가장 최근 매입월을 기준으로 답합니다. 올해·작년·상반기·분기·최근 N개월도 인식합니다.<br>금액은 현재 선택한 사업부와 공급가/합계액 기준으로 파일 안에서 직접 계산합니다.</div>';return {sum:'💬 매입자료에서 무엇을 찾아드릴까요?',html:h}}
+/* 고정 규칙으로 분류되지 않은 질문도 모든 매입 행에서 검색합니다. */
+function searchAll(q,P){
+  var stop={매입:1,매입액:1,매입금액:1,알려:1,알려줘:1,보여:1,보여줘:1,검색:1,찾아:1,찾아줘:1,관련:1,정보:1,자료:1,전체:1,현재:1,얼마:1,뭐:1,무엇:1,대해:1};
+  var toks=String(q||'').split(/[\s,?.!·/]+/).map(NM).filter(function(t){return t.length>=2&&!stop[t];});
+  var hit=[];baseRows().forEach(function(r){if(P&&P.yms&&P.yms.length&&!P.def&&!inP(r,P))return;var txt=[r.ym,r.d,r.date,r.vendor,r.code,r.name,r.spec,r.unit,r.nat,r.natCls,r.big,r.mid,r.small,r.group,r.project,r.mgr,r.po,r.bigo].map(function(v){return NM(v)}).join(' '),score=0;toks.forEach(function(t){if(txt.indexOf(t)>=0)score+=2});if(score)hit.push({r:r,s:score})});
+  hit.sort(function(a,b){return b.s-a.s||String(b.r.d||b.r.ym||'').localeCompare(String(a.r.d||a.r.ym||''))});if(!hit.length)return null;
+  var rows=hit.map(function(x){return x.r}),tot=sum(rows),qty=rows.reduce(function(a,r){return a+(+r.qty||0)},0);
+  return response('🔎 <b>매입자료 전체 검색</b> · '+W(rows.length)+'건 · 합계 <b class="pcb-big">'+W(tot)+'</b>원<div class="pcb-sub">'+(P&&P.label?E(P.label)+' · ':'')+'업체·품목·규격·구분·프로젝트 등 행 전체에서 일치하는 자료를 찾았습니다 · 수량 '+N(qty,2)+'</div>',T(['#','입고일','매입처','품번','품명·규격','매입액','수량'],rows.slice(0,20).map(function(r,i){return [i+1,E(r.d||r.ym||'-'),E(r.vendor||'-'),E(r.code||''),E((r.name||'')+(r.spec?' / '+r.spec:'')),W(A(r)),N(r.qty,2)]}),[0,1,1,1,1,0,0]),['최근 3개월 매입 전망','매입처 상위 10개'],GO('home','🏠 홈 대시보드'));
+}
+function forecast(P,v,p,nat,pr,q){
+  var scope=baseRows().filter(function(r){return (!v||r.vendor===v)&&(!p||prodMatch(r,p))&&(!nat||(r.nat===nat||r.big===nat||r.mid===nat||r.small===nat))&&(!pr||r.project===pr)}),avail=months();
+  if(!scope.length)return response('예측할 매입 행을 찾지 못했습니다. 업체명·품목명 또는 기간을 함께 입력해 주세요.','', ['최근 3개월 매입 전망','올해 총매입']);
+  var base=(P&&P.yms&&P.yms.length&&!P.def?P.yms.slice():avail.slice(-6)).filter(function(y){return avail.indexOf(y)>=0});if(!base.length)base=avail.slice(-6);
+  var vals=base.map(function(y){return sum(scope.filter(function(r){return r.ym===y}))}),recent=vals.slice(-Math.min(6,vals.length));if(!recent.length||recent.every(function(x){return !x}))return response('선택한 범위에 실제 매입값이 없어 전망을 계산할 수 없습니다.','', ['최근 3개월 매입추이']);
+  var n=Math.min(3,recent.length),weighted=0,ws=0;for(var i=recent.length-n,j=1;i<recent.length;i++,j++){weighted+=recent[i]*j;ws+=j}var avg=weighted/(ws||1),delta=recent.length>1?(recent[recent.length-1]-recent[0])/(recent.length-1):0;
+  var horizon=Math.max(1,Math.min(6,+(String(q||'').match(/(\d+)\s*개월/)||[])[1]||3)),last=base[base.length-1]||avail[avail.length-1],prev=recent[recent.length-1]||0,rr=[];for(var h=1;h<=horizon;h++){var val=Math.max(0,avg+delta*h);rr.push([ymLabel(ymAdd(last,h)),W(val)+'원',prev?D((val-prev)/Math.abs(prev)*100):'-']);prev=val}
+  var label=v||(p?itemLabel(p):(nat||pr||'전체 매입'));return response('📈 <b>'+E(label)+'</b> 매입 전망 · 향후 '+horizon+'개월<div class="pcb-sub">최근 '+recent.length+'개월 가중평균 '+W(avg)+'원 · 월 추세 '+(delta>=0?'+':'')+W(delta)+'원 · 단순 추세 참고치</div>',T(['기간','예상 매입','직전 대비'],rr,[1,0,0]),['최근 6개월 매입 검색','단가 오른 품목'],GO('trend','📅 월별 매입추이'));
+}
+function suggest(q){var v=findVendor(q),p=findProduct(q),pg=findPage(q),a=[];if(v)a.push(v+' 매입 얼마야?');if(p)a.push(itemLabel(p)+' 매입 얼마야?',itemLabel(p)+' 단가');if(pg)a.push(pg.label+' 화면 열어줘');if(!a.length)a=['오늘의 매입 요약','이번달 매입처 상위 10개','품목 매입 순위','원자재 매입 현황'];return {sum:'정확히 일치하는 질문을 찾지 못했습니다. 아래 항목으로 확인해 보세요.',html:chips(a),go:pg?GO(pg.act,'▶ '+pg.label):null}}
+function route(q0){var q=String(q0||'').trim();if(!q)return help();if(/(도움말|사용법|뭐 물어|무엇을 물어|할 수 있어)/.test(q))return help();if(/(오늘|브리핑|요약|뭐 봐야|전체현황)/.test(q)&&!/(단가|매출대비|프로젝트)/.test(q))return brief();if(/(열어|이동|가줘|화면|페이지)/.test(q)){var pg=findPage(q);if(pg)return {sum:'✅ <b>'+E(pg.label)+'</b> 화면으로 이동합니다.',go:GO(pg.act,'▶ '+pg.label),auto:true}}
+  var P=parsePeriod(q)||defaultPeriod(),v=findVendor(q),p=findProduct(q),nat=findNature(q),pr=findProject(q),n=topN(q);
+  if(/(예측|전망|다음\s*달|향후|앞으로|추정|예상|계속|증가할|감소할)/.test(q))return forecast(P,v,p,nat,pr,q);
+  if(/(매출대비|원가율)/.test(q))return ratio(P);
+  if(/(단가|가격|인상|인하|오른|내린|변동)/.test(q)){if(p)return productDetail(p,P,v);return priceChange(P,v,/인하|내린|하락/.test(q)?'down':/인상|오른|상승/.test(q)?'up':'all')}
+  if(/(월별|추이|트렌드)/.test(q))return trend(P);
+  if(/(프로젝트|현장)/.test(q))return projectSummary(P,pr);
+  if(/(원자재|소재|철판|강종|코일|판재)/.test(q)&&!p)return rawSummary(P);
+  if(/(매입구분|대분류|중분류|소분류)/.test(q)||nat)return natureSummary(P,nat);
+  if(v&&p)return productDetail(p,P,v);
+  if(v)return vendorDetail(v,P);
+  if(p)return productDetail(p,P,null);
+  if(/(매입처|거래처|업체).*(순위|상위|top)|(?:순위|상위|top).*(매입처|거래처|업체)/i.test(q))return topVendors(P,n);
+  if(/(품목|제품|품번).*(순위|상위|top)|(?:순위|상위|top).*(품목|제품|품번)/i.test(q))return topProducts(P,n);
+  var allHit=searchAll(q,P); if(allHit)return allHit;
+  if(/(총매입|매입액|매입금액|매입 얼마|매입현황|얼마 샀|구매액)/.test(q))return summary(P);
+  return suggest(q);
+}
+
+var CSS=''
++'#pcbBtn{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border:0;border-radius:50%;background:#0f766e;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 7px 22px rgba(15,118,110,.34);z-index:99998;transition:transform .16s,background .16s}#pcbBtn:hover{background:#0b5f59;transform:translateY(-2px)}#pcbBtn.on{background:#14312e}'
++'#pcbPanel{position:fixed;inset:0 0 0 auto;width:450px;max-width:100vw;background:#f5f8f7;border-left:1px solid #cbd5e1;box-shadow:-9px 0 28px rgba(15,23,42,.16);z-index:99999;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .23s ease;font-family:inherit}#pcbPanel.open{transform:none}'
++'.pcb-head{display:flex;align-items:center;gap:8px;padding:12px 14px;background:#14312e;color:#fff}.pcb-head b{font-size:15px;font-weight:900}.pcb-head small{font-size:10.5px;color:#b7d3ce}.pcb-spacer{flex:1}.pcb-head button{border:0;background:rgba(255,255,255,.14);color:#fff;height:29px;border-radius:8px;padding:0 9px;font:700 11px inherit;cursor:pointer}.pcb-head .pcb-x{width:29px;padding:0;font-size:15px}'
++'.pcb-body{flex:1 1 auto;overflow-y:auto;padding:14px;overscroll-behavior:contain}.pcb-msg{margin-bottom:12px;font-size:13px;line-height:1.65}.pcb-msg.me{text-align:right}.pcb-me{display:inline-block;max-width:88%;padding:7px 12px;border-radius:14px 14px 3px 14px;background:#0f766e;color:#fff;font-weight:700;text-align:left}.pcb-bot{background:#fff;border:1px solid #d7e3e0;border-radius:12px;padding:11px 13px;color:#334155}.pcb-big{font-size:17px;color:#14312e}.pcb-sub{margin-top:4px;font-size:11.5px;color:#64748b}.pcb-muted{color:#cbd5e1}'
++'.pcb-tablewrap{margin-top:9px;overflow:auto;border:1px solid #d7e3e0;border-radius:8px}.pcb-table{width:100%!important;min-width:max-content!important;border-collapse:collapse!important;font-size:11.5px!important;background:#fff!important}.pcb-table th{position:static!important;background:#e8f1ef!important;color:#14312e!important;padding:5px 7px!important;text-align:right!important;white-space:nowrap!important;border-bottom:1px solid #cbd5e1!important;cursor:default!important}.pcb-table td{padding:4px 7px!important;text-align:right!important;white-space:nowrap!important;border-bottom:1px solid #eef2f1!important;color:#475569!important}.pcb-table th.l,.pcb-table td.l{text-align:left!important}.pcb-table tbody tr:last-child td{border-bottom:0!important}'
++'.pcb-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}.pcb-chip{border:1px solid #b8cbc7;background:#fff;color:#475569;font:700 11px inherit;padding:5px 9px;border-radius:14px;cursor:pointer;text-align:left}.pcb-chip:hover{border-color:#0f766e;color:#0f766e;background:#f0fdfa}.pcb-go{margin-top:9px;border:1px solid #99f6e4;background:#f0fdfa;color:#0f766e;font:800 11.5px inherit;padding:6px 12px;border-radius:8px;cursor:pointer}.pcb-go:hover{background:#ccfbf1}.pcb-none{margin-top:8px;padding:10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;color:#94a3b8;text-align:center;font-size:11.5px}.pcb-tip{margin:10px 0 5px;font-size:11px;font-weight:900;color:#0f766e}.pcb-note{margin-top:10px;padding:8px 10px;background:#f8fafc;border-left:3px solid #94a3b8;font-size:10.5px;color:#64748b;line-height:1.65}'
++'.pcb-foot{display:flex;gap:7px;padding:10px 12px;border-top:1px solid #d7e3e0;background:#fff}.pcb-foot input{flex:1;height:39px;border:1px solid #b8cbc7;border-radius:10px;padding:0 11px;font:13px inherit;color:#334155}.pcb-foot input:focus{outline:0;border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.11)}.pcb-foot button{width:60px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:800 13px inherit;cursor:pointer}@media(max-width:560px){#pcbPanel{width:100vw}}';
+var LOG=[];
+function save(){try{localStorage.setItem('dbfastec_purchase_cb_v1',JSON.stringify(LOG.slice(-50)))}catch(_){}}
+function restore(){try{LOG=JSON.parse(localStorage.getItem('dbfastec_purchase_cb_v1')||'[]')||[]}catch(_){LOG=[]}}
+function answerHtml(a){var h=a.sum||'';if(a.html)h+=a.html;if(a.tbl)h+=a.tbl;if(a.chips&&a.chips.length)h+=chips(a.chips);if(a.go)h+='<button class="pcb-go" data-act="'+E(a.go.act)+'">'+E(a.go.label)+' →</button>';return h}
+function draw(){var b=document.getElementById('pcbBody');if(!b)return;if(!LOG.length){var h=help();b.innerHTML='<div class="pcb-msg"><div class="pcb-bot">'+h.sum+h.html+'</div></div>';return}b.innerHTML=LOG.map(function(m){return m.me?'<div class="pcb-msg me"><span class="pcb-me">'+E(m.me)+'</span></div>':'<div class="pcb-msg"><div class="pcb-bot">'+m.bot+'</div></div>'}).join('');b.scrollTop=b.scrollHeight}
+function go(act){try{if(typeof closePurchaseFilePanel==='function')closePurchaseFilePanel();if(typeof setAct==='function')setAct(act);else{var s=ST();if(s)s.act=act;if(typeof runAct==='function')runAct(true)}window.scrollTo({top:0,behavior:'smooth'})}catch(_){}}
+function ask(q,silent){var a;try{a=route(q)}catch(e){a={sum:'계산 중 문제가 생겼습니다.<div class="pcb-sub">'+E(e&&e.message||e)+'</div>'}}if(!silent&&q)LOG.push({me:q});LOG.push({bot:answerHtml(a)});save();draw();if(a.auto&&a.go)setTimeout(function(){go(a.go.act)},100)}
+function send(){var i=document.getElementById('pcbInput');if(!i)return;var q=i.value.trim();if(!q)return;i.value='';ask(q)}
+function toggle(force){var p=document.getElementById('pcbPanel'),b=document.getElementById('pcbBtn');if(!p)return;var on=force==null?!p.classList.contains('open'):!!force;p.classList.toggle('open',on);b.classList.toggle('on',on);b.textContent=on?'✕':'💬';if(on)setTimeout(function(){var i=document.getElementById('pcbInput');if(i)i.focus()},220)}
+function mount(){if(document.getElementById('pcbPanel'))return;var st=document.createElement('style');st.id='purchase-chatbot-v113-style';st.textContent=CSS;document.head.appendChild(st);var b=document.createElement('button');b.id='pcbBtn';b.type='button';b.title='매입 분석 챗봇 (Alt+C)';b.textContent='💬';var p=document.createElement('aside');p.id='pcbPanel';p.setAttribute('aria-label','매입 분석 챗봇');p.innerHTML='<div class="pcb-head"><div><b>💬 (주)동방파스텍 도우미</b><br><small>매입 · 원자재 · 단가 · 매입처 · 전체 검색 · 전망</small></div><span class="pcb-spacer"></span><button id="pcbClear">비우기</button><button class="pcb-x" id="pcbX">✕</button></div><div class="pcb-body" id="pcbBody"></div><div class="pcb-foot"><input id="pcbInput" autocomplete="off" placeholder="예) 이번달 매입처 순위 / EGI 1.6 단가 / 다음달 전망"><button id="pcbSend">전송</button></div>';document.body.appendChild(b);document.body.appendChild(p);b.addEventListener('click',function(){toggle()});p.querySelector('#pcbX').addEventListener('click',function(){toggle(false)});p.querySelector('#pcbClear').addEventListener('click',function(){LOG=[];save();draw()});p.querySelector('#pcbSend').addEventListener('click',send);p.querySelector('#pcbInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();send()}});p.querySelector('#pcbBody').addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.pcb-chip');if(c){ask(c.dataset.q);return}var g=e.target.closest&&e.target.closest('.pcb-go');if(g)go(g.dataset.act)});document.addEventListener('keydown',function(e){if(e.altKey&&(e.key==='c'||e.key==='C')){e.preventDefault();toggle()}});restore();draw()}
+window.PurchaseCB={open:function(){toggle(true)},close:function(){toggle(false)},ask:ask,route:route};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+})();
+</script>
+<script id="drag-guard-v113">
 /* ==========================================================
    v111 · 드래그(범위 선택) 후에는 클릭이 일어나지 않도록 — 전 화면 공통
    · 표 안에서 글자를 끌어 선택하고 마우스를 표 밖에서 놓아도 행이 열리지 않는다.
