@@ -312,7 +312,8 @@
   table.common-product-txn-table th.txn-project-col,table.common-product-txn-table td.txn-project-col{width:140px!important;min-width:140px!important;max-width:140px!important;overflow:hidden;text-overflow:ellipsis}
   table.common-product-txn-table .commonTxnDivisionEdit,table.common-product-txn-table .commonTxnProjectEdit{width:132px!important;max-width:132px!important;min-width:0;border:1px solid var(--line);border-radius:7px;background:#fff;padding:5px 6px;font:inherit;font-size:12px;box-sizing:border-box}
   table.common-product-txn-table .commonTxnDivisionEdit{font-weight:800}
-  .major-product-star{display:inline-block;margin-left:0;color:#f59e0b;font-size:10px;line-height:1;vertical-align:middle;white-space:nowrap;text-shadow:0 1px 0 #fff}
+  /* v115: 표에 표기되는 주요제품 ★ — 글자보다 살짝 작게, 같은 줄 세로 중앙 정렬 */
+  .major-product-star{display:inline-block;margin-left:1px;color:#f59e0b;font-size:0.85em;line-height:1;vertical-align:middle;position:relative;top:-0.04em;white-space:nowrap;text-shadow:0 1px 0 #fff}
   tbody td:has(.major-product-star){white-space:nowrap!important}
   tbody td.l:has(>.major-product-star)>a{display:inline!important;white-space:nowrap}
   table.vendor-price-summary-table,table.vendor-price-summary-table th,table.vendor-price-summary-table td,table.vendor-price-summary-table a,table.vendor-price-summary-table b,table.vendor-price-summary-table span{font-size:13px!important}
@@ -5655,7 +5656,8 @@ function wireFilePanel(){
   };
   const close=()=>{ panel.classList.remove('open'); $('#fileToggle').classList.remove('open'); $('#fileToggle').textContent='📁 파일·관리 ▾'; content.style.display=''; if(drop)drop.classList.toggle('hidden',!!CUR.length||state.act==='matprice'); };
   window.openPurchaseFilePanel=open; window.closePurchaseFilePanel=close;
-  $('#fileToggle').onclick=()=>panel.classList.contains('open')?close():open(); {const _x=$('#fpClose'); if(_x)_x.onclick=close;} $('#overlay').onclick=close;
+  /* v115: 파일·관리 패널이 열려 있을 때 같은 버튼을 다시 눌러도 아무 반응 없게 처리 */
+  $('#fileToggle').onclick=()=>{ if(panel.classList.contains('open'))return; open(); }; {const _x=$('#fpClose'); if(_x)_x.onclick=close;} $('#overlay').onclick=close;
   $('#pickBtn').onclick=()=>$('#fileInput').click();
   $('#fpPick').onclick=()=>$('#fileInput').click();
   $('#fileInput').onchange=e=>{ if(e.target.files.length)handleFiles(e.target.files); e.target.value=''; };
