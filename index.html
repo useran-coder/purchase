@@ -6910,12 +6910,17 @@ function gradeCard(db,m,y){
 }
 function scrapCard(db,y){
   var k='고철',li=latest(db,k,y),b=getBase();
-  return '<section class="mp-grade-card mp-special-card scrap">'+
+  /* v116: 고철단가에도 단가추이 그래프보기 추가 (강종 카드와 동일 동작) */
+  return '<section class="mp-grade-card mp-special-card scrap" data-grade="고철">'+
     '<div class="mp-grade-head"><span class="mp-grade-name">🔩 고철단가</span>'+
     '<span class="mp-grade-desc">고철(스크랩) 회수단가 · 영업분석 매출자료에서 자동 반영</span>'+
     '<span class="mp-grade-current">현재 적용 <b>'+won(b.scrapPrice||0)+'</b>원/kg'+(li?' · 최근 '+li.month+'월 평균 <b>'+won(li.value)+'</b>원':'')+'</span>'+
-    '<div class="mp-grade-actions"><button type="button" class="apply" data-mp-apply="scrap">최근 고철단가 적용</button></div></div>'+
+    '<div class="mp-grade-actions">'+
+      '<button type="button" data-mp-trend="1">단가추이 그래프보기</button>'+
+      '<button type="button" class="apply" data-mp-apply="scrap">최근 고철단가 적용</button>'+
+    '</div></div>'+
     tableHtml(db,k,y)+
+    '<div class="mp-trend-wrap" hidden>'+trendSvg(db,k,y)+'</div>'+
   '</section>';
 }
 function extraCard(db){
@@ -8956,6 +8961,175 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     records.forEach(function(r){r.addedNodes.forEach(function(n){pending.push(n);});});
     if(pending.length&&!scheduled){scheduled=true;(window.requestAnimationFrame||setTimeout)(flush);}
   }).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
+<script id="matprice-delete-guard-v116">
+/* ─────────────────────────────────────────────────────────────
+   v116 · 원자재 월별 매입단가 "지운 칸이 되살아나는" 문제 수정
+   원인 : 단가 DB가 localStorage(본본) · 백업본 · IndexedDB · 메모리 4곳에
+          동시에 보관되고, 20초마다 도는 복구(heal) 루틴이 "칸 수가 많은 쪽"을
+          정답으로 보고 되살리기 때문. 삭제 표시(tombstone)가 행 _id 기준이라
+          저장소마다 _id가 다르면 삭제가 무시됐다.
+   수정 : ① 업체명 기준(_id 무관) 삭제표시를 별도 키에 영구 보관
+          ② 모든 저장소(본본·백업·IndexedDB·메모리)에 삭제표시를 강제 적용
+          ③ 0 이하(0, 00, -) 값은 어디서 들어오든 빈칸으로 정규화
+   ───────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+if(window.__mpDelGuardV116)return; window.__mpDelGuardV116=true;
+
+var MAT_KEY='dbfastec_material_price_history_v1';
+var BK_KEY ='dbfastec_material_master_backup_v1';   /* MATGUARD 백업본 */
+var TOMB   ='dbfastec_matprice_deleted_v116';
+var nGet=Storage.prototype.getItem.bind(localStorage);
+var nSet=Storage.prototype.setItem.bind(localStorage);   /* MATGUARD 우회용 원본 */
+
+function txt(v){return String(v==null?'':v).trim()}
+function n0(v){var n=Number(txt(v).replace(/[, ]/g,''));return isFinite(n)?n:0}
+function po(v){return v&&typeof v==='object'&&!Array.isArray(v)}
+function jparse(x){try{return JSON.parse(x||'null')}catch(e){return null}}
+
+/* 백업 키 자동 탐지 (…_backup / …_bak / …_v1b 등) */
+function allKeys(){
+  var out=[MAT_KEY,BK_KEY];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&k.indexOf('dbfastec_material')===0&&out.indexOf(k)<0)out.push(k);
+    }
+  }catch(e){}
+  return out;
+}
+function isMatKey(k){return allKeys().indexOf(k)>=0}
+
+/* ── 삭제표시 저장소 : { "연도|강종|업체명|월index" : 시각 } ── */
+function tombs(){var t=jparse(nGet(TOMB));return po(t)?t:{}}
+function saveTombs(t){try{nSet(TOMB,JSON.stringify(t))}catch(e){}}
+function tkey(y,k,vendor,mi){return txt(y)+'|'+txt(k)+'|'+txt(vendor)+'|'+mi}
+function markTomb(y,k,vendor,mi){var t=tombs();t[tkey(y,k,vendor,mi)]=Date.now();saveTombs(t)}
+function dropTomb(y,k,vendor,mi){var t=tombs();if(t[tkey(y,k,vendor,mi)]!=null){delete t[tkey(y,k,vendor,mi)];saveTombs(t)}}
+window.__mpClearDeletedMarks=function(){saveTombs({});return '삭제표시를 모두 지웠습니다'};
+
+/* ── DB 한 벌에 삭제표시 + 0 정규화를 강제 적용 ── */
+function scrub(db){
+  if(!po(db)||!po(db.years))return false;
+  var T=tombs(),now=Date.now(),changed=false;
+  if(!po(db._cellUpdated))db._cellUpdated={};
+  if(!po(db._cellDeleted))db._cellDeleted={};
+  Object.keys(db.years).forEach(function(y){
+    var gy=db.years[y]; if(!po(gy))return;
+    Object.keys(gy).forEach(function(k){
+      var rows=Array.isArray(gy[k])?gy[k]:[];
+      rows.forEach(function(r){
+        if(!po(r)||!Array.isArray(r.m))return;
+        for(var mi=0;mi<12;mi++){
+          var cur=txt(r.m[mi]); if(cur==='')continue;
+          var zero=n0(cur)<=0;                                   /* 0 이하 = 빈칸 */
+          var del =T[tkey(y,k,r.vendor,mi)]!=null;               /* 사용자가 지운 칸 */
+          if(!zero&&!del)continue;
+          r.m[mi]='';
+          if(Array.isArray(r.w))r.w[mi]=0;
+          var id=txt(r._id);
+          if(id){
+            var ck=txt(y)+'|'+txt(k)+'|'+id+'|m'+mi;
+            db._cellUpdated[ck]=now;
+            db._cellDeleted[ck]=now+1;                           /* 삭제표시가 항상 더 최신 */
+          }
+          changed=true;
+        }
+      });
+    });
+  });
+  return changed;
+}
+
+/* ── 네 저장소 전부 청소 ── */
+var busy=false;
+function enforce(rerender){
+  if(busy)return false; busy=true;
+  var touched=false;
+  try{
+    allKeys().forEach(function(key){
+      var db=jparse(nGet(key));
+      if(!po(db))return;
+      if(scrub(db)){try{nSet(key,JSON.stringify(db));touched=true}catch(e){}}
+    });
+    /* 메모리 사본 */
+    ['state','MATERIAL_DB'].forEach(function(_){});
+    try{if(typeof state!=='undefined'&&state&&po(state.materialDB)&&scrub(state.materialDB))touched=true}catch(e){}
+    try{if(window.state&&po(window.state.materialDB)&&scrub(window.state.materialDB))touched=true}catch(e){}
+    try{if(window.MATERIAL_DB&&po(window.MATERIAL_DB)&&scrub(window.MATERIAL_DB))touched=true}catch(e){}
+    try{if(window.__dbfMaterialMemoryDB&&po(window.__dbfMaterialMemoryDB))scrub(window.__dbfMaterialMemoryDB)}catch(e){}
+    /* IndexedDB 사본 */
+    try{
+      if(typeof idbGet==='function'&&typeof idbSet==='function'){
+        Promise.resolve(idbGet('settings')).then(function(st){
+          if(st&&po(st.materialDB)&&scrub(st.materialDB))return idbSet('settings',st);
+        }).catch(function(){});
+      }
+    }catch(e){}
+  }finally{busy=false}
+  if(touched&&rerender!==false)redraw();
+  return touched;
+}
+window.__mpEnforceDeleted=function(){return enforce(true)};
+
+var rT=0;
+function redraw(){
+  clearTimeout(rT);
+  rT=setTimeout(function(){
+    try{if(typeof window.renderMaterialPricePage==='function')window.renderMaterialPricePage()}catch(e){}
+  },120);
+}
+
+/* ── 입력 감지 : 빈칸/0 입력은 삭제표시, 값 입력은 삭제표시 해제 ── */
+function vendorOf(inp){
+  try{
+    var tr=inp.closest('tr'); if(!tr)return '';
+    var v=tr.querySelector('.mp-vendor');
+    if(v)return txt(v.value);
+    var c=tr.querySelector('.mp-vendor-cell');
+    return c?txt(c.textContent).replace(/×$/,'').replace(/자동$/,'').trim():'';
+  }catch(e){return ''}
+}
+var iT=0;
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(!t||!t.classList||!t.classList.contains('mp-month'))return;
+  var y=t.dataset.y,k=t.dataset.k,mi=+t.dataset.mi,vn=vendorOf(t);
+  if(txt(t.value)===''||n0(t.value)<=0)markTomb(y,k,vn,mi); else dropTomb(y,k,vn,mi);
+  clearTimeout(iT); iT=setTimeout(function(){enforce(false)},250);
+},true);
+
+/* 업체명을 바꾸면 그 행의 삭제표시를 새 이름으로 옮긴다 */
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(!t||!t.classList||!t.classList.contains('mp-vendor'))return;
+  clearTimeout(iT); iT=setTimeout(function(){enforce(false)},250);
+},true);
+
+/* ── 저장이 일어날 때마다 다시 강제 적용 (heal·동기화·엑셀 병합 포함) ── */
+try{
+  var prevSet=localStorage.setItem.bind(localStorage);   /* MATGUARD 병합 저장 */
+  localStorage.setItem=function(k,v){
+    if(isMatKey(k)){
+      var db=jparse(v);
+      if(po(db)){scrub(db);v=JSON.stringify(db)}
+    }
+    var r=prevSet(k,v);
+    if(k===MAT_KEY){clearTimeout(window.__mpG116T);window.__mpG116T=setTimeout(function(){enforce(false)},300)}
+    return r;
+  };
+}catch(e){}
+
+window.addEventListener('materialPriceChanged',function(){clearTimeout(window.__mpG116E);window.__mpG116E=setTimeout(function(){enforce(false)},500)});
+window.addEventListener('storage',function(e){if(e&&e.key===MAT_KEY)setTimeout(function(){enforce(true)},300)});
+
+function boot(){enforce(true);setTimeout(function(){enforce(true)},1500);setTimeout(function(){enforce(true)},4000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+window.addEventListener('load',function(){setTimeout(function(){enforce(true)},2500)},{once:true});
+setInterval(function(){enforce(false)},10000);   /* heal(20초)보다 자주 돌아 되살아남을 차단 */
 })();
 </script>
 </body>
