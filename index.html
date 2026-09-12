@@ -6742,8 +6742,15 @@ function marketPrice(db,k,y){
 }
 
 function gradeOf(name){
-  var n=String(name||'').toUpperCase().replace(/\s/g,'');
-  for(var i=0;i<GRADE_MATCH.length;i++){if(n.indexOf(GRADE_MATCH[i])===0)return GRADE_MATCH[i]}
+  var n=String(name||'').toUpperCase().replace(/[\s\-_.]/g,'');
+  for(var i=0;i<GRADE_MATCH.length;i++){
+    var g=GRADE_MATCH[i],idx=n.indexOf(g);
+    if(idx<0)continue;
+    var prev=idx>0?n.charAt(idx-1):'',next=n.charAt(idx+g.length);
+    if(/[A-Z0-9]/.test(prev))continue;                                   /* 다른 단어의 일부 */
+    if(g.indexOf('STS')!==0&&/[A-Z]/.test(next))continue;                /* POSCO·CRT 등 오인식 방지 */
+    return g;
+  }
   return null;
 }
 function pick(obj,names){
@@ -6757,13 +6764,13 @@ function parsePurchase(arr){
   var agg={},skipUnit=0,skipGrade={},used=0;
   arr.forEach(function(r){
     var grp=String(pick(r,['품목군','ITEMGRP_NMK'])||'').trim();
-    if(grp&&grp!=='원자재')return;
+    if(grp&&/(임가공|외주|상품|소모|공구|부품|포장|운반|용역)/.test(grp))return;
     var ym=String(pick(r,['입고년월'])||'').replace(/[^0-9]/g,'');
     if(ym.length<6)return;
     var y=ym.slice(0,4),mi=parseInt(ym.slice(4,6),10)-1;
     if(mi<0||mi>11)return;
-    var unitNm=String(pick(r,['단위'])||'').trim().toUpperCase();
-    if(unitNm&&unitNm!=='KG')return;
+    var unitNm=String(pick(r,['단위'])||'').trim().toUpperCase().replace(/[.\s]/g,'');
+    if(unitNm&&['EA','PCS','PC','개','매','장','SHT','SHEET','SET','조','본','M','MM','M2','㎡','롤','ROLL','대','BOX','박스'].indexOf(unitNm)>=0)return;
     var nm=pick(r,['품명','ITEM_NMK']);
     var g=gradeOf(nm);
     if(!g){var raw=String(nm||'').trim();if(raw)skipGrade[raw]=(skipGrade[raw]||0)+1;return}
@@ -6946,8 +6953,6 @@ function toolbarHtml(db,y,years){
     '<span class="mp-year-legend" style="display:inline-flex;align-items:center;gap:6px;background:#fefce8;border:1px solid #fde68a;color:#854d0e;padding:2px 9px;border-radius:6px"><i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,235,59,.55);border:1px solid #eab308"></i>노란색 = 해당 월 최저단가</span>'+
     '</div>'+
     '<div class="mp-tool-actions">'+
-      
-      
       (IS_EDIT?'<button type="button" class="mp-btn mp-btn-import" id="mpReceiveBtn" title="원자재단가 엑셀을 합쳐서 불러옵니다(기존 자료 보존)"><span class="mp-ico">⇩</span><span>엑셀 불러오기</span></button>'
               :'<span class="mp-readonly-badge">🔒 받기 전용 · 수정은 매입분석·매출목표에서</span><button type="button" class="mp-btn mp-btn-import" id="mpReceiveBtn" title="매출목표·매입분석에서 내보낸 원자재단가 엑셀을 그대로 받아옵니다"><span class="mp-ico">⇩</span><span>단가표 받기(엑셀)</span></button>')+
       
@@ -7111,7 +7116,7 @@ function bind(root){
       window.renderMaterialPricePage();toast('시장단가 '+n2+'개 강종을 기준단가에 적용했습니다');return;
     }
     if(t.id==='mpExportBtn'){exportXls(getDb());return}
-    if(t.id==='mpFromCurBtn'){fillFromCur();return}
+    if(t.id==='mpFromCurBtn'){fillFromCur(false);return}
     if(IS_EDIT&&t.hasAttribute('data-mp-add')){
       var ak=t.getAttribute('data-k'),ay=curYear(),d2=getDb();
       if(!d2.years[ay])d2.years[ay]={};
@@ -7308,19 +7313,41 @@ function importSheet(ev){
 }
 
 /* 이 프로그램에 적재된 매입 데이터(CUR)에서 강종·업체·월별 가중평균 단가를 산출한다 */
-function fillFromCur(){
+function fillFromCur(silent){
   var rows=null;
   try{if(typeof CUR!=='undefined'&&Array.isArray(CUR))rows=CUR}catch(e){}
-  if(!rows||!rows.length){toast('불러온 매입 데이터가 없습니다. 먼저 매입현황 파일을 불러오세요');return}
+  if(!rows||!rows.length){if(!silent)toast('불러온 매입 데이터가 없습니다. 먼저 매입현황 파일을 불러오세요');return}
   var conv=rows.map(function(r){
     var ym=String(r.ym||'')||String(r.d||'').slice(0,7).replace('-','');
     return {'입고년월':ym.replace('-',''),'거래처':r.vendor||r.cust||'','품명':r.name||'','단위':r.unit||'','입고수량':r.qty,'공급가':(r.supply!=null?r.supply:r.total),'품목군':r.group||''};
   });
   var parsed=parsePurchase(conv);
-  if(!parsed.rows.length){toast('매입 데이터에서 원자재(강종) 단가를 찾지 못했습니다');return}
+  if(!parsed.rows.length){
+    if(!silent){
+      var miss=Object.keys(parsed.skipGrade||{}).slice(0,3).join(', ');
+      toast('매입 데이터에서 원자재(강종) 단가를 찾지 못했습니다 · 검토행 '+conv.length+'건'+(miss?' · 미인식 품명 예: '+miss:''));
+    }
+    return;
+  }
   var res=applyPurchase(parsed);
-  window.renderMaterialPricePage();
-  toast('매입 데이터 반영 완료 — '+res.years.join(', ')+'년 · 업체 '+res.vendors+'건 · 단가 '+res.cells+'칸'+(parsed.skipUnit?' · 이상단가 '+parsed.skipUnit+'건 제외':''));
+  if(!silent){
+    window.renderMaterialPricePage();
+    toast('매입 데이터 반영 완료 — '+res.years.join(', ')+'년 · 업체 '+res.vendors+'건 · 단가 '+res.cells+'칸'+(parsed.skipUnit?' · 이상단가 '+parsed.skipUnit+'건 제외':''));
+  }
+  return res;
+}
+window.mpFillFromCurV117=fillFromCur;
+/* 매입 데이터는 있는데 해당 연도 단가표가 비어 있으면 화면 진입 시 1회 자동 반영 */
+function mpAutoFillV117(){
+  try{
+    if(!IS_EDIT||SRC!=='cur')return;
+    var rows=(typeof CUR!=='undefined'&&Array.isArray(CUR))?CUR:null;
+    if(!rows||!rows.length)return;
+    var sig=rows.length+':'+String(rows[0]&&rows[0].ym||'')+':'+String(rows[rows.length-1]&&rows[rows.length-1].ym||'');
+    if(window.__mpAutoFillSigV117===sig)return;    /* 같은 매입데이터면 1회만 */
+    window.__mpAutoFillSigV117=sig;
+    fillFromCur(true);                              /* 수기 수정 칸(_manualCell)은 보존됨 */
+  }catch(e){}
 }
 
 window.materialPricePage=function(){
@@ -7343,6 +7370,7 @@ window.materialPricePage=function(){
   host.style.display='';
   _lastHtml='';            /* 컨테이너가 새로 만들어졌으므로 강제로 다시 그린다 */
   _firstDraw=true;
+  mpAutoFillV117();
   renderNow();
 };
 /* 기존 '엑셀 불러오기'는 저장소를 통째로 새로 만들어 다른 연도·업체를 지웠다 → 병합 방식으로 교체 */
