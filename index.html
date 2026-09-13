@@ -59,6 +59,14 @@
   /* v64: 상단 바로가기·동기화·버전·사용자 칩 글자 크기 통일 */
   .salesLink,.productCostLink,.header-history-btn,.header-sync-btn,.appver,.huser,.huser b{font-size:11.5px!important}
   #userLbl{cursor:pointer}
+  /* v117: 헤더 사용자 표시 — 👤이름 · 권한 배지 · 로그아웃 */
+  .huser .hu-role{display:inline-flex;align-items:center;height:21px;padding:0 8px;border-radius:999px;
+    background:#ecfeff;border:1px solid #a5e8ee;color:#0e7490;font-size:11px!important;font-weight:800;white-space:nowrap}
+  .huser .hu-out{display:inline-flex;align-items:center;height:21px;padding:0 9px;border-radius:999px;cursor:pointer;
+    background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:11px!important;font-weight:800;
+    font-family:inherit;line-height:1;white-space:nowrap}
+  .huser .hu-out:hover{background:#b91c1c;border-color:#b91c1c;color:#fff}
+  .huser [hidden]{display:none!important}
   .gs-config-grid{display:grid;grid-template-columns:minmax(420px,2fr) minmax(220px,.8fr) minmax(220px,.8fr);gap:8px;margin-top:8px;align-items:center}
   .gs-config-grid input{width:100%;min-width:0;height:35px;padding:7px 10px;border:1px solid #cfd8e5;border-radius:7px;background:#fff;color:#26364d;font-family:inherit;font-size:12px;outline:0}
   .gs-config-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:9px}
@@ -830,11 +838,10 @@
       <button type="submit" aria-label="검색" title="검색"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg></button>
     </form>
     <a class="salesLink" href="https://useran-coder.github.io/sales/" target="_blank" rel="noopener">📊 매출분석 도구</a>
-    <a class="productCostLink" href="https://useran-coder.github.io/product" target="_blank" rel="noopener">제품제조원가</a>
     <button id="headerElogBtn" class="header-history-btn" type="button" title="수정이력">🕘 수정이력</button>
     <button id="gsSyncBtn" class="header-sync-btn sync-unconfigured" type="button" title="구글시트 동기화"><span class="sync-main">🔄 동기화</span><span class="sync-time"> · 미설정</span></button>
     <span class="appver" id="appVer">v113 · 매입 분석 챗봇 · 전체 검색·전망</span>
-    <span class="huser" id="userLbl" title="파일·관리에서 이름을 입력하세요">👤 <b id="userName">이름 미설정</b></span>
+    <span class="huser" id="userLbl" title="파일·관리에서 이름을 입력하세요">👤 <b id="userName">이름 미설정</b><span class="hu-role" id="userRole" hidden></span><button type="button" class="hu-out" id="userOutBtn" hidden>로그아웃</button></span>
   </div>
   <nav class="topmenu" id="topMenu">
     <button class="tm-direct" id="homeBtn" type="button">🏠 홈</button>
@@ -6742,15 +6749,8 @@ function marketPrice(db,k,y){
 }
 
 function gradeOf(name){
-  var n=String(name||'').toUpperCase().replace(/[\s\-_.]/g,'');
-  for(var i=0;i<GRADE_MATCH.length;i++){
-    var g=GRADE_MATCH[i],idx=n.indexOf(g);
-    if(idx<0)continue;
-    var prev=idx>0?n.charAt(idx-1):'',next=n.charAt(idx+g.length);
-    if(/[A-Z0-9]/.test(prev))continue;                                   /* 다른 단어의 일부 */
-    if(g.indexOf('STS')!==0&&/[A-Z]/.test(next))continue;                /* POSCO·CRT 등 오인식 방지 */
-    return g;
-  }
+  var n=String(name||'').toUpperCase().replace(/\s/g,'');
+  for(var i=0;i<GRADE_MATCH.length;i++){if(n.indexOf(GRADE_MATCH[i])===0)return GRADE_MATCH[i]}
   return null;
 }
 function pick(obj,names){
@@ -6764,13 +6764,13 @@ function parsePurchase(arr){
   var agg={},skipUnit=0,skipGrade={},used=0;
   arr.forEach(function(r){
     var grp=String(pick(r,['품목군','ITEMGRP_NMK'])||'').trim();
-    if(grp&&/(임가공|외주|상품|소모|공구|부품|포장|운반|용역)/.test(grp))return;
+    if(grp&&grp!=='원자재')return;
     var ym=String(pick(r,['입고년월'])||'').replace(/[^0-9]/g,'');
     if(ym.length<6)return;
     var y=ym.slice(0,4),mi=parseInt(ym.slice(4,6),10)-1;
     if(mi<0||mi>11)return;
-    var unitNm=String(pick(r,['단위'])||'').trim().toUpperCase().replace(/[.\s]/g,'');
-    if(unitNm&&['EA','PCS','PC','개','매','장','SHT','SHEET','SET','조','본','M','MM','M2','㎡','롤','ROLL','대','BOX','박스'].indexOf(unitNm)>=0)return;
+    var unitNm=String(pick(r,['단위'])||'').trim().toUpperCase();
+    if(unitNm&&unitNm!=='KG')return;
     var nm=pick(r,['품명','ITEM_NMK']);
     var g=gradeOf(nm);
     if(!g){var raw=String(nm||'').trim();if(raw)skipGrade[raw]=(skipGrade[raw]||0)+1;return}
@@ -6953,6 +6953,8 @@ function toolbarHtml(db,y,years){
     '<span class="mp-year-legend" style="display:inline-flex;align-items:center;gap:6px;background:#fefce8;border:1px solid #fde68a;color:#854d0e;padding:2px 9px;border-radius:6px"><i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,235,59,.55);border:1px solid #eab308"></i>노란색 = 해당 월 최저단가</span>'+
     '</div>'+
     '<div class="mp-tool-actions">'+
+      
+      
       (IS_EDIT?'<button type="button" class="mp-btn mp-btn-import" id="mpReceiveBtn" title="원자재단가 엑셀을 합쳐서 불러옵니다(기존 자료 보존)"><span class="mp-ico">⇩</span><span>엑셀 불러오기</span></button>'
               :'<span class="mp-readonly-badge">🔒 받기 전용 · 수정은 매입분석·매출목표에서</span><button type="button" class="mp-btn mp-btn-import" id="mpReceiveBtn" title="매출목표·매입분석에서 내보낸 원자재단가 엑셀을 그대로 받아옵니다"><span class="mp-ico">⇩</span><span>단가표 받기(엑셀)</span></button>')+
       
@@ -7116,7 +7118,7 @@ function bind(root){
       window.renderMaterialPricePage();toast('시장단가 '+n2+'개 강종을 기준단가에 적용했습니다');return;
     }
     if(t.id==='mpExportBtn'){exportXls(getDb());return}
-    if(t.id==='mpFromCurBtn'){fillFromCur(false);return}
+    if(t.id==='mpFromCurBtn'){fillFromCur();return}
     if(IS_EDIT&&t.hasAttribute('data-mp-add')){
       var ak=t.getAttribute('data-k'),ay=curYear(),d2=getDb();
       if(!d2.years[ay])d2.years[ay]={};
@@ -7313,41 +7315,19 @@ function importSheet(ev){
 }
 
 /* 이 프로그램에 적재된 매입 데이터(CUR)에서 강종·업체·월별 가중평균 단가를 산출한다 */
-function fillFromCur(silent){
+function fillFromCur(){
   var rows=null;
   try{if(typeof CUR!=='undefined'&&Array.isArray(CUR))rows=CUR}catch(e){}
-  if(!rows||!rows.length){if(!silent)toast('불러온 매입 데이터가 없습니다. 먼저 매입현황 파일을 불러오세요');return}
+  if(!rows||!rows.length){toast('불러온 매입 데이터가 없습니다. 먼저 매입현황 파일을 불러오세요');return}
   var conv=rows.map(function(r){
     var ym=String(r.ym||'')||String(r.d||'').slice(0,7).replace('-','');
     return {'입고년월':ym.replace('-',''),'거래처':r.vendor||r.cust||'','품명':r.name||'','단위':r.unit||'','입고수량':r.qty,'공급가':(r.supply!=null?r.supply:r.total),'품목군':r.group||''};
   });
   var parsed=parsePurchase(conv);
-  if(!parsed.rows.length){
-    if(!silent){
-      var miss=Object.keys(parsed.skipGrade||{}).slice(0,3).join(', ');
-      toast('매입 데이터에서 원자재(강종) 단가를 찾지 못했습니다 · 검토행 '+conv.length+'건'+(miss?' · 미인식 품명 예: '+miss:''));
-    }
-    return;
-  }
+  if(!parsed.rows.length){toast('매입 데이터에서 원자재(강종) 단가를 찾지 못했습니다');return}
   var res=applyPurchase(parsed);
-  if(!silent){
-    window.renderMaterialPricePage();
-    toast('매입 데이터 반영 완료 — '+res.years.join(', ')+'년 · 업체 '+res.vendors+'건 · 단가 '+res.cells+'칸'+(parsed.skipUnit?' · 이상단가 '+parsed.skipUnit+'건 제외':''));
-  }
-  return res;
-}
-window.mpFillFromCurV117=fillFromCur;
-/* 매입 데이터는 있는데 해당 연도 단가표가 비어 있으면 화면 진입 시 1회 자동 반영 */
-function mpAutoFillV117(){
-  try{
-    if(!IS_EDIT||SRC!=='cur')return;
-    var rows=(typeof CUR!=='undefined'&&Array.isArray(CUR))?CUR:null;
-    if(!rows||!rows.length)return;
-    var sig=rows.length+':'+String(rows[0]&&rows[0].ym||'')+':'+String(rows[rows.length-1]&&rows[rows.length-1].ym||'');
-    if(window.__mpAutoFillSigV117===sig)return;    /* 같은 매입데이터면 1회만 */
-    window.__mpAutoFillSigV117=sig;
-    fillFromCur(true);                              /* 수기 수정 칸(_manualCell)은 보존됨 */
-  }catch(e){}
+  window.renderMaterialPricePage();
+  toast('매입 데이터 반영 완료 — '+res.years.join(', ')+'년 · 업체 '+res.vendors+'건 · 단가 '+res.cells+'칸'+(parsed.skipUnit?' · 이상단가 '+parsed.skipUnit+'건 제외':''));
 }
 
 window.materialPricePage=function(){
@@ -7370,7 +7350,6 @@ window.materialPricePage=function(){
   host.style.display='';
   _lastHtml='';            /* 컨테이너가 새로 만들어졌으므로 강제로 다시 그린다 */
   _firstDraw=true;
-  mpAutoFillV117();
   renderNow();
 };
 /* 기존 '엑셀 불러오기'는 저장소를 통째로 새로 만들어 다른 연도·업체를 지웠다 → 병합 방식으로 교체 */
@@ -9158,6 +9137,51 @@ function boot(){enforce(true);setTimeout(function(){enforce(true)},1500);setTime
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
 window.addEventListener('load',function(){setTimeout(function(){enforce(true)},2500)},{once:true});
 setInterval(function(){enforce(false)},10000);   /* heal(20초)보다 자주 돌아 되살아남을 차단 */
+})();
+</script>
+
+<script id="header-user-chip-v117">
+/* v117 · 헤더 사용자 표시: 👤이름 · 권한 배지 · 로그아웃 버튼
+   (타이틀 줄의 '제품제조원가' 링크는 제거) */
+(function(){
+'use strict';
+if(window.__headerUserV117)return; window.__headerUserV117=true;
+var ROLE={admin:'관리자',uploader:'업로더',user:'일반'};
+function el(id){return document.getElementById(id)}
+function paint(){
+  var lbl=el('userLbl'),nm=el('userName'),rl=el('userRole'),out=el('userOutBtn');
+  if(!lbl||!nm)return;
+  var on=false,name='',role='';
+  try{ on=(typeof auValid==='function')&&auValid(); }catch(e){}
+  try{ name=(window.AU&&(AU.name||AU.id))||''; role=(window.AU&&AU.role)||''; }catch(e){}
+  if(!name){try{name=(state&&state.gsync&&state.gsync.user)||''}catch(e){}}
+  nm.textContent=name||'이름 미설정';
+  if(rl){ if(on&&role){rl.textContent=ROLE[role]||role;rl.hidden=false} else rl.hidden=true; }
+  if(out){ out.hidden=!on; }
+  lbl.title=on?'클릭하면 파일·관리로 이동합니다':'파일·관리에서 이름을 입력하세요';
+}
+window.__paintHeaderUser=paint;
+
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest?e.target.closest('#userOutBtn'):null;
+  if(!b)return;
+  e.preventDefault(); e.stopPropagation();          /* 라벨 클릭(파일·관리 열기)과 분리 */
+  try{ if(typeof auLogout==='function')auLogout(); }catch(_e){}
+  setTimeout(paint,400);
+},true);
+
+/* 로그인·로그아웃·이름 변경 때마다 갱신 */
+function hook(name){
+  var f=window[name];
+  if(typeof f!=='function'||f.__v117)return;
+  var w=function(){var r=f.apply(this,arguments);setTimeout(paint,0);return r};
+  w.__v117=true; window[name]=w;
+}
+function hookAll(){['auApply','renderUserLbl','auLogout'].forEach(hook)}
+hookAll(); setTimeout(hookAll,800); setTimeout(hookAll,2500);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',paint,{once:true}); else paint();
+setTimeout(paint,600); setTimeout(paint,2000);
+setInterval(paint,3000);
 })();
 </script>
 </body>
