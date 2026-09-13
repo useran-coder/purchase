@@ -9184,5 +9184,173 @@ setTimeout(paint,600); setTimeout(paint,2000);
 setInterval(paint,3000);
 })();
 </script>
+
+<script id="browser-history-nav-v118">
+/* ─────────────────────────────────────────────────────────────
+   v118 · 크롬 뒤로가기 / 앞으로가기 지원 (매출분석 도구와 동일 동작)
+   화면이 바뀔 때마다(메뉴 이동·드릴다운 상세) 브라우저 히스토리에 한 단계씩 쌓고,
+   ← / → 버튼으로 1,2,3,4… 단계 그대로 되돌아가거나 다시 앞으로 갈 수 있습니다.
+   · 정렬·검색·칩필터·기간변경처럼 "같은 화면"인 동작은 단계를 늘리지 않고 현재 단계를 갱신
+   · 되돌아갈 때 화면 상태(정렬·드릴키·필터)와 스크롤 위치까지 복원
+   ───────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+if(window.__navHistV118)return; window.__navHistV118=true;
+
+var STACK={}, ORDER=[], seq=0, curId=null;
+var pending=null, pendT=0, restoring=false, started=false;
+
+/* 화면을 결정하는 상태값들 — 되돌아갈 때 이 값들을 함께 복원한다 */
+var FIELDS=['act','sortKey','sortDir','chipVal','catDrill','catDrill2','_search','_drill','_parent',
+ 'monthlyOpen','period','division','basis','homeTopPeriod','itemDivisionFilter',
+ 'priceCompItem','priceCompMonth','priceTrendItem','priceTrendBack','priceTrendBackLabel',
+ 'priceTrendProject','priceTrendBig','priceTrendMid','priceTrendSmall',
+ 'priceAlertNat','priceAlertStart','priceAlertEnd','yoyMonth','yoySpan','natureFilter',
+ 'matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','matTreeFormSelected','matTreeThickSelected',
+ 'purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','paretoNat','paretoPct',
+ 'costRatioNat','costRatioList','commonOnlyItemView','majorProductEdit','majorProductOnly'];
+
+function ST(){try{return state}catch(e){return null}}
+function cp(v){ if(v==null||typeof v!=='object')return v; try{return JSON.parse(JSON.stringify(v))}catch(e){return v} }
+function snap(){var s=ST(),o={};if(!s)return o;FIELDS.forEach(function(k){if(k in s)o[k]=cp(s[k])});return o}
+function apply(o){var s=ST();if(!s||!o)return;FIELDS.forEach(function(k){if(k in o)s[k]=cp(o[k])})}
+function plain(t){return String(t==null?'':t).replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim()}
+
+/* 열려 있는 모달·파일관리 패널은 되돌아갈 때 닫는다 */
+function closeOverlays(){
+  try{['projectModal','categoryModal'].forEach(function(id){var m=document.getElementById(id);if(m)m.classList.remove('on')})}catch(e){}
+  try{var fp=document.getElementById('filePanel');
+      if(fp&&fp.classList.contains('open')&&typeof window.closePurchaseFilePanel==='function')window.closePurchaseFilePanel();}catch(e){}
+}
+
+function queue(entry,prio){
+  if(restoring)return;
+  if(pending&&pending.prio>prio)return;      /* 같은 tick에서는 더 구체적인 기록(render)이 이긴다 */
+  entry.prio=prio; pending=entry;
+  if(!pendT)pendT=setTimeout(commit,0);
+}
+function commit(){
+  pendT=0; var en=pending; pending=null; if(!en)return;
+  en.scroll=0;
+  var cur=curId?STACK[curId]:null;
+  if(!curId){                                   /* 첫 화면 = 기준점(back 시 앱을 벗어남) */
+    curId='nv'+(++seq); en.id=curId; STACK[curId]=en; ORDER.push(curId);
+    try{history.replaceState({__nav:curId},'',location.href)}catch(e){}
+    started=true; return;
+  }
+  if(cur&&cur.sig===en.sig){                    /* 같은 화면 → 단계 추가 없이 갱신 */
+    en.scroll=cur.scroll||0; en.id=curId; STACK[curId]=en;
+    try{history.replaceState({__nav:curId},'',location.href)}catch(e){}
+    return;
+  }
+  var id='nv'+(++seq); en.id=id; STACK[id]=en; ORDER.push(id);
+  while(ORDER.length>60){var d=ORDER.shift(); if(d!==curId)delete STACK[d]}
+  curId=id;
+  try{history.pushState({__nav:id},'',location.href)}catch(e){}
+}
+
+/* 현재 단계의 스크롤 위치를 계속 기록 */
+var sT=0;
+window.addEventListener('scroll',function(){
+  if(sT)return; sT=setTimeout(function(){sT=0;
+    var e=curId&&STACK[curId]; if(e)e.scroll=window.scrollY||window.pageYOffset||0;
+  },200);
+},{passive:true});
+
+window.addEventListener('popstate',function(ev){
+  var id=ev&&ev.state&&ev.state.__nav;
+  var en=id&&STACK[id];
+  if(!en){ return; }                              /* 새로고침 이후 등 — 브라우저 기본 동작 */
+  curId=id; restoring=true;
+  closeOverlays();
+  try{ en.run(); }catch(e){ try{console.warn('[NAV] 복원 실패',e)}catch(_){} }
+  try{ if(typeof highlightMenu==='function')highlightMenu((ST()||{}).act) }catch(e){}
+  setTimeout(function(){ restoring=false; },0);
+  var y=en.scroll||0;
+  setTimeout(function(){ try{window.scrollTo(0,y)}catch(e){} },40);
+});
+
+/* ── 후킹 : render(상세·목록 표) > setAct / runAct(메뉴 이동) ── */
+function hookRender(){
+  var o=window.render;
+  if(typeof o!=='function'||o.__nav118)return false;
+  var w=function(title,meta,data,cols,defSortKey,note,opts){
+    var r=o.apply(this,arguments);
+    if(!restoring){
+      var args=[].slice.call(arguments), s=snap(), op=opts||{};
+      queue({
+        sig:(s.act||'')+'|'+plain(title)+'|'+(op.back?'1':'0'),
+        label:plain(title),
+        run:function(){ apply(s); o.apply(null,args); }
+      },2);
+    }
+    return r;
+  };
+  w.__nav118=true; window.render=w; return true;
+}
+function hookAct(){
+  var ok=true;
+  var oS=window.setAct;
+  if(typeof oS==='function'&&!oS.__nav118){
+    var wS=function(a,opts){
+      var r=oS.apply(this,arguments);
+      if(!restoring){ var s=snap(); queue({sig:(s.act||'')+'|@act',label:String(a),
+        run:function(){ apply(s); oS.call(null,s.act,{}); }},1); }
+      return r;
+    };
+    wS.__nav118=true; window.setAct=wS;
+  }else if(typeof oS!=='function')ok=false;
+
+  var oR=window.runAct;
+  if(typeof oR==='function'&&!oR.__nav118){
+    var wR=function(){
+      var r=oR.apply(this,arguments);
+      if(!restoring){ var s=snap(); queue({sig:(s.act||'')+'|@act',label:String(s.act||''),
+        run:function(){ apply(s); oR.call(null,true); }},1); }
+      return r;
+    };
+    wR.__nav118=true; window.runAct=wR;
+  }else if(typeof oR!=='function')ok=false;
+  return ok;
+}
+/* 📁 파일·관리 패널도 한 단계로 — 뒤로가기를 누르면 패널이 닫히고 보던 화면으로 돌아온다
+   (패널 열기·닫기는 내부 클로저라서 버튼 클릭을 직접 감지한다) */
+function panelOpen(){var f=document.getElementById('filePanel');return !!(f&&f.classList.contains('open'))}
+function isPanelStep(){var e=curId&&STACK[curId];return !!(e&&/\|@filepanel$/.test(e.sig||''))}
+document.addEventListener('click',function(e){
+  var t=e.target&&e.target.closest?e.target.closest('#fileToggle'):null;
+  if(t){
+    if(restoring||panelOpen())return;                     /* v115: 열린 상태에서 다시 눌러도 무반응 */
+    var s=snap();
+    setTimeout(function(){
+      if(!panelOpen()||isPanelStep())return;
+      queue({sig:(s.act||'')+'|@filepanel',label:'파일·관리',
+        run:function(){ apply(s); try{var o=window.openPurchaseFilePanel; if(typeof o==='function')o()}catch(_e){} }},3);
+    },80);
+    return;
+  }
+  var c=e.target&&e.target.closest?e.target.closest('#fpClose'):null;
+  var ov=e.target&&e.target.id==='overlay';
+  if((c||ov)&&!restoring&&isPanelStep())setTimeout(function(){ try{history.back()}catch(_e){} },0);
+},true);
+function install(){ hookRender(); hookAct(); }
+
+/* 첫 화면(보통 홈)을 기준점으로 먼저 기록해 둔다 — 그래야 마지막 뒤로가기가 홈으로 돌아온다 */
+function seedBase(){
+  if(curId||restoring)return;
+  var s=snap(); if(!s||!s.act)s={act:'home'};
+  var en={sig:(s.act||'home')+'|@act',label:s.act||'home',prio:0,
+    run:function(){ apply(s); try{ if(typeof window.runAct==='function')window.runAct(true) }catch(e){} }};
+  var keep=pending; pending=en; commit(); pending=keep;   /* 즉시 기준점으로 확정 */
+}
+install();
+setTimeout(seedBase,1200); setTimeout(seedBase,3000);
+['click','keydown'].forEach(function(ev){document.addEventListener(ev,function(){seedBase()},true)});
+var tries=0, iv=setInterval(function(){ install(); if(++tries>40)clearInterval(iv); },300);
+window.addEventListener('load',function(){ setTimeout(install,200); setTimeout(install,1500); });
+
+window.__navDebug=function(){return {cur:curId,steps:ORDER.map(function(i){return (STACK[i]||{}).label}),count:ORDER.length}};
+})();
+</script>
 </body>
 </html>
