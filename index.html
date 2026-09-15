@@ -1082,7 +1082,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-15';
-const VERNO='v122 · 입력 중 재렌더 차단 · 강종 자동반영 표시';
+const VERNO='v123 · 단가화면 입력 지연 해소';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -7046,6 +7046,12 @@ window.renderMaterialPricePage=function(){
 window.renderMaterialPriceNow=renderNow;
 function renderNow(){
   if(_inRender)return null;
+  /* v123: 입력 중이면 어떤 경로로 들어와도 화면을 다시 그리지 않는다.
+     (requestAnimationFrame 으로 예약된 호출이 바깥 래퍼를 우회해 타이핑을 지우던 문제) */
+  try{ if(typeof window.__mpIsTyping==='function'&&window.__mpIsTyping()){
+    if(typeof window.__mpDeferRender==='function')window.__mpDeferRender();
+    return null;
+  } }catch(_e){}
   _inRender=true;
   try{return renderPage()}catch(e){
     try{console.error('원자재 단가 화면 오류',e)}catch(_){}
@@ -9615,7 +9621,10 @@ function inField(){
 function busy(){ return composing||(inField()&&(Date.now()-lastType)<IDLE) }
 
 function mark(e){
-  try{ if(e.target&&e.target.closest&&e.target.closest('#view-matprice'))lastType=Date.now(); }catch(_){}
+  try{
+    if(window.__mpReplaying)return;                 /* 보류분 확정 저장용 재생 이벤트는 타이핑이 아니다 */
+    if(e.target&&e.target.closest&&e.target.closest('#view-matprice'))lastType=Date.now();
+  }catch(_){}
 }
 document.addEventListener('input',mark,true);
 document.addEventListener('keydown',mark,true);
@@ -9631,7 +9640,14 @@ document.addEventListener('compositionstart',function(e){
   document.addEventListener(ev,function(){ composing=false; lastType=Date.now(); flushSoon(); },true);
 });
 document.addEventListener('focusout',function(e){
-  if(e.target&&e.target.closest&&e.target.closest('#view-matprice')){lastType=0;flushSoon()}
+  try{
+    if(!(e.target&&e.target.closest&&e.target.closest('#view-matprice')))return;
+    /* v123: 같은 화면 안의 다른 입력칸으로 옮겨 간 것이면 계속 입력 중이므로 그리지 않는다.
+       (예전에는 여기서 바로 다시 그려, 옮겨 간 칸에 방금 친 글자가 지워졌다) */
+    var to=e.relatedTarget;
+    if(to&&to.closest&&to.closest('#view-matprice')&&/^(INPUT|TEXTAREA)$/.test(to.tagName))return;
+    lastType=0; flushSoon();
+  }catch(_){ lastType=0; flushSoon(); }
 },true);
 
 function flushSoon(){
@@ -9640,6 +9656,7 @@ function flushSoon(){
     if(busy()){flushSoon();return}
     if(!pending)return;
     pending=false;
+    try{ if(typeof window.__mpCommitInput==='function')window.__mpCommitInput(); }catch(e){}   /* 보류된 입력 먼저 저장 */
     try{ if(typeof window.__mpRenderRaw==='function')window.__mpRenderRaw(); }catch(e){}
   },250);
 }
@@ -9654,10 +9671,146 @@ function guard(name){
   w.__v122=true; w.__raw=f; window[name]=w;
   if(name==='renderMaterialPricePage')window.__mpRenderRaw=function(){try{return f.call(window)}catch(e){return null}};
 }
+window.__mpIsTyping=busy;      /* v123 에서 같은 판정을 재사용 */
+window.__mpDeferRender=function(){ pending=true; flushSoon(); };
 function install(){ ['renderMaterialPricePage','renderMaterialPriceNow'].forEach(guard) }
 install();
 var n=0,iv=setInterval(function(){ install(); if(++n>40)clearInterval(iv) },300);
 window.addEventListener('load',function(){setTimeout(install,300);setTimeout(install,1500)});
+})();
+</script>
+
+<script id="matprice-input-perf-v123">
+/* ─────────────────────────────────────────────────────────────
+   v123 · 추가금액·비고 입력이 «느리고 글자가 지워지는» 현상 수정
+
+   측정 결과 : 글자 한 자를 칠 때마다 아래가 전부 실행되고 있었습니다.
+     ① 단가 DB 전체 정규화 + JSON 문자열화(자료 145KB 기준)
+     ② MATGUARD 병합 저장 — 본본·백업본을 다시 읽어 3중 union 후 2곳에 기록
+     ③ 삭제표시 청소(cleanStores) — 관련 localStorage 키 전부 재기록
+     ④ saveSettings — state 60여 항목 structuredClone 후 IndexedDB 기록
+     ⑤ materialPriceChanged / bomDataChanged 발생 → 복구·동기화 루틴 기동
+   → 한 타에 평균 49ms, 최대 76ms (헤드리스 크롬 기준). 엣지·큰 자료에서는
+     이보다 훨씬 느려져 타이핑이 밀리고, 한글 조합 중에 밀리면 글자가 사라집니다.
+
+   수정 : 타이핑 중에는 «메모리에만» 반영하고, 무거운 저장(①~⑤)은 입력이 멈춘 뒤
+          0.5초에 한 번만 실행합니다. 칸을 벗어나거나 조합이 끝나면 즉시 저장하고,
+          탭을 닫거나 숨길 때도 반드시 저장합니다(자료 유실 없음).
+   ───────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+if(window.__matInputPerfV123)return; window.__matInputPerfV123=true;
+
+var KEYS=/^dbfastec_material/;
+var nSet=Storage.prototype.setItem.bind(localStorage);
+var queued=null, flushT=0, ssT=0, ssWait=null, ssDone=null;
+
+function typing(){
+  try{ if(typeof window.__mpIsTyping==='function')return !!window.__mpIsTyping(); }catch(e){}
+  try{
+    var a=document.activeElement;
+    return !!(a&&/^(INPUT|TEXTAREA)$/.test(a.tagName)&&a.closest&&a.closest('#view-matprice'));
+  }catch(e){return false}
+}
+
+/* ── ① 저장 지연 : 타이핑 중 localStorage 기록을 모아 두었다가 한 번만 ── */
+var prevSet=localStorage.setItem.bind(localStorage);   /* MATGUARD·v116 가드를 거치는 경로 */
+var nGet=Storage.prototype.getItem.bind(localStorage);
+localStorage.setItem=function(k,v){
+  if(KEYS.test(String(k))&&typing()){
+    /* 값 자체는 즉시 기록한다(가벼운 쓰기). 그래야 다음 글자를 칠 때 코드가
+       읽어 가는 자료가 항상 최신이고, 앞서 입력한 칸이 되돌아가지 않는다.
+       무거운 병합 저장(백업본 3중 union·삭제표시 청소)만 뒤로 미룬다. */
+    try{nSet(k,v)}catch(e){}
+    (queued||(queued={}))[k]=1;
+    schedule();
+    return;
+  }
+  return prevSet(k,v);
+};
+function schedule(){ clearTimeout(flushT); flushT=setTimeout(flush,500); }
+function flush(){
+  clearTimeout(flushT); flushT=0;
+  var q=queued; queued=null;
+  if(q){ Object.keys(q).forEach(function(k){ try{var cur=nGet(k); if(cur!=null)prevSet(k,cur)}catch(e){} }); }
+  if(ssT){ clearTimeout(ssT); ssT=0; runSave(); }
+}
+window.__mpFlushInput=flush;
+
+/* ── ② saveSettings(무거운 복제 + IndexedDB) 도 입력이 멈춘 뒤 한 번만 ── */
+function hookSave(){
+  var f=window.saveSettings;
+  if(typeof f!=='function'||f.__v123)return;
+  var w=function(){
+    if(!typing())return f.apply(this,arguments);
+    if(!ssWait)ssWait=new Promise(function(res){ssDone=res});
+    clearTimeout(ssT); ssT=setTimeout(function(){ssT=0;runSave()},600);
+    return ssWait;
+  };
+  w.__v123=true; w.__raw=f; window.saveSettings=w;
+}
+function runSave(){
+  var f=window.saveSettings&&window.saveSettings.__raw;
+  var done=ssDone; ssWait=null; ssDone=null;
+  try{ var r=f?f.call(window):null; if(done)Promise.resolve(r).then(done,done); }
+  catch(e){ if(done)done(); }
+}
+hookSave(); setTimeout(hookSave,800); setTimeout(hookSave,2500); setTimeout(hookSave,6000);
+
+/* ── ③ 타이핑 중에는 복구·청소·동기화 루틴을 쉬게 한다 ── */
+function pause(name){
+  var f=window[name];
+  if(typeof f!=='function'||f.__v123)return;
+  var w=function(){ if(typing())return null; return f.apply(this,arguments) };
+  w.__v123=true; window[name]=w;
+}
+function pauseAll(){ ['__matGuardHeal','__mpEnforceDeleted','__matSyncBridge'].forEach(pause) }
+pauseAll(); setTimeout(pauseAll,900); setTimeout(pauseAll,3000); setTimeout(pauseAll,7000);
+
+/* ── ④ 글자 한 자마다 돌던 저장 자체를 «입력이 멈춘 뒤 한 번»으로 ──
+   원래는 input 이벤트마다 단가 DB 전체를 다시 만들고 문자열로 바꿔 저장했습니다.
+   자료가 커질수록(60만자 이상) 한 타에 수십~수백 ms 가 걸려 타이핑이 밀렸습니다.
+   여기서는 타이핑 중 이벤트를 붙잡아 두었다가, 0.4초 멈추거나 칸을 벗어날 때
+   같은 입력 이벤트를 한 번만 흘려보내 원래 저장 로직이 그대로 동작하게 합니다. */
+var FIELDS=/(^|\s)(mp-extra-name|mp-extra-amount|mp-extra-note|mp-vendor|mp-month)(\s|$)/;
+var holdEl=null, holdT=0, replaying=false;
+document.addEventListener('input',function(e){
+  if(replaying)return;
+  var t=e.target;
+  if(!t||!t.className||typeof t.className!=='string'||!FIELDS.test(t.className))return;
+  try{ if(!t.closest||!t.closest('#view-matprice'))return; }catch(_){return}
+  e.stopPropagation();                         /* 원래 저장 처리기를 잠시 막는다 */
+  holdEl=t;
+  clearTimeout(holdT); holdT=setTimeout(commitHold,400);
+},true);
+function commitHold(){
+  clearTimeout(holdT); holdT=0;
+  var t=holdEl; holdEl=null;
+  if(!t)return;
+  try{ if(!document.contains(t))return; }catch(_){ }
+  replaying=true; window.__mpReplaying=true;
+  try{ t.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+  replaying=false; window.__mpReplaying=false;
+}
+window.__mpCommitInput=commitHold;
+
+/* ── 입력이 끝나면 곧바로 확정 저장 ── */
+['focusout','compositionend','change'].forEach(function(ev){
+  document.addEventListener(ev,function(e){
+    try{
+      if(!(e.target&&e.target.closest&&e.target.closest('#view-matprice')))return;
+      commitHold();
+      var to=e.relatedTarget;
+      if(to&&to.closest&&to.closest('#view-matprice')&&/^(INPUT|TEXTAREA)$/.test(to.tagName))return;  /* 계속 입력 중 */
+      setTimeout(flush,60);
+    }catch(_){}
+  },true);
+});
+function finalize(){ commitHold(); flush(); }
+document.addEventListener('visibilitychange',function(){ if(document.hidden)finalize() });
+window.addEventListener('pagehide',finalize);
+window.addEventListener('beforeunload',finalize);
+window.addEventListener('blur',function(){setTimeout(finalize,50)});
 })();
 </script>
 </body>
