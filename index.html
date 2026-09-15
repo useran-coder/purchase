@@ -1082,7 +1082,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-15';
-const VERNO='v123 · 단가화면 입력 지연 해소';
+const VERNO='v124 · 가공 추가 금액 동기화 정리';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -6264,14 +6264,26 @@ function union(base,add){
     sx.forEach(function(r){
       if(!r||typeof r!=='object')return;
       var id=txt(r._id),nm=txt(r.name);
-      if(id&&(od[id]||sd[id]))return;                         /* 삭제한 항목은 되살리지 않음 */
+      /* v124 : 삭제표시가 있어도, 그 뒤에 수정된 항목이면 되살립니다 */
+      var delTs=Math.max(Number(od[id]||0),Number(sd[id]||0));
+      if(id&&delTs){
+        var newest=0;
+        ['name','amount','note'].forEach(function(f){ newest=Math.max(newest,Number(su[id+'|'+f]||0),Number(ou[id+'|'+f]||0)); });
+        if(newest<=delTs)return;
+        delete od[id];
+      }
       var ex=(id&&out.egiExtras.filter(function(x){return txt(x._id)===id})[0])||null;
-      if(!ex&&!id&&nm)ex=out.egiExtras.filter(function(x){return txt(x.name)===nm})[0]||null;
+      if(!ex&&nm)ex=out.egiExtras.filter(function(x){return txt(x.name)===nm})[0]||null;   /* 이름으로도 대조 → 중복 방지 */
       if(!ex){out.egiExtras.push(cp(r));return}
       ['name','amount','note'].forEach(function(f){
         var key=(id||txt(ex._id))+'|'+f;
         var s1=Number(su[key]||0),o1=Number(ou[key]||0);
-        if(s1>=o1||(txt(ex[f])===''&&txt(r[f])!==''))ex[f]=r[f];
+        var sv=txt(r[f]), ov=txt(ex[f]);
+        if(sv===ov)return;
+        /* v124 : 값이 들어있는 칸을 «빈 값»으로 지우려면, 그쪽이 분명히 더 최근이어야 합니다
+           (중복 항목이 합쳐질 때 입력한 금액이 지워지던 문제) */
+        if(sv===''){ if(s1>o1)ex[f]=r[f]; return; }
+        if(s1>=o1||ov==='')ex[f]=r[f];
       });
     });
   })();
@@ -6671,12 +6683,55 @@ function toast(msg){
 }
 
 function readLocal(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
+/* v124 : 저장소에 남아 있는 «오래된 삭제표시»를 정리합니다.
+   그 항목을 삭제한 뒤에 다시 수정한 기록이 있으면 삭제표시를 지워, 입력한 값이 사라지지 않게 합니다. */
+function extrasPurgeStaleTombstones(){
+  try{
+    var raw=localStorage.getItem(MAT_KEY); if(!raw)return;
+    var db=JSON.parse(raw); if(!db||typeof db!=='object')return;
+    var del=db._extraDeleted||{}, upd=db._extraUpdated||{}, ex=Array.isArray(db.egiExtras)?db.egiExtras:[], hit=false;
+    Object.keys(del).forEach(function(id){
+      var t=Number(del[id]||0), newest=0;
+      ['name','amount','note'].forEach(function(f){ newest=Math.max(newest,Number(upd[id+'|'+f]||0)); });
+      var alive=ex.some(function(r){ return r&&String(r._id||'')===id; });
+      if(alive||newest>t){ delete del[id]; hit=true; }
+    });
+    if(hit){ db._extraDeleted=del; localStorage.setItem(MAT_KEY,JSON.stringify(db)); }
+  }catch(e){}
+}
+try{ extrasPurgeStaleTombstones(); }catch(e){}
 function blankDb(){return{years:{},marketPrices:{},updated:'',_cellUpdated:{},_rowDeleted:{},_extraUpdated:{},_extraDeleted:{},_scrapManual:{},_scrapManualVendor:{},_scrapAutoDeleted:{},egiExtras:[]}}
+/* v124 : ▾가공 추가 금액 정리 —
+   · 같은 항목명이 두 번 들어오면 하나로 합칩니다(값이 있는 쪽 우선)
+   · 화면에 남아 있는 항목의 «삭제표시»는 지웁니다
+     (예전 매출분석 도구가 남긴 삭제표시 때문에 입력한 항목이 사라지던 문제) */
+function extrasTidy(db){
+  try{
+    if(!Array.isArray(db.egiExtras))db.egiExtras=[];
+    if(!po(db._extraDeleted))db._extraDeleted={};
+    var seen={},out=[];
+    db.egiExtras.forEach(function(r){
+      if(!po(r))return;
+      var nm=String(r.name||'').trim(), key=nm||String(r._id||'');
+      if(!key){ out.push(r); return; }
+      var prev=seen[key];
+      if(prev===undefined){ seen[key]=out.length; out.push(r); return; }
+      var a=out[prev];
+      ['name','amount','note'].forEach(function(f){
+        if(String(a[f]==null?'':a[f]).trim()===''&&String(r[f]==null?'':r[f]).trim()!=='')a[f]=r[f];
+      });
+    });
+    db.egiExtras=out;
+    db.egiExtras.forEach(function(r){ if(r&&r._id&&db._extraDeleted[r._id])delete db._extraDeleted[r._id]; });
+  }catch(e){}
+  return db;
+}
 function normalize(db){
   if(!po(db))db=blankDb();
   ['years','marketPrices','_cellUpdated','_rowDeleted','_extraUpdated','_extraDeleted','_scrapManual','_scrapManualVendor','_scrapAutoDeleted'].forEach(function(k){if(!po(db[k]))db[k]={}});
   if(!Array.isArray(db.egiExtras))db.egiExtras=[];
   db.egiExtras.forEach(function(r,i){if(po(r)&&!r._id)r._id='ex_'+hash(String(r.name||'')+'|'+i)});
+  extrasTidy(db);
   Object.keys(db.years).forEach(function(y){
     var gy=db.years[y]; if(!po(gy)){db.years[y]={};return}
     Object.keys(gy).forEach(function(k){
@@ -6716,6 +6771,7 @@ function getDb(){
 }
 function putDb(db,stampSource){
   db=normalize(db);
+  extrasTidy(db);            /* v124 : 중복·잘못된 삭제표시 정리 */
   db.updated=nowText();
   if(stampSource){db._sourceApp=IS_MASTER?'sales_analyzer_v200':'cost_v200';db._sourceUpdatedAt=Date.now();db._masterSource='purchase_erp'}
   try{localStorage.setItem(MAT_KEY,JSON.stringify(db))}catch(e){}
@@ -7433,6 +7489,18 @@ window.deleteMaterialVendorV56=window.deleteMaterialVendorV97=function(k,ri){
 window.addMaterialExtraV97=function(){
   if(!IS_EDIT){toast('받기 전용 화면입니다');return}
   var db=getDb(),r={_id:'ex_'+hash(Date.now()+'|'+Math.random()),name:'',amount:'',note:''};
+  /* v124 : 같은 항목명이 이미 있으면 새로 만들지 않고 그 줄로 이동합니다 */
+  var _nm=String(r.name||'').trim();
+  if(_nm){
+    var _dup=(db.egiExtras||[]).filter(function(x){return po(x)&&String(x.name||'').trim()===_nm})[0];
+    if(_dup){
+      if(_dup._id&&db._extraDeleted)delete db._extraDeleted[_dup._id];
+      putDb(db,true);window.renderMaterialPricePage();
+      setTimeout(function(){var a=document.querySelector('.mp-extra-amount[data-i="'+db.egiExtras.indexOf(_dup)+'"]');if(a)a.focus();},30);
+      return;
+    }
+  }
+  if(r._id&&db._extraDeleted)delete db._extraDeleted[r._id];
   db.egiExtras.push(r);db._extraUpdated[r._id+'|name']=Date.now();putDb(db,true);window.renderMaterialPricePage();
 };
 window.deleteMaterialExtraV97=function(i){
