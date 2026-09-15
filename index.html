@@ -1081,8 +1081,8 @@
    ============================================================ */
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
-const BUILD='2026-08-26';
-const VERNO='v110 · 제품단가 검색 → 이전단가 이력';
+const BUILD='2026-09-15';
+const VERNO='v120 · 원자재단가 저장(업체명·가공추가금액) 수정';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -6231,9 +6231,16 @@ function union(base,add){
           var a=txt(ex.m[mi]),b=txt(r.m[mi]);
           if(b===''||a===b)continue;
           if(a===''){ex.m[mi]=r.m[mi];continue}
-          if(stampOf(src,y,k,id,'m'+mi)>stampOf(out,y,k,txt(ex._id),'m'+mi))ex.m[mi]=r.m[mi];
+          /* v120: 같은 밀리초 저장에서도 최신본이 이기도록 >= 비교 (빠르게 타이핑하면 한 글자만 저장되던 원인) */
+          if(stampOf(src,y,k,id,'m'+mi)>=stampOf(out,y,k,txt(ex._id),'m'+mi))ex.m[mi]=r.m[mi];
         }
-        if(!txt(ex.vendor)&&vn)ex.vendor=vn;
+        /* v120: 업체명도 수정시각이 더 최신이면 덮어쓴다.
+           예전에는 '비어 있을 때만' 채워서, 한 번 저장된 업체명은 아무리 고쳐도
+           병합에서 되돌려졌다(첫 글자만 저장되는 현상의 원인). */
+        if(vn){
+          var _sv=stampOf(src,y,k,id,'vendor'),_ov=stampOf(out,y,k,txt(ex._id),'vendor');
+          if(!txt(ex.vendor)||_sv>=_ov)ex.vendor=vn;
+        }
       });
     });
   });
@@ -6248,7 +6255,26 @@ function union(base,add){
       if(Number(src[f][q]||0)>Number(out[f][q]||0)||out[f][q]==null)out[f][q]=src[f][q];
     });
   });
-  if(!out.egiExtras.length&&src.egiExtras.length)out.egiExtras=cp(src.egiExtras);
+  /* v120: 가공 추가 금액은 '목록이 비어 있을 때 통째로 복사'가 아니라 항목·칸 단위로 병합한다.
+     예전에는 기본 3항목이 이미 있으면 사용자가 입력한 항목명·금액·비고가 전부 버려졌다. */
+  (function(){
+    var sx=Array.isArray(src.egiExtras)?src.egiExtras:[];
+    if(!Array.isArray(out.egiExtras))out.egiExtras=[];
+    var su=src._extraUpdated||{},ou=out._extraUpdated||{},sd=src._extraDeleted||{},od=out._extraDeleted||{};
+    sx.forEach(function(r){
+      if(!r||typeof r!=='object')return;
+      var id=txt(r._id),nm=txt(r.name);
+      if(id&&(od[id]||sd[id]))return;                         /* 삭제한 항목은 되살리지 않음 */
+      var ex=(id&&out.egiExtras.filter(function(x){return txt(x._id)===id})[0])||null;
+      if(!ex&&!id&&nm)ex=out.egiExtras.filter(function(x){return txt(x.name)===nm})[0]||null;
+      if(!ex){out.egiExtras.push(cp(r));return}
+      ['name','amount','note'].forEach(function(f){
+        var key=(id||txt(ex._id))+'|'+f;
+        var s1=Number(su[key]||0),o1=Number(ou[key]||0);
+        if(s1>=o1||(txt(ex[f])===''&&txt(r[f])!==''))ex[f]=r[f];
+      });
+    });
+  })();
   /* '최종 업데이트' 시각은 병합에서 지워지지 않도록 최신 값을 유지 */
   if(txt(src.updated)&&(!txt(out.updated)||String(src.updated)>String(out.updated)))out.updated=src.updated;
   if(Number(src._sourceUpdatedAt||0)>Number(out._sourceUpdatedAt||0)){out._sourceUpdatedAt=src._sourceUpdatedAt;if(src._sourceApp)out._sourceApp=src._sourceApp;if(src._masterSource)out._masterSource=src._masterSource;}
@@ -6447,7 +6473,11 @@ function fixMerge(){
                 if(del&&del+25>=up){ex.m[i]='';return}
                 if(txt(v)!==''&&txt(ex.m[i])==='')ex.m[i]=v;
               });
-              if(!txt(ex.vendor)&&vn)ex.vendor=vn;
+              if(vn){                                   /* v120: 업체명도 최신 수정본을 반영 */
+                var _sv=Number(((src._cellUpdated||{})[y+'|'+k+'|'+(id||txt(ex._id))+'|vendor'])||0);
+                var _ov=Number(((out._cellUpdated||{})[y+'|'+k+'|'+txt(ex._id)+'|vendor'])||0);
+                if(!txt(ex.vendor)||_sv>=_ov)ex.vendor=vn;
+              }
             });
           });
         });
@@ -8188,12 +8218,51 @@ function auHideGate(){ var g=document.getElementById('auGate'); if(g)g.remove();
 async function auVerCheck(){
   var el=document.getElementById('auVerWarn'); if(!el)return;
   var u=auUrl(); if(!u)return;
-  var ver='';
-  try{ var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'auVer'})});
-    var d=JSON.parse(await r.text()); if(d&&d.ver)ver=d.ver; }catch(_e){ return; }
-  if(ver){ el.style.display='none'; return; }
+  /* v119 : 「다시 보지 않기」를 누르면 이 안내를 영구히 띄우지 않습니다 */
+  try{ if(localStorage.getItem('au_warn_off_v701')==='1'){ el.style.display='none'; return; } }catch(_o){}
+  /* v119 : ① 접속키를 함께 보냅니다(서버가 키를 먼저 검사하면 키 없이는 항상 실패했습니다)
+            ② 키 없이도 한 번 더 시도합니다
+            ③ 서버가 «모르는 요청»이라고 분명히 답할 때만 구버전으로 판정합니다
+            (예전에는 접속키 오류·서버 바쁨에도 «예전 버전» 경고가 떴습니다) */
+  var _probe=async function(withKey){
+    var ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var tm=ctl?setTimeout(function(){try{ctl.abort();}catch(_){}},12000):null;
+    var pay={action:'auVer'};
+    if(withKey){ try{ pay.key=AU_KEY||((state.gsync&&state.gsync.key)||''); }catch(_k){} }
+    var r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pay),signal:ctl?ctl.signal:undefined});
+    if(tm)clearTimeout(tm);
+    var tx=await r.text(), dd=null; try{ dd=JSON.parse(tx); }catch(_p){ dd=null; }
+    return {st:r.status,raw:tx,d:dd};
+  };
+  var ver='', serr='', raw='', bad=false;
+  try{
+    var R1=await _probe(true); raw=R1.raw;
+    var d=R1.d;
+    if(!(d&&d.ver)){
+      try{ var R2=await _probe(false); if(R2.d&&R2.d.ver){ d=R2.d; raw=R2.raw; } else if(!d){ d=R2.d; raw=R2.raw; } }catch(_e2){}
+    }
+    if(d&&d.ver)ver=d.ver;
+    else if(!d)bad=true;                                   /* JSON 이 아님 — 연결·권한 문제 */
+    else serr=String((d&&(d.error||d.message))||'');
+  }catch(_e){ el.style.display='none'; return; }            /* 연결 실패는 조용히 넘어갑니다 */
+  var OKKEY='au_ver_ok_v701', seen='';
+  try{ seen=localStorage.getItem(OKKEY)||''; }catch(_s){}
+  if(ver){ try{ localStorage.setItem(OKKEY,String(ver)); }catch(_s2){} el.style.display='none'; return; }
+  var _reallyOld = /알 수 없는 요청|알수없는 요청|unknown (action|request)|not supported|지원하지 않/i.test(serr);
+  if(bad||!_reallyOld||seen){
+    el.style.display='none';
+    try{ console.info('[auVer] 버전 확인 생략 — 응답:',(serr||raw||'').slice(0,120)); }catch(_c){}
+    return;
+  }
   el.style.display='';
-  el.textContent='⚠ 서버의 auth 코드가 예전 버전입니다.\n계정 신청·승인·비밀번호 변경이 동작하지 않습니다.\n\n관리자 조치 — 앱스스크립트에서\n  ① auth 파일 내용을 새 「2_로그인」 코드로 전부 교체\n  ② 저장 (Ctrl+S)\n  ③ 배포 → 배포 관리 → 연필 → 버전: 새 버전 → 배포';
+  el.style.whiteSpace='pre-line';
+  el.innerHTML='⚠ 서버의 auth 코드가 예전 버전입니다.\n계정 신청·승인·비밀번호 변경이 동작하지 않습니다. <b>로그인 자체는 될 수 있습니다.</b>\n\n관리자 조치 — 앱스스크립트에서\n  ① auth 파일 내용을 새 「2_로그인」 코드로 전부 교체\n  ② 저장 (Ctrl+S)\n  ③ 배포 → 배포 관리 → 연필 → <b>버전: 새 버전</b> → 배포'+
+    '<div style="margin-top:8px"><button type="button" id="auVerRetry" style="border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:8px;font-size:11.5px;font-weight:800;padding:4px 10px;font-family:inherit;cursor:pointer">🔄 다시 확인</button>'+
+    ' <button type="button" id="auVerOff" style="border:1px solid #e2e8f0;background:#fff;color:#64748b;border-radius:8px;font-size:11.5px;font-weight:800;padding:4px 10px;font-family:inherit;cursor:pointer">✕ 다시 보지 않기</button></div>';
+  var rb=document.getElementById('auVerRetry');
+  if(rb)rb.addEventListener('click',function(){ el.style.display='none'; auVerCheck(); });
+  var ob=document.getElementById('auVerOff');
+  if(ob)ob.addEventListener('click',function(){ try{ localStorage.setItem('au_warn_off_v701','1'); }catch(_e){} el.style.display='none'; });
 }
 
 /* ── 서버 연결 진단 ── */
@@ -9030,11 +9099,27 @@ function scrub(db){
       var rows=Array.isArray(gy[k])?gy[k]:[];
       rows.forEach(function(r){
         if(!po(r)||!Array.isArray(r.m))return;
+        var rid=txt(r._id);
         for(var mi=0;mi<12;mi++){
           var cur=txt(r.m[mi]); if(cur==='')continue;
           var zero=n0(cur)<=0;                                   /* 0 이하 = 빈칸 */
-          var del =T[tkey(y,k,r.vendor,mi)]!=null;               /* 사용자가 지운 칸 */
-          if(!zero&&!del)continue;
+          var tk=tkey(y,k,r.vendor,mi),tt=T[tk];
+          /* v120: 삭제표시보다 나중에 값을 입력했으면 그 입력이 이긴다(삭제표시 자동 해제).
+             예전에는 지웠던 칸에 새로 입력해도 10초 주기 청소가 다시 지워버렸다. */
+          if(tt!=null&&rid){
+            var up=Number((db._cellUpdated||{})[txt(y)+'|'+txt(k)+'|'+rid+'|m'+mi]||0);
+            if(up>Number(tt)+50){ delete T[tk]; saveTombs(T); tt=null; }
+          }
+          var del=(tt!=null);                                    /* 사용자가 지운 칸 */
+          if(!zero&&!del){
+            /* v120: 값이 살아 있는 칸에 남아 있는 옛 삭제표시를 걷어낸다.
+               (지우고 곧바로 다시 입력하면 MATGUARD 백업본의 삭제표시가 되살아나 값을 지워버렸다) */
+            if(rid){
+              var ck2=txt(y)+'|'+txt(k)+'|'+rid+'|m'+mi;
+              if(db._cellDeleted[ck2]!=null){delete db._cellDeleted[ck2];changed=true}
+            }
+            continue;
+          }
           r.m[mi]='';
           if(Array.isArray(r.w))r.w[mi]=0;
           var id=txt(r._id);
@@ -9049,6 +9134,39 @@ function scrub(db){
     });
   });
   return changed;
+}
+
+/* ── 저장 직전 : 값이 들어 있는 칸의 옛 삭제표시를 모든 저장소에서 제거 ──
+   MATGUARD 병합은 _cellDeleted 를 '최댓값'으로 합치기 때문에, 들어오는 저장본에서만
+   지워서는 백업본에 남은 삭제표시가 되살아나 방금 입력한 값을 지워버린다. */
+function cleanStores(inc){
+  if(!po(inc)||!po(inc.years))return;
+  var T=tombs(),live={},n=0;
+  Object.keys(inc.years).forEach(function(y){
+    var gy=inc.years[y]; if(!po(gy))return;
+    Object.keys(gy).forEach(function(k){
+      (Array.isArray(gy[k])?gy[k]:[]).forEach(function(r){
+        if(!po(r)||!Array.isArray(r.m))return;
+        var id=txt(r._id); if(!id)return;
+        for(var mi=0;mi<12;mi++){
+          if(n0(r.m[mi])<=0)continue;
+          if(T[tkey(y,k,r.vendor,mi)]!=null)continue;     /* 정말로 지운 칸은 그대로 둔다 */
+          live[txt(y)+'|'+txt(k)+'|'+id+'|m'+mi]=1; n++;
+        }
+      });
+    });
+  });
+  if(!n)return;
+  if(po(inc._cellDeleted))Object.keys(live).forEach(function(ck){delete inc._cellDeleted[ck]});
+  allKeys().forEach(function(key){
+    var db=jparse(nGet(key)); if(!po(db)||!po(db._cellDeleted))return;
+    var ch=false;
+    Object.keys(live).forEach(function(ck){ if(db._cellDeleted[ck]!=null){delete db._cellDeleted[ck];ch=true} });
+    if(ch){try{nSet(key,JSON.stringify(db))}catch(e){}}
+  });
+  ['state','MATERIAL_DB'].forEach(function(){});
+  try{ [ (typeof state!=='undefined'&&state)?state.materialDB:null, window.MATERIAL_DB, window.__dbfMaterialMemoryDB ]
+    .forEach(function(d){ if(po(d)&&po(d._cellDeleted))Object.keys(live).forEach(function(ck){delete d._cellDeleted[ck]}) }); }catch(e){}
 }
 
 /* ── 네 저장소 전부 청소 ── */
@@ -9122,7 +9240,7 @@ try{
   localStorage.setItem=function(k,v){
     if(isMatKey(k)){
       var db=jparse(v);
-      if(po(db)){scrub(db);v=JSON.stringify(db)}
+      if(po(db)){scrub(db);cleanStores(db);v=JSON.stringify(db)}
     }
     var r=prevSet(k,v);
     if(k===MAT_KEY){clearTimeout(window.__mpG116T);window.__mpG116T=setTimeout(function(){enforce(false)},300)}
