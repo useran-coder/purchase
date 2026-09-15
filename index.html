@@ -1082,7 +1082,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-15';
-const VERNO='v120 · 원자재단가 저장(업체명·가공추가금액) 수정';
+const VERNO='v121 · 원자재단가 다른PC 동기화 반영';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -6411,7 +6411,11 @@ async function heal(loud){
     merged=honorDeletions(applyCellTombstones(applyTombstones(merged)),ls,null);
     var best=score(merged);
     var changed=false;
-    if(best>score(ls)){var s=JSON.stringify(merged);writing=true;try{nSet(KEY,s);nSet(BK,s)}finally{writing=false}changed=true}
+    /* v121: 예전에는 '채워진 칸 수가 늘어날 때'만 저장해서, 다른 컴퓨터에서 값을 '수정'만 한 경우
+       (칸 수가 그대로) 복구 루틴이 아무것도 쓰지 않아 로컬 저장소에 영영 반영되지 않았습니다.
+       내용(연도별 표·가공 추가 금액·시장단가)이 실제로 다르면 저장하도록 넓힙니다. */
+    function _dsig(d){try{return JSON.stringify({y:(d&&d.years)||{},e:(d&&d.egiExtras)||[],m:(d&&d.marketPrices)||{}})}catch(_){return ''}}
+    if(best>score(ls)||_dsig(merged)!==_dsig(ls)){var s=JSON.stringify(merged);writing=true;try{nSet(KEY,s);nSet(BK,s)}finally{writing=false}changed=true}
     if(!mm||best>score(mm)){pushToMemory(merged)}
     if(!ib||best>score(ib)){try{await idbWrite(merged)}catch(_){}}
     if(changed){rerender();console.log('[MATGUARD] 원자재 단가 복원: localStorage '+score(ls)+' · IndexedDB '+score(ib||{})+' · 메모리 '+score(mm||{})+' → '+best+'칸')}
@@ -9204,8 +9208,12 @@ var rT=0;
 function redraw(){
   clearTimeout(rT);
   rT=setTimeout(function(){
+    /* v121: 입력 중에는 다시 그리지 않는다(타이핑이 끊기는 것 방지) */
+    try{var a=document.activeElement;
+      if(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.closest&&a.closest('#view-matprice')){redraw();return}
+    }catch(e){}
     try{if(typeof window.renderMaterialPricePage==='function')window.renderMaterialPricePage()}catch(e){}
-  },120);
+  },250);
 }
 
 /* ── 입력 감지 : 빈칸/0 입력은 삭제표시, 값 입력은 삭제표시 해제 ── */
@@ -9468,6 +9476,91 @@ var tries=0, iv=setInterval(function(){ install(); if(++tries>40)clearInterval(i
 window.addEventListener('load',function(){ setTimeout(install,200); setTimeout(install,1500); });
 
 window.__navDebug=function(){return {cur:curId,steps:ORDER.map(function(i){return (STACK[i]||{}).label}),count:ORDER.length}};
+})();
+</script>
+
+<script id="matprice-sync-bridge-v121">
+/* ─────────────────────────────────────────────────────────────
+   v121 · 원자재 월별 매입단가 «다른 컴퓨터 변경이 안 보이는» 문제 수정
+
+   원인 : 구글시트 동기화(gsLoad/gsSave)는 받아온 자료를
+            ① state.materialDB (메모리)  ② IndexedDB 의 settings
+          두 곳에만 넣습니다. 그런데 원자재 단가 화면·매출분석·제조원가가
+          실제로 읽는 곳은 ③ localStorage(dbfastec_material_price_history_v1) 이고,
+          동기화는 이 ③을 건드리지 않습니다. 게다가 화면의 getDb() 는
+          "연도 수가 같거나 많으면 localStorage 를 쓴다"라서 항상 옛 로컬본을 봅니다.
+          → 다른 사람이 입력한 강종 단가·가공 추가 금액이 내 화면에 나타나지 않았습니다.
+          (20초마다 도는 복구 루틴이 우연히 메모리를 합쳐 올릴 때만 뒤늦게 보였습니다)
+
+   수정 : 동기화로 메모리가 바뀌면 곧바로 localStorage 로 옮겨 적고(병합 저장),
+          화면을 다시 그립니다. 반대로 내가 입력한 값은 기존대로 저장·전송됩니다.
+   ───────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+if(window.__matSyncBridgeV121)return; window.__matSyncBridgeV121=true;
+
+var MAT_KEY='dbfastec_material_price_history_v1';
+function po(v){return v&&typeof v==='object'&&!Array.isArray(v)}
+function ST(){try{return state}catch(e){return null}}
+function sig(d){try{return JSON.stringify({y:(d&&d.years)||{},e:(d&&d.egiExtras)||[],m:(d&&d.marketPrices)||{}})}catch(e){return ''}}
+function lsDb(){try{return JSON.parse(localStorage.getItem(MAT_KEY)||'null')}catch(e){return null}}
+/* 입력 중에는 건드리지 않는다 — 화면을 다시 그리면 타이핑이 끊긴다 */
+function typing(){
+  try{var a=document.activeElement;
+    return !!(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.closest&&a.closest('#view-matprice'));
+  }catch(e){return false}
+}
+
+var lastPushed='';
+function bridge(force){
+  var st=ST(); if(!st||!po(st.materialDB)||!po(st.materialDB.years))return false;
+  var mem=st.materialDB, ls=lsDb();
+  var ms=sig(mem); if(!ms||ms==='{"y":{},"e":[],"m":{}}')return false;
+  if(ls&&ms===sig(ls)){lastPushed=ms;return false}
+  if(ms===lastPushed&&!force)return false;          /* 같은 내용을 반복해서 밀지 않음 */
+  lastPushed=ms;
+  try{
+    /* MATGUARD 가 가로채 병합 저장하므로(타임스탬프 기준) 로컬 편집분이 사라지지 않습니다 */
+    localStorage.setItem(MAT_KEY,JSON.stringify(mem));
+  }catch(e){return false}
+  try{window.MATERIAL_DB=st.materialDB}catch(e){}
+  try{window.dispatchEvent(new CustomEvent('materialPriceChanged'))}catch(e){}
+  redraw();          /* 저장은 즉시, 화면 다시 그리기만 입력이 끝난 뒤에 */
+  return true;
+}
+window.__matSyncBridge=function(){return bridge(true)};
+
+var rT=0;
+function redraw(){
+  clearTimeout(rT);
+  rT=setTimeout(function(){
+    if(typing()){redraw();return}                   /* 입력 중이면 끝날 때까지 미룬다 */
+    try{ if((ST()||{}).act==='matprice'&&typeof window.renderMaterialPricePage==='function')window.renderMaterialPricePage(); }catch(e){}
+  },400);
+}
+
+/* 동기화 함수가 끝나는 즉시 반영 */
+function hook(name){
+  var f=window[name];
+  if(typeof f!=='function'||f.__v121)return;
+  var w=function(){
+    var r=f.apply(this,arguments);
+    if(r&&typeof r.then==='function'){
+      return r.then(function(v){ setTimeout(function(){bridge(true)},60); setTimeout(function(){bridge(true)},900); return v; },
+                    function(e){ setTimeout(function(){bridge(true)},60); throw e; });
+    }
+    setTimeout(function(){bridge(true)},60);
+    return r;
+  };
+  w.__v121=true; window[name]=w;
+}
+function install(){['gsLoad','gsSave','gsApplyDelta','restoreFull'].forEach(hook)}
+install(); setTimeout(install,700); setTimeout(install,2000); setTimeout(install,5000);
+
+/* 어떤 경로로 메모리가 바뀌더라도 놓치지 않도록 짧은 주기로 대조 */
+setInterval(function(){bridge(false)},2500);
+window.addEventListener('focus',function(){setTimeout(function(){bridge(false)},200)});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(function(){bridge(false)},200)});
 })();
 </script>
 </body>
