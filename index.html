@@ -1082,7 +1082,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-15';
-const VERNO='v121 · 원자재단가 다른PC 동기화 반영';
+const VERNO='v122 · 입력 중 재렌더 차단 · 강종 자동반영 표시';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -6901,6 +6901,17 @@ if(!window.__mpTrendResizeBound){
   window.__mpTrendResizeBound=true;
   window.addEventListener('resize',function(){clearTimeout(window.__mpTrendRT);window.__mpTrendRT=setTimeout(fitAllOpenTrends,140)});
 }
+/* v122: 이 강종이 매입현황에서 자동으로 채워지는지 카드 제목에 표시한다 */
+function autoBadge(db,k,y){
+  var rows=rowsOf(db,y,k),n=0,last=0,cells=0;
+  (rows||[]).forEach(function(r){
+    if(!r||!r.auto)return; n++;
+    for(var i=0;i<12;i++){ if(n0(r.m&&r.m[i])>0){cells++; if(i+1>last)last=i+1} }
+  });
+  if(!n)return '<span class="mp-grade-auto off" title="이 강종은 매입현황에서 자동으로 채워지지 않습니다 — 직접 입력">✍ 수기 입력</span>';
+  return '<span class="mp-grade-auto" title="매입현황(ERP) 가중평균 단가로 자동 채워지는 강종입니다">⚙ 자동 반영 '+n+'개 업체'+
+         (cells?' · '+cells+'칸':'')+(last?' · 최근 '+last+'월':'')+'</span>';
+}
 function tableHtml(db,k,y){
   var rows=rowsOf(db,y,k),mins=monthMins(rows);
   var head='<thead><tr><th>업체명</th>'+Array.from({length:12},function(_,i){return '<th>'+(i+1)+'월</th>'}).join('')+'</tr></thead>';
@@ -6940,6 +6951,7 @@ function gradeCard(db,m,y){
     '<div class="mp-grade-head">'+
       '<span class="mp-grade-name">'+esc(m.n)+'</span>'+
       '<span class="mp-grade-desc">'+esc(m.desc)+'</span>'+
+      autoBadge(db,m.k,y)+
       '<span class="mp-grade-current">적용 기준 <b>'+won(applied)+'</b>원/kg'+(li?' · 최근 '+li.month+'월 가중평균 <b>'+won(li.value)+'</b>원':' · 매입자료 없음')+'</span>'+
       '<div class="mp-grade-actions">'+
         '<button type="button" data-mp-trend="1">단가추이 그래프보기</button>'+
@@ -6955,6 +6967,7 @@ function scrapCard(db,y){
   return '<section class="mp-grade-card mp-special-card scrap" data-grade="고철">'+
     '<div class="mp-grade-head"><span class="mp-grade-name">🔩 고철단가</span>'+
     '<span class="mp-grade-desc">고철(스크랩) 회수단가 · 영업분석 매출자료에서 자동 반영</span>'+
+    autoBadge(db,k,y)+
     '<span class="mp-grade-current">현재 적용 <b>'+won(b.scrapPrice||0)+'</b>원/kg'+(li?' · 최근 '+li.month+'월 평균 <b>'+won(li.value)+'</b>원':'')+'</span>'+
     '<div class="mp-grade-actions">'+
       '<button type="button" data-mp-trend="1">단가추이 그래프보기</button>'+
@@ -7454,6 +7467,8 @@ window.__matPriceApi={getDb:getDb,latest:function(k,y){return latest(getDb(),k,y
   '#view-matprice .mp-ro-table .mp-avgrow td{background:#eef4fb!important;font-weight:900;color:#16284a;text-align:right}'+
   '#view-matprice .mp-ro-table .mp-avgrow td:first-child{text-align:left}'+
   '#view-matprice .mp-empty{color:#c2cad6;font-weight:600}'+
+  '#view-matprice .mp-grade-auto{margin-left:2px;font-size:10.5px!important;font-weight:800;color:#0b5e34;background:#eaf7ef;border:1px solid #a8d6bc;border-radius:999px;padding:2px 9px;white-space:nowrap}'+
+  '#view-matprice .mp-grade-auto.off{color:#8a6d3b;background:#fdf6e3;border-color:#ead9a8}'+
   '#view-matprice .mp-auto-tag{margin-left:6px;font-size:9.5px;font-weight:900;color:#0b5e34;background:#eaf7ef;border:1px solid #a8d6bc;border-radius:999px;padding:1px 6px;vertical-align:middle}'+
   '#view-matprice .mp-grade-table th:not(:first-child),#view-matprice .mp-grade-table td:not(:first-child){width:auto!important}'+
   '#view-matprice .material-price-table{display:none!important}'+
@@ -9561,6 +9576,88 @@ install(); setTimeout(install,700); setTimeout(install,2000); setTimeout(install
 setInterval(function(){bridge(false)},2500);
 window.addEventListener('focus',function(){setTimeout(function(){bridge(false)},200)});
 document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(function(){bridge(false)},200)});
+})();
+</script>
+
+<script id="matprice-typing-guard-v122">
+/* ─────────────────────────────────────────────────────────────
+   v122 · 가공 추가 금액 «비고란에 잘 써지다가 갑자기 지워지는» 현상 수정
+
+   원인 : 이 화면은 여러 곳에서 저절로 다시 그려집니다.
+            · MATGUARD 복구 루틴(20초) · 삭제표시 청소(10초)
+            · 동기화 반영(v121 브리지 2.5초·gsLoad/gsSave 완료)
+            · 구글시트 자동저장 후 rerender
+          다시 그릴 때 화면 전체(root.innerHTML)를 교체하므로, 한글을 조합 중이면
+          (예: ㅅ→소→소ㅍ→소폭) 조합이 강제로 끊기고 입력칸이 새로 만들어집니다.
+          포커스·커서는 되살리지만 IME 조합 버퍼는 되살릴 수 없어서, 조합 중이던
+          글자가 통째로 사라집니다. 영문·숫자는 조합이 없어 멀쩡하다가 한글에서만
+          «갑자기 지워지는» 것으로 보였습니다.
+
+   수정 : 이 화면의 입력칸에 커서가 있거나 한글을 조합하는 동안에는 다시 그리지 않고,
+          입력이 끝나면(포커스 해제·조합 완료) 그때 한 번 그립니다. 저장은 그대로 즉시.
+   ───────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+if(window.__matTypingGuardV122)return; window.__matTypingGuardV122=true;
+
+var composing=false, pending=false, t=0, lastType=0;
+var IDLE=2000;   /* 마지막 타이핑 후 이 시간 동안은 다시 그리지 않는다 */
+
+function inField(){
+  try{
+    var a=document.activeElement;
+    if(!a||!/^(INPUT|TEXTAREA)$/.test(a.tagName))return false;
+    return !!(a.closest&&a.closest('#view-matprice'));
+  }catch(e){return false}
+}
+/* 조합 중이거나 '방금 치던 중'일 때만 막는다.
+   버튼을 눌러서 화면이 바뀌어야 하는 경우(업체 추가·연도 변경 등)는 막지 않는다. */
+function busy(){ return composing||(inField()&&(Date.now()-lastType)<IDLE) }
+
+function mark(e){
+  try{ if(e.target&&e.target.closest&&e.target.closest('#view-matprice'))lastType=Date.now(); }catch(_){}
+}
+document.addEventListener('input',mark,true);
+document.addEventListener('keydown',mark,true);
+/* 버튼·선택 상자를 누르면 즉시 그릴 수 있게 타이핑 표시를 해제 */
+document.addEventListener('pointerdown',function(e){
+  try{ var t2=e.target&&e.target.closest?e.target.closest('button,select,th,a,.mp-extra-head'):null; if(t2)lastType=0; }catch(_){}
+},true);
+
+document.addEventListener('compositionstart',function(e){
+  if(e.target&&e.target.closest&&e.target.closest('#view-matprice')){composing=true;lastType=Date.now()}
+},true);
+['compositionend','compositioncancel'].forEach(function(ev){
+  document.addEventListener(ev,function(){ composing=false; lastType=Date.now(); flushSoon(); },true);
+});
+document.addEventListener('focusout',function(e){
+  if(e.target&&e.target.closest&&e.target.closest('#view-matprice')){lastType=0;flushSoon()}
+},true);
+
+function flushSoon(){
+  clearTimeout(t);
+  t=setTimeout(function(){
+    if(busy()){flushSoon();return}
+    if(!pending)return;
+    pending=false;
+    try{ if(typeof window.__mpRenderRaw==='function')window.__mpRenderRaw(); }catch(e){}
+  },250);
+}
+
+function guard(name){
+  var f=window[name];
+  if(typeof f!=='function'||f.__v122)return;
+  var w=function(){
+    if(busy()){ pending=true; flushSoon(); return null; }   /* 입력 중에는 다시 그리지 않는다 */
+    return f.apply(this,arguments);
+  };
+  w.__v122=true; w.__raw=f; window[name]=w;
+  if(name==='renderMaterialPricePage')window.__mpRenderRaw=function(){try{return f.call(window)}catch(e){return null}};
+}
+function install(){ ['renderMaterialPricePage','renderMaterialPriceNow'].forEach(guard) }
+install();
+var n=0,iv=setInterval(function(){ install(); if(++n>40)clearInterval(iv) },300);
+window.addEventListener('load',function(){setTimeout(install,300);setTimeout(install,1500)});
 })();
 </script>
 </body>
