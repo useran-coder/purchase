@@ -1082,7 +1082,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v125 · 로그인 요청 호환·안내 개선';
+const VERNO='v126 · 가공 추가 금액 입력 끊김 수정';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -6769,6 +6769,18 @@ function getDb(){
   if(!db||(ls&&po(ls)&&Object.keys(ls.years||{}).length>=Object.keys((db&&db.years)||{}).length))db=ls||db;
   return normalize(db||blankDb());
 }
+/* v126 : 입력 중에는 «저장만» 하고 화면은 다시 그리지 않습니다.
+   예전에는 글자 하나 칠 때마다 전체 화면을 다시 그려서
+   한글 입력(조합 중)이 끊기고 커서가 튀었습니다. */
+function putDbLight(db){
+  try{
+    db.updated=nowText();
+    localStorage.setItem(MAT_KEY,JSON.stringify(db));
+    if(typeof state!=='undefined'&&state)state.materialDB=db;
+    window.MATERIAL_DB=db;
+    try{ _hostSig=null; }catch(_h){}
+  }catch(e){}
+}
 function putDb(db,stampSource){
   db=normalize(db);
   extrasTidy(db);            /* v124 : 중복·잘못된 삭제표시 정리 */
@@ -7260,6 +7272,18 @@ function bind(root){
   if(rfile)rfile.onchange=function(ev){importSheet(ev)};
 
   if(IS_EDIT){
+    /* v126 : 한글 입력(조합) 중에는 저장을 보류하고, 조합이 끝나면 저장합니다 */
+    root.addEventListener('compositionstart',function(e){ var t=e.target; if(t&&t.classList&&/mp-extra-/.test(t.className))t.__composing=true; },true);
+    root.addEventListener('compositionend',function(e){
+      var t=e.target; if(!t||!t.classList||!/mp-extra-/.test(t.className))return;
+      t.__composing=false;
+      try{ t.dispatchEvent(new Event('input',{bubbles:true})); }catch(_e){}
+    },true);
+    root.addEventListener('blur',function(e){
+      var t=e.target; if(!t||!t.classList||!/mp-extra-/.test(t.className))return;
+      clearTimeout(window.__exSaveT);
+      try{ putDb(getDb(),true); }catch(_e){}   /* 화면은 다시 그리지 않습니다(펼친 상태·커서 유지) */
+    },true);
     root.oninput=function(e){
       var t=e.target,db=getDb();
       if(t.classList.contains('mp-vendor')){
@@ -7289,15 +7313,19 @@ function bind(root){
         else db.marketPrices[yy][k]=Math.round(n0(t.value));
         db._cellUpdated[yy+'|'+k+'|market']=Date.now();
         putDb(db,true);
-      }else if(t.classList.contains('mp-extra-name')){
-        var i0=+t.dataset.i,r0=db.egiExtras[i0];
-        if(r0){r0.name=t.value;db._extraUpdated[r0._id+'|name']=Date.now();putDb(db,true)}
-      }else if(t.classList.contains('mp-extra-amount')){
-        var i=+t.dataset.i,r=db.egiExtras[i];
-        if(r){r.amount=String(t.value).replace(/,/g,'');db._extraUpdated[r._id+'|amount']=Date.now();putDb(db,true)}
-      }else if(t.classList.contains('mp-extra-note')){
-        var i2=+t.dataset.i,r2=db.egiExtras[i2];
-        if(r2){r2.note=t.value;db._extraUpdated[r2._id+'|note']=Date.now();putDb(db,true)}
+      }else if(t.classList.contains('mp-extra-name')||t.classList.contains('mp-extra-amount')||t.classList.contains('mp-extra-note')){
+        /* v126 : 입력 중에는 화면을 다시 그리지 않습니다 (글자 끊김·커서 튐 방지) */
+        if(t.__composing)return;                       /* 한글 조합 중에는 보류 */
+        var _i=+t.dataset.i, _r=db.egiExtras[_i];
+        if(!_r)return;
+        var _f=t.classList.contains('mp-extra-name')?'name':(t.classList.contains('mp-extra-amount')?'amount':'note');
+        _r[_f]=(_f==='amount')?String(t.value).replace(/,/g,''):t.value;
+        db._extraUpdated[_r._id+'|'+_f]=Date.now();
+        putDbLight(db);
+        clearTimeout(window.__exSaveT);
+        window.__exSaveT=setTimeout(function(){          /* 입력이 멈춘 뒤에 정식 저장 */
+          try{ var d2=getDb(); putDb(d2,true); }catch(_e){}
+        },900);
       }
     };
   }
@@ -8221,7 +8249,7 @@ async function auCall(payload){
       if(d2&&!d2.error)return d2;
       if(d2&&d2.error&&!AU_LOST_RE.test(String(d2.error)))throw new Error(d2.error);
     }catch(_e2){ if(_e2&&_e2.message&&!/Failed to fetch|NetworkError/i.test(_e2.message))throw _e2; }
-    throw new Error('서버가 로그인 요청을 알아보지 못했습니다.\n앱스스크립트의 auth(2_로그인) 코드가 배포되지 않았거나 예전 버전입니다.\n\n관리자 조치 — 배포 → 배포 관리 → 연필(✏) → 버전: «새 버전» → 배포\n(서버 응답: '+(_serr||'-')+')');
+    throw new Error('서버가 로그인 요청을 알아보지 못했습니다.\n로그인 요청이 auth(2_로그인) 대신 다른 처리기로 넘어갔습니다.\n\n관리자 조치 (앱스스크립트)\n  ① auth.gs 를 최신 코드(v405)로 교체 — 옛 코드는 호출 방식이 다르면 요청을 놓칩니다\n  ② dsync.gs 의 doPost 맨 앞에  var r=auRoute(e); if(r) return r;  가 있는지 확인\n  ③ 배포 → 배포 관리 → 연필(✏) → 버전: «새 버전» → 배포\n(서버 응답: '+(_serr||'-')+')');
   }
   if(d&&d.error)throw new Error(d.error);
   return d;
