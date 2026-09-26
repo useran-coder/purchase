@@ -1014,6 +1014,39 @@
     </details>
   </div>
 
+  <!-- v128 : GitHub 한 번에 올리기 (매출분석 도구와 동일 방식) -->
+  <div class="fp-sec">
+    <details id="ghBoxV128" style="width:100%;margin:0;border:1px solid #d8dee9;border-radius:10px;padding:10px 12px;background:#fbfcfe">
+      <summary style="cursor:pointer;font-weight:800;font-size:13px;color:#1e3a5f">🚀 GitHub 업로드 <span class="sub2" style="font-weight:600">(이 파일을 저장소에 바로 배포합니다)</span></summary>
+      <div style="margin-top:9px">
+        <div class="gs-config-grid">
+          <input type="text" id="ghOwner" placeholder="GitHub 계정(owner)" autocomplete="off">
+          <input type="text" id="ghRepo" placeholder="저장소 이름(repo)" autocomplete="off">
+          <input type="text" id="ghPath" placeholder="파일 경로 (예: index.html)" autocomplete="off">
+        </div>
+        <div class="gs-config-grid" style="margin-top:6px">
+          <input type="text" id="ghBranch" placeholder="브랜치 (기본 main)" autocomplete="off">
+          <input type="password" id="ghToken" placeholder="GitHub 토큰 (이 PC에만 저장)" autocomplete="off">
+          <input type="text" id="ghMsg" placeholder="커밋 메시지(비우면 자동)" autocomplete="off">
+        </div>
+        <div class="gs-config-actions" style="margin-top:8px">
+          <button class="btn" id="ghUploadBtn" type="button" style="background:#1e3a5f;color:#fff;border-color:#1e3a5f;font-weight:800">🚀 지금 올리기</button>
+          <button class="btn ghost" id="ghPickBtn" type="button" style="font-size:12px;color:#1d4ed8;border-color:#bfd4f2">📄 파일 선택해 올리기</button>
+          <button class="btn ghost" id="ghCheckBtn" type="button" style="font-size:12px">🔍 현재 배포 버전 확인</button>
+          <button class="btn ghost" id="ghForgetBtn" type="button" style="font-size:12px;color:#b91c1c;border-color:#fecaca">🗑 토큰 지우기</button>
+          <span class="sub2 gs-config-status" id="ghStatus" style="font-weight:700"></span>
+        </div>
+        <div class="sub2" style="margin-top:7px;line-height:1.65">
+          토큰은 <b>이 PC의 브라우저에만</b> 저장되며 서버·동기화에는 절대 올라가지 않습니다. 공용 PC에서는 쓰지 마세요.<br>
+          토큰 만들기 — GitHub → Settings → Developer settings → <b>Personal access tokens → Fine-grained tokens</b> → 저장소 <b>이 저장소만</b> 선택 → 권한 <b>Contents: Read and write</b> → 발급.<br>
+          <b>🚀 지금 올리기</b>는 GitHub Pages 주소로 열었을 때 쓰는 버튼입니다(지금 보고 있는 페이지를 그대로 배포).<br>
+          내 컴퓨터의 HTML 파일을 직접 열어 쓰는 중이면 <b>📄 파일 선택해 올리기</b>를 눌러 올릴 HTML 파일을 고르세요.
+        </div>
+        <input type="file" id="ghFile" accept=".html,.htm,text/html" style="display:none">
+      </div>
+    </details>
+  </div>
+
   <div class="file-data-flat">
     <div id="fileList"><span class="sub2">불러온 파일이 없습니다.</span></div>
     <div id="purchaseFileSum"></div>
@@ -1082,7 +1115,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v127 · 거래처·제품 월매입 추이 그래프';
+const VERNO='v129 · GitHub 업로드 · 내 PC 파일 선택 올리기';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -10144,5 +10177,188 @@ window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(funct
 .ptrend-empty{margin:0 0 12px;padding:12px;border:1px dashed #dbe2ec;border-radius:10px;color:#7b8798;font-size:12px;text-align:center;background:#fafbfd}
 @media (max-width:900px){.ptrend .pt-stats{margin-left:0;white-space:normal}}
 </style>
+
+<script id="v128-github-upload">
+/* v128 : 지금 열려 있는 이 파일을 GitHub 저장소에 그대로 올립니다(= GitHub Pages 배포).
+   매출분석 도구(v784)와 같은 방식이며, 토큰은 localStorage 에만 두고
+   설정 동기화(saveSettings/gsSave/구글시트)에는 절대 포함하지 않습니다. */
+(function(){
+  var LS='ghCfgV128';
+  var D={owner:'useran-coder',repo:'purchase',path:'index.html',branch:'main',token:''};
+  function cfg(){ try{ return Object.assign({},D,JSON.parse(localStorage.getItem(LS)||'{}')); }catch(_e){ return Object.assign({},D); } }
+  function save(c){ try{ localStorage.setItem(LS,JSON.stringify(c)); }catch(_e){} }
+  function el(id){ return document.getElementById(id); }
+  function ES(v){ try{ return esc(v); }catch(_e){ return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}); } }
+  function ver(){ try{ if(typeof VERNO!=='undefined'&&VERNO)return String(VERNO); }catch(_e){}
+    try{ if(typeof BUILD!=='undefined'&&BUILD)return String(BUILD); }catch(_e){} return ''; }
+  function say(t,col){ var s=el('ghStatus'); if(s){ s.style.color=col||'#64748b'; s.innerHTML=t; } }
+  function readCfg(){
+    var c=cfg();
+    c.owner=(el('ghOwner')&&el('ghOwner').value.trim())||c.owner;
+    c.repo=(el('ghRepo')&&el('ghRepo').value.trim())||c.repo;
+    c.path=(el('ghPath')&&el('ghPath').value.trim())||c.path;
+    c.branch=(el('ghBranch')&&el('ghBranch').value.trim())||c.branch||'main';
+    var t=el('ghToken')&&el('ghToken').value.trim(); if(t)c.token=t;
+    save(c); return c;
+  }
+  function api(c,url,opt){
+    opt=opt||{}; opt.headers=Object.assign({
+      'Accept':'application/vnd.github+json',
+      'Authorization':'Bearer '+c.token,
+      'X-GitHub-Api-Version':'2022-11-28'
+    },opt.headers||{});
+    return fetch('https://api.github.com'+url,opt);
+  }
+  function b64(str){
+    var bytes=new TextEncoder().encode(str), out='', CH=0x8000;
+    for(var i=0;i<bytes.length;i+=CH)out+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+    return btoa(out);
+  }
+  /* 큰 파일은 파일 자체를 읽지 못하므로, 폴더 목록에서 sha 를 찾습니다. */
+  async function shaOf(c){
+    var dir=c.path.indexOf('/')>=0?c.path.slice(0,c.path.lastIndexOf('/')):'';
+    var name=c.path.indexOf('/')>=0?c.path.slice(c.path.lastIndexOf('/')+1):c.path;
+    var r=await api(c,'/repos/'+c.owner+'/'+c.repo+'/contents/'+encodeURI(dir)+'?ref='+encodeURIComponent(c.branch));
+    if(r.status===404)return '';           /* 새 파일 */
+    if(!r.ok)throw new Error('저장소를 읽지 못했습니다 (HTTP '+r.status+')');
+    var list=await r.json();
+    if(!Array.isArray(list))return '';
+    for(var i=0;i<list.length;i++)if(list[i].name===name)return list[i].sha||'';
+    return '';
+  }
+  async function mySource(){
+    if(location.protocol==='file:')throw new Error('내 컴퓨터의 파일을 직접 연 상태에서는 원본을 읽을 수 없습니다. GitHub Pages 주소로 열고 다시 눌러 주세요.');
+    var r=await fetch(location.pathname+'?_gh='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('이 페이지의 원본을 읽지 못했습니다 (HTTP '+r.status+')');
+    var t=await r.text();
+    if(!/<html/i.test(t))throw new Error('원본이 HTML 이 아닙니다.');
+    return t;
+  }
+  /* v129 : 내 컴퓨터에서 파일을 직접 열어 쓰는 경우(file://)에는 페이지 원본을 읽을 수 없으므로
+     올릴 HTML 파일을 직접 고르게 합니다. 파일 선택창은 클릭 즉시 열어야 브라우저가 막지 않습니다. */
+  function pickFile(){
+    return new Promise(function(res,rej){
+      var inp=el('ghFile');
+      if(!inp)return rej(new Error('파일 선택칸을 찾지 못했습니다.'));
+      inp.value='';
+      inp.onchange=function(){
+        var f=inp.files&&inp.files[0];
+        if(!f)return rej(new Error('파일을 고르지 않았습니다.'));
+        var rd=new FileReader();
+        rd.onload=function(){
+          var t=String(rd.result||'');
+          if(!/<html/i.test(t))return rej(new Error('HTML 파일이 아닙니다 — ' + f.name));
+          res({html:t,name:f.name});
+        };
+        rd.onerror=function(){ rej(new Error('파일을 읽지 못했습니다.')); };
+        rd.readAsText(f,'utf-8');
+      };
+      inp.click();
+    });
+  }
+  function uploadFromFile(){
+    var c=readCfg();
+    if(!c.token)return say('🟠 GitHub 토큰을 먼저 입력해 주세요.','#b45309');
+    if(!c.owner||!c.repo||!c.path)return say('🟠 계정·저장소·파일 경로를 확인해 주세요.','#b45309');
+    say('📄 올릴 HTML 파일을 골라 주세요…');
+    pickFile().then(function(o){
+      say('📄 '+ES(o.name)+' 선택됨 — 올리는 중…');
+      return push(c,o.html,o.name);
+    }).catch(function(e){ say('🔴 '+ES(String(e.message||e)),'#dc2626'); });
+  }
+  async function upload(){
+    var c=readCfg();
+    if(!c.token)return say('🟠 GitHub 토큰을 먼저 입력해 주세요.','#b45309');
+    if(!c.owner||!c.repo||!c.path)return say('🟠 계정·저장소·파일 경로를 확인해 주세요.','#b45309');
+    if(location.protocol==='file:'){           /* 클릭 제스처가 살아 있을 때 바로 선택창 */
+      say('📄 내 컴퓨터의 파일을 직접 연 상태입니다 — 올릴 HTML 파일을 골라 주세요.','#b45309');
+      return uploadFromFile();
+    }
+    var btn=el('ghUploadBtn'); if(btn)btn.disabled=true;
+    try{
+      say('⏳ 이 페이지의 원본을 읽는 중…');
+      var html=await mySource();
+      await push(c,html,'');
+    }catch(e){ say('🔴 '+ES(String(e.message||e)),'#dc2626'); }
+    finally{ if(btn)btn.disabled=false; }
+  }
+  /* 실제 커밋 — 「지금 올리기」와 「파일 선택해 올리기」가 함께 씁니다 */
+  async function push(c,html,fromName){
+    var btn=el('ghUploadBtn'); if(btn)btn.disabled=true;
+    try{
+      var v=ver();
+      var m0=html.match(/VERNO='([^']+)'/); var fv=m0?m0[1]:'';
+      say('⏳ 저장소 상태 확인 중… (자료 '+(html.length/1048576).toFixed(2)+'MB'+(fv?' · '+ES(fv):'')+')');
+      var sha=await shaOf(c);
+      var msg=(el('ghMsg')&&el('ghMsg').value.trim())||('매입 분석 도구 '+(fv||v||'업데이트')+' 배포');
+      say('⏳ 올리는 중… '+(sha?'(기존 파일 교체)':'(새 파일)'));
+      var r=await api(c,'/repos/'+c.owner+'/'+c.repo+'/contents/'+encodeURI(c.path),{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:msg,content:b64(html),branch:c.branch,sha:sha||undefined})
+      });
+      var d=null; try{ d=await r.json(); }catch(_e){}
+      if(!r.ok){
+        var em=(d&&d.message)||('HTTP '+r.status);
+        if(r.status===401)em='토큰이 올바르지 않거나 만료되었습니다.';
+        if(r.status===403)em='토큰에 이 저장소의 «Contents: Read and write» 권한이 없습니다.';
+        if(r.status===404)em='저장소나 경로를 찾을 수 없습니다(계정·저장소 이름·브랜치 확인).';
+        if(r.status===409)em='브랜치가 다른 사람 변경과 충돌했습니다. 잠시 후 다시 눌러 주세요.';
+        throw new Error(em);
+      }
+      var url=(d&&d.commit&&d.commit.html_url)||'';
+      say('🟢 <b>올렸습니다</b> — '+ES(c.owner+'/'+c.repo+'/'+c.path)+' · '+ES(fv||v)
+         +(fromName?(' <span style="color:#64748b">('+ES(fromName)+')</span>'):'')
+         +'<br><span style="font-weight:600;color:#475569">GitHub Pages 반영까지 1~2분 걸립니다.</span>'
+         +(url?(' <a href="'+url+'" target="_blank" rel="noopener" style="color:#1d4ed8">커밋 보기 ↗</a>'):''),'#0f766e');
+      try{ if(typeof logEdit==='function')logEdit('배포','GitHub 업로드 '+(fv||v||'')+' → '+c.owner+'/'+c.repo+'/'+c.path); }catch(_l){}
+    }catch(e){ say('🔴 '+ES(String(e.message||e)),'#dc2626'); throw e; }
+    finally{ if(btn)btn.disabled=false; }
+  }
+  async function check(){
+    var c=readCfg();
+    if(!c.owner||!c.repo||!c.path)return say('🟠 계정·저장소·파일 경로를 확인해 주세요.','#b45309');
+    try{
+      say('⏳ 확인 중…');
+      var u='https://'+c.owner+'.github.io/'+c.repo+'/'+(c.path==='index.html'?'':c.path)+'?_gh='+Date.now();
+      var r=await fetch(u,{cache:'no-store'});
+      if(!r.ok)throw new Error('페이지를 읽지 못했습니다 (HTTP '+r.status+')');
+      var t=await r.text();
+      var m=t.match(/VERNO='([^']+)'/)||t.match(/APP_BUILD='([^']+)'/);
+      var here=ver()||'?';
+      var there=m?m[1]:'?';
+      say((there===here?'🟢':'🟠')+' 배포된 버전 <b>'+ES(there)+'</b> · 지금 보고 있는 버전 <b>'+ES(here)+'</b>'
+        +(there===here?' — 같습니다.':' — 다릅니다. 올리기를 눌러 주세요.'), there===here?'#0f766e':'#b45309');
+    }catch(e){ say('🔴 '+ES(String(e.message||e)),'#dc2626'); }
+  }
+  function mount(){
+    var box=el('ghBoxV128'); if(!box||box.__v128)return; box.__v128=1;
+    var c=cfg();
+    if(el('ghOwner'))el('ghOwner').value=c.owner;
+    if(el('ghRepo'))el('ghRepo').value=c.repo;
+    if(el('ghPath'))el('ghPath').value=c.path;
+    if(el('ghBranch'))el('ghBranch').value=c.branch||'main';
+    if(el('ghToken'))el('ghToken').value=c.token||'';
+    ['ghOwner','ghRepo','ghPath','ghBranch','ghToken'].forEach(function(id){
+      var e=el(id); if(e)e.addEventListener('change',readCfg);
+    });
+    if(el('ghUploadBtn'))el('ghUploadBtn').addEventListener('click',upload);
+    if(el('ghPickBtn'))el('ghPickBtn').addEventListener('click',uploadFromFile);
+    if(el('ghCheckBtn'))el('ghCheckBtn').addEventListener('click',check);
+    if(el('ghForgetBtn'))el('ghForgetBtn').addEventListener('click',function(){
+      var k=cfg(); k.token=''; save(k); if(el('ghToken'))el('ghToken').value='';
+      say('🗑 토큰을 지웠습니다.','#64748b');
+    });
+    if(location.protocol==='file:'){
+      if(el('ghUploadBtn'))el('ghUploadBtn').title='내 컴퓨터의 파일을 직접 연 상태 — 누르면 올릴 파일을 고르는 창이 열립니다.';
+      say((c.token?'토큰 저장됨 · ':'')+'지금은 내 컴퓨터의 파일을 직접 연 상태입니다 — 「📄 파일 선택해 올리기」로 올리세요.','#b45309');
+    }else if(c.token)say('토큰 저장됨 — 「🚀 지금 올리기」를 누르면 배포됩니다.','#64748b');
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
+  else mount();
+  setTimeout(mount,600); setTimeout(mount,2000);
+  window.ghUploadV128=upload;
+})();
+</script>
 </body>
 </html>
