@@ -1115,7 +1115,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v129 · GitHub 업로드 · 내 PC 파일 선택 올리기';
+const VERNO='v131 · 월매입 추이 금액·중량(kg) 선택';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -2875,9 +2875,11 @@ function vendorPriceSummary(vendor,nav){
   });
 }
 
-function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,selectedName='',selectedSpec=''){
+function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,selectedName='',selectedSpec='',item=null){
+  const bomUsageHtml=(typeof window.bomUsageBoxHtml==='function')
+    ? window.bomUsageBoxHtml(item||{name:selectedName,spec:selectedSpec},(data&&data[0])||null) : '';
   if(!data.length)return '<div class="vendor-price-history-chart"><div class="sub2" style="padding:24px;text-align:center">입고일 추이그래프를 표시할 단가 이력이 없습니다.</div></div>';
-  const W=1600,H=330,L=82,R=34,T=42,B=58,innerW=W-L-R,innerH=H-T-B;
+  const W=1600,H=372,L=82,R=34,T=42,B=100,innerW=W-L-R,innerH=H-T-B;
   const prices=data.map(o=>+o.price||0),minPrice=Math.min(...prices),maxPrice=Math.max(...prices);
   const pad=Math.max((maxPrice-minPrice)*.15,maxPrice*.05,1),yMin=Math.max(0,minPrice-pad),yMax=Math.max(yMin+1,maxPrice+pad);
   const x=i=>data.length===1?L+innerW/2:L+i*(innerW/(data.length-1));
@@ -2888,7 +2890,36 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
   const labelStep=Math.max(1,Math.ceil(data.length/12));
   const showLabel=i=>i===0||i===data.length-1||i%labelStep===0;
   const dots=data.map((o,i)=>{const xx=x(i),yy=y(o.price),fill=allVendorMode?'#0f766e':(o.vendor===selectedVendor?'#0f766e':'#f59e0b'),status=o.status==='up'?'인상':o.status==='down'?'인하':o.status==='same'?'동일':'최초';return `<g><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="5" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · ${won(Math.round(o.price))}원 · ${status}</title></circle>${showLabel(i)?`<text x="${xx.toFixed(1)}" y="${Math.max(15,yy-11).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">${won(Math.round(o.price))}</text>`:''}</g>`;}).join('');
-  const dates=data.map((o,i)=>showLabel(i)?`<text x="${x(i).toFixed(1)}" y="${H-25}" text-anchor="middle" font-size="12" fill="#64748b">${esc(String(o.d||'').slice(2))}</text>`:'').join('');
+  const dates=data.map((o,i)=>showLabel(i)?`<text x="${x(i).toFixed(1)}" y="${H-62}" text-anchor="middle" font-size="12" fill="#64748b">${esc(String(o.d||'').slice(2))}</text>`:'').join('');
+  /* v130 : 구매주기(입고 간격) — 점과 점 사이에 며칠 만에 다시 들어왔는지 표시 */
+  const DAY=86400000;
+  const dayOf=v=>{const t=toDate(String(v||''));return t&&!isNaN(t)?t.getTime():null;};
+  const gaps=data.slice(1).map((o,i)=>{const a=dayOf(data[i].d),b=dayOf(o.d);return (a!=null&&b!=null)?Math.max(0,Math.round((b-a)/DAY)):null;});
+  const gapVals=gaps.filter(v=>v!=null&&v>0);
+  const gapAvg=gapVals.length?Math.round(gapVals.reduce((a,b)=>a+b,0)/gapVals.length):null;
+  const gapMin=gapVals.length?Math.min(...gapVals):null, gapMax=gapVals.length?Math.max(...gapVals):null;
+  const lastDay=data.length?dayOf(data[data.length-1].d):null;
+  const refDay=(()=>{let mx=null;(CUR||[]).forEach(r=>{const t=dayOf(r.d);if(t!=null&&(mx==null||t>mx))mx=t;});return mx!=null?mx:Date.now();})();
+  const elapsed=lastDay!=null?Math.max(0,Math.round((refDay-lastDay)/DAY)):null;
+  const nextDay=(gapAvg!=null&&lastDay!=null)?lastDay+gapAvg*DAY:null;
+  const remain=nextDay!=null?Math.round((nextDay-refDay)/DAY):null;
+  const cycleY=H-30;
+  const cycles=gaps.map((g,i)=>{
+    if(g==null)return '';
+    const xm=(x(i)+x(i+1))/2, wBox=Math.max(46,String(g).length*9+30);
+    if(x(i+1)-x(i)<wBox*0.92&&data.length>14&&i%2)return '';   /* 촘촘하면 번갈아 표시 */
+    const hot=gapAvg!=null&&g>gapAvg*1.5, cold=gapAvg!=null&&g<gapAvg*0.5;
+    const col=hot?'#b45309':(cold?'#1d4ed8':'#64748b'), bg=hot?'#fffbeb':(cold?'#eff6ff':'#f8fafc'), bd=hot?'#fcd34d':(cold?'#bfdbfe':'#e2e8f0');
+    return `<g><line x1="${xm.toFixed(1)}" y1="${(H-B+6)}" x2="${xm.toFixed(1)}" y2="${(cycleY-13)}" stroke="#e2e8f0" stroke-width="1"/>`
+      +`<rect x="${(xm-wBox/2).toFixed(1)}" y="${(cycleY-13)}" width="${wBox}" height="21" rx="10" fill="${bg}" stroke="${bd}"/>`
+      +`<text x="${xm.toFixed(1)}" y="${(cycleY+2)}" text-anchor="middle" font-size="12" font-weight="700" fill="${col}">${g}일</text></g>`;
+  }).join('');
+  const cycleAxis=gapVals.length?`<text x="${L-10}" y="${(cycleY+2)}" text-anchor="end" font-size="11.5" font-weight="700" fill="#94a3b8">구매주기</text>`:'';
+  const cycleSummary=gapVals.length
+    ? `<span>평균 구매주기 <b>${gapAvg}일</b></span><span>최단 <b>${gapMin}일</b></span><span>최장 <b>${gapMax}일</b></span>`
+      +(elapsed!=null?`<span>최근 입고 후 <b>${won(elapsed)}일</b> 경과</span>`:'')
+      +(remain!=null?`<span class="${remain<0?'cycle-late':(remain<=Math.max(7,Math.round(gapAvg*0.2))?'cycle-soon':'cycle-ok')}">다음 예상 <b>${esc(fmtD(new Date(nextDay)))}</b> · ${remain<0?`${Math.abs(remain)}일 지남`:`${remain}일 남음`}</span>`:'')
+    : '<span class="sub2">입고가 1회뿐이라 구매주기를 계산할 수 없습니다.</span>';
   const avg=prices.reduce((a,b)=>a+b,0)/prices.length,avgY=y(avg);
   const otherMap=new Map();
   data.filter(o=>allVendorMode||o.vendor!==selectedVendor).forEach(o=>{
@@ -2901,7 +2932,7 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
   const vendorLegend=allVendorMode?`<button type="button" class="price-history-other-toggle" aria-expanded="false" aria-controls="priceHistoryOtherList" title="매입처 목록 보기"><i class="current"></i>매입처 <b>${otherList.length}개사</b></button>`:`<span><i class="current"></i>선택 매입처</span><button type="button" class="price-history-other-toggle" aria-expanded="false" aria-controls="priceHistoryOtherList" title="타 매입처 목록 보기"><i class="other"></i>타 매입처 <b>${otherList.length}개사</b></button>`;
   const selectedProductInfo=[selectedName,selectedSpec].filter(Boolean).join(' · ');
   const selectedSpecHtml=selectedProductInfo?`<span class="vendor-price-history-selected-spec">${esc(selectedProductInfo)}</span>`:'';
-  return `<div class="vendor-price-history-chart"><div class="vendor-price-history-chart-head"><h3>📊 입고일별 매입단가 추이</h3>${selectedSpecHtml}<span class="sub2">왼쪽 → 오른쪽: 과거 → 최근</span><span class="spacer"></span><div class="vendor-price-history-legend">${vendorLegend}<span><i class="up"></i>인상선</span><span><i class="down"></i>인하선</span><span><i class="same"></i>동일선</span></div></div><div class="price-history-other-list" id="priceHistoryOtherList" hidden><div class="price-history-other-list-head">🏷️ ${listName} 목록 <span class="sub2">${otherList.length}개사 · 제외 처리된 단가이력은 포함하지 않음</span></div><div class="price-history-other-list-body">${otherListHtml}</div></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="입고일별 매입단가 추이그래프">${grid}<line x1="${L}" y1="${avgY.toFixed(1)}" x2="${W-R}" y2="${avgY.toFixed(1)}" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-R-4}" y="${(avgY-6).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="#0f766e">평균 ${won(Math.round(avg))}</text>${segments}${dots}${dates}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#94a3b8"/></svg><div class="chart-summary"><span>최저 <b>${won(Math.round(minPrice))}원</b></span><span>최고 <b>${won(Math.round(maxPrice))}원</b></span><span>평균 <b>${won(Math.round(avg))}원</b></span><span>입고단가 <b>${data.length}회</b></span></div></div>`;
+  return `<div class="vendor-price-history-chart"><div class="vendor-price-history-chart-head"><h3>📊 입고일별 매입단가 추이</h3>${selectedSpecHtml}<span class="sub2">왼쪽 → 오른쪽: 과거 → 최근</span><span class="spacer"></span><div class="vendor-price-history-legend">${vendorLegend}<span><i class="up"></i>인상선</span><span><i class="down"></i>인하선</span><span><i class="same"></i>동일선</span></div></div><div class="price-history-other-list" id="priceHistoryOtherList" hidden><div class="price-history-other-list-head">🏷️ ${listName} 목록 <span class="sub2">${otherList.length}개사 · 제외 처리된 단가이력은 포함하지 않음</span></div><div class="price-history-other-list-body">${otherListHtml}</div></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="입고일별 매입단가 추이그래프">${grid}<line x1="${L}" y1="${avgY.toFixed(1)}" x2="${W-R}" y2="${avgY.toFixed(1)}" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-R-4}" y="${(avgY-6).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="#0f766e">평균 ${won(Math.round(avg))}</text>${segments}${dots}${dates}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#94a3b8"/>${cycleAxis}${cycles}</svg><div class="chart-summary"><span>최저 <b>${won(Math.round(minPrice))}원</b></span><span>최고 <b>${won(Math.round(maxPrice))}원</b></span><span>평균 <b>${won(Math.round(avg))}원</b></span><span>입고단가 <b>${data.length}회</b></span></div><div class="chart-summary chart-cycle-summary">🔁 ${cycleSummary}</div>${bomUsageHtml}</div>`;
 }
 
 /* 매입처 단가정리 제품 선택: 전체 기간·전체 매입처·전체 사업부의 동일 품목 단가 이력 */
@@ -2945,7 +2976,7 @@ function vendorPriceHistory(selectedVendor,item,nav){
   const currentCount=allVendorMode?0:included.filter(o=>o.vendor===selectedVendor).length;
   const otherVendors=new Set(included.filter(o=>allVendorMode||o.vendor!==selectedVendor).map(o=>o.vendor)).size;
   const divisions=new Set(included.map(o=>o.division).filter(Boolean)).size;
-  const chartHtml=vendorPriceHistoryChartHtml(included,selectedVendor,allVendorMode,item.name||'',item.spec||'');
+  const chartHtml=vendorPriceHistoryChartHtml(included,selectedVendor,allVendorMode,item.name||'',item.spec||'',item);
   state.sortKey='d';state.sortDir=-1;
   const statusHtml=o=>o.excluded?'<span class="price-history-excluded-badge">계산 제외</span>':o.status==='up'?`<span class="up">▲ 인상</span>`:o.status==='down'?`<span class="down">▼ 인하</span>`:o.status==='same'?'<span class="flat">— 동일</span>':'<span class="flat">최초</span>';
   render('📈 제품별 · 이전단가 이력', `${item.code?esc(item.code)+' · ':''}${esc(item.name)}${item.spec?' ('+esc(item.spec)+')':''} · 단가이력 ${included.length}회 · 제외 ${excluded.length}회 · ${allVendorMode?'매입처 '+otherVendors+'개사':`선택 매입처 ${currentCount}회 · 타 매입처 ${otherVendors}개사`} · 사업부 ${divisions}개`, arr, [
@@ -9983,6 +10014,16 @@ window.addEventListener('blur',function(){setTimeout(finalize,50)});
 if(window.__ptrendV127)return; window.__ptrendV127=true;
 
 var STORE={}, SEQ=0;
+/* v131 : 금액 / 중량(kg) 단위 선택 — 마지막 선택을 브라우저에 기억 */
+var UNIT_KEY='dbfastec_ptrend_unit_v131';
+function lastUnit(){ try{ var v=localStorage.getItem(UNIT_KEY); return (v==='qty')?'qty':'amt'; }catch(e){ return 'amt'; } }
+function saveUnit(u){ try{ localStorage.setItem(UNIT_KEY,u); }catch(e){} }
+function qtyOf(r){ var q=+((r&&r.qty)||0); return isFinite(q)?q:0; }
+function hasKg(rows){
+  try{ if(typeof isKgList==='function')return isKgList(rows); }catch(e){}
+  var any=(rows||[]).some(function(r){return Math.abs(qtyOf(r))>0});
+  return any&&(rows||[]).every(function(r){return !Math.abs(qtyOf(r))||/kg/i.test(String(r.unit||''))});
+}
 
 function W(n){try{return won(Math.round(+n||0))}catch(e){return String(Math.round(+n||0))}}
 function WM(n){try{return wonM(+n||0)}catch(e){return W(n)}}
@@ -10029,7 +10070,7 @@ window.purchaseTrendHtml=function(rows,label,opts){
   var src=opts.raw?(rows||[]):expand(rows);
   if(!src.length)return '';
   var id='pt'+(++SEQ);
-  STORE[id]={rows:src,label:label||'',year:null};
+  STORE[id]={rows:src,label:label||'',year:null,unit:lastUnit()};
   var ks=Object.keys(STORE);                 /* 메모리 누적 방지 — 최근 60개만 보관 */
   if(ks.length>60)ks.slice(0,ks.length-60).forEach(function(k){delete STORE[k]});
   return '<div class="ptrend" id="'+id+'" data-ptrend="1"></div>';
@@ -10042,11 +10083,15 @@ function build(id){
   var cy=String(new Date().getFullYear());
   var year=st.year&&ys.indexOf(st.year)>=0?st.year:(ys.indexOf(cy)>=0?cy:ys[0]);
   st.year=year;
+  var kgOk=hasKg(rows);
+  var unit=(st.unit==='qty'&&kgOk)?'qty':'amt';
+  st.unit=unit;
+  var U=function(x){ return W(x)+(unit==='qty'?'kg':''); };
   var v=Array(12).fill(0), n=Array(12).fill(0);
   rows.forEach(function(r){
     var ym=String(r.ym||''); if(ym.slice(0,4)!==year)return;
     var mi=+ym.slice(5,7)-1; if(mi<0||mi>11)return;
-    v[mi]+=amt(r); n[mi]++;
+    v[mi]+=(unit==='qty'?qtyOf(r):amt(r)); n[mi]++;
   });
   var tot=v.reduce(function(a,b){return a+b},0), cnt=n.reduce(function(a,b){return a+b},0);
   var live=[]; for(var i=0;i<12;i++)if(n[i]>0)live.push(i);
@@ -10075,7 +10120,7 @@ function build(id){
     dots+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+col+'" stroke="#fff" stroke-width="'+(isMax||isMin?2:1.5)+'"/>';
     var anchor=i2===0?'start':(i2===11?'end':'middle');
     var lx=i2===0?x-4:(i2===11?x+4:x);
-    labs+='<text x="'+lx.toFixed(1)+'" y="'+(y-14).toFixed(1)+'" text-anchor="'+anchor+'" font-size="13" font-weight="'+(isMax||isMin?'800':'600')+'" fill="'+(isMax?'#ef4444':(isMin?'#0d9488':'#334155'))+'">'+W(v[i2])+'</text>';
+    labs+='<text x="'+lx.toFixed(1)+'" y="'+(y-14).toFixed(1)+'" text-anchor="'+anchor+'" font-size="13" font-weight="'+(isMax||isMin?'800':'600')+'" fill="'+(isMax?'#ef4444':(isMin?'#0d9488':'#334155'))+'">'+U(v[i2])+'</text>';
     /* 배지는 기본적으로 점 아래, 점이 바닥 가까이면 값 라벨 위로 올려 월 축 글자와 겹치지 않게 */
     var lowPt=(y>pT+ih*0.72), by=lowPt?(y-50):(y+12), bt=lowPt?(y-36):(y+26);
     var bx1=Math.min(Math.max(x-22,pL-18),WD-pR-26);
@@ -10092,7 +10137,7 @@ function build(id){
   var ay=Y(avg);
   var avgLine='<line x1="'+pL+'" y1="'+ay.toFixed(1)+'" x2="'+(WD-pR+10)+'" y2="'+ay.toFixed(1)+'" stroke="#facc15" stroke-width="1.8" stroke-dasharray="7 5"/>'+
     '<g><rect x="'+(WD-pR+16)+'" y="'+(ay-13).toFixed(1)+'" width="'+(pR-24)+'" height="26" rx="13" fill="#fffbea" stroke="#facc15"/>'+
-    '<text x="'+(WD-pR+16+(pR-24)/2)+'" y="'+(ay+4.5).toFixed(1)+'" text-anchor="middle" font-size="12" font-weight="800" fill="#a16207">평균 '+W(avg)+'</text></g>';
+    '<text x="'+(WD-pR+16+(pR-24)/2)+'" y="'+(ay+4.5).toFixed(1)+'" text-anchor="middle" font-size="12" font-weight="800" fill="#a16207">평균 '+U(avg)+'</text></g>';
   /* 현재월 */
   var nowLine='';
   if(curMonth){
@@ -10110,10 +10155,14 @@ function build(id){
     dots+labs+xa+'</svg>';
 
   var chips=ys.map(function(y2){return '<button type="button" class="pt-year'+(y2===year?' on':'')+'" data-pty="'+E(y2)+'">'+E(y2)+'년</button>'}).join('');
+  var units=kgOk
+    ? '<span class="pt-units"><button type="button" class="pt-unit'+(unit==='amt'?' on':'')+'" data-ptu="amt">금액</button>'
+      +'<button type="button" class="pt-unit'+(unit==='qty'?' on':'')+'" data-ptu="qty">중량(kg)</button></span>'
+    : '';
   var head='<div class="pt-head">'+
-    '<span class="pt-title">📈 '+E(st.label)+' · '+E(year)+'년 · 월별 매입 추이</span>'+
-    '<span class="pt-years">'+chips+'</span>'+
-    '<span class="pt-stats">합계 <b>'+W(tot)+'</b> · 평균 <b class="y">'+W(Math.round(avg))+'</b>(거래월 '+live.length+'개월) · 최고 <b class="r">'+W(v[mxi])+'</b>('+(mxi+1)+'월) · 최저 <b class="g">'+W(v[mni])+'</b>('+(mni+1)+'월) · 건수 '+W(cnt)+'건'+
+    '<span class="pt-title">📈 '+E(st.label)+' · '+E(year)+'년 · 월별 매입 '+(unit==='qty'?'중량 추이':'추이')+'</span>'+
+    '<span class="pt-years">'+chips+'</span>'+units+
+    '<span class="pt-stats">합계 <b>'+U(tot)+'</b> · 평균 <b class="y">'+U(Math.round(avg))+'</b>(거래월 '+live.length+'개월) · 최고 <b class="r">'+U(v[mxi])+'</b>('+(mxi+1)+'월) · 최저 <b class="g">'+U(v[mni])+'</b>('+(mni+1)+'월) · 건수 '+W(cnt)+'건'+
     (curMonth?' · '+curMonth+'월 진행 중':'')+'</span>'+
     '</div>';
   return head+'<div class="pt-svg">'+svg+'</div>';
@@ -10146,11 +10195,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 /* 연도 버튼 */
 document.addEventListener('click',function(e){
-  var b=e.target&&e.target.closest?e.target.closest('.pt-year'):null;
-  if(!b)return;
-  var host=b.closest('.ptrend'); if(!host||!STORE[host.id])return;
+  var t=e.target&&e.target.closest?e.target.closest('.pt-year,.pt-unit'):null;
+  if(!t)return;
+  var host=t.closest('.ptrend'); if(!host||!STORE[host.id])return;
   e.preventDefault(); e.stopPropagation();
-  STORE[host.id].year=b.dataset.pty;
+  if(t.classList.contains('pt-unit')){
+    var u=t.dataset.ptu==='qty'?'qty':'amt';
+    saveUnit(u);
+    Object.keys(STORE).forEach(function(k){STORE[k].unit=u});   /* 다른 그래프도 같은 단위로 */
+    document.querySelectorAll('.ptrend[data-ptrend]').forEach(function(el){paint(el,true)});
+    return;
+  }
+  STORE[host.id].year=t.dataset.pty;
   paint(host,true);
 },true);
 
@@ -10167,6 +10223,11 @@ window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(funct
 .ptrend .pt-year{border:1px solid #d7dfea;background:#fff;color:#5b6b82;border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer;line-height:1.5}
 .ptrend .pt-year:hover{border-color:#2f7ef0;color:#2f7ef0}
 .ptrend .pt-year.on{background:#16284a;border-color:#16284a;color:#fff}
+.ptrend .pt-units{display:inline-flex;gap:0;border:1px solid #d7dfea;border-radius:999px;overflow:hidden;margin-left:2px}
+.ptrend .pt-unit{border:0;background:#fff;color:#5b6b82;padding:3px 11px;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer;line-height:1.5}
+.ptrend .pt-unit+.pt-unit{border-left:1px solid #e6ecf4}
+.ptrend .pt-unit:hover{color:#2f7ef0}
+.ptrend .pt-unit.on{background:#0d9488;color:#fff}
 .ptrend .pt-stats{margin-left:auto;font-size:11.5px;color:#7b8798;font-weight:600;white-space:nowrap}
 .ptrend .pt-stats b{color:#16284a}
 .ptrend .pt-stats b.r{color:#ef4444}
@@ -10360,5 +10421,267 @@ window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(funct
   window.ghUploadV128=upload;
 })();
 </script>
+
+<script id="bom-usage-v130">
+/* ─────────────────────────────────────────────────────────────
+   v130 · 원자재 «사용제품 품목» 표기
+   제품별 제조원가 프로그램의 BOM(제품 → 반제품 → 원자재)을 읽어
+   이 원자재가 어느 완제품에 들어가는지 보여 줍니다.
+   · 같은 계정의 제조원가 페이지에서 BOM_DATA·SEED_PRODUCTS 를 읽고
+   · 이 브라우저의 사용자 추가 BOM(dbfastec_cost_user_bom_v1)을 합칩니다
+   · 만든 색인은 localStorage 에 보관해 다음부터 즉시 표시합니다
+   ───────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+if(window.__bomUsageV130)return; window.__bomUsageV130=true;
+
+var IDX_KEY='dbfastec_bom_usage_v130';
+var USER_BOM_KEY='dbfastec_cost_user_bom_v1';
+var SRC_KEY='dbfastec_bom_usage_src_v130';
+var DEFAULT_SRC='https://useran-coder.github.io/product/';
+var IDX=null, BUSY=false, TRIED=false;
+
+function ES(v){ try{ return esc(v); }catch(e){ return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}); } }
+function rd(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
+function wr(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function srcUrl(){ var v=rd(SRC_KEY); return (typeof v==='string'&&v)?v:DEFAULT_SRC; }
+
+/* 품명·규격 정규화 — ERP 품번과 BOM 품번은 서로 달라서 품명+규격으로 맞춘다 */
+function nrm(v){ return String(v==null?'':v).toUpperCase().replace(/[×Ｘ]/g,'X').replace(/\s+/g,'').replace(/[()\[\]{}]/g,'').replace(/[·ㆍ・]/g,'').replace(/-/g,''); }
+function keyOf(name,spec){ return nrm(name)+'|'+nrm(spec); }
+/* 품번 보조키 : MATEGIC1666 / MCEGIC1666_G → EGIC1666 */
+function codeKey(code){
+  var c=String(code||'').toUpperCase().replace(/_[A-Z]$/,'');
+  c=c.replace(/^MAT/,'').replace(/^MC/,'').replace(/^MA/,'');
+  return c.replace(/[^A-Z0-9.]/g,'');
+}
+
+/* ── HTML 원본에서 JSON 상수 뽑기 (문자열 안의 괄호를 건너뛴다) ── */
+function grab(text,tag,open){
+  var i=text.indexOf(tag); if(i<0)return null;
+  var j=text.indexOf(open,i); if(j<0)return null;
+  var close=open==='{'?'}':']', d=0, q=false, esc2=false;
+  for(var k=j;k<text.length;k++){
+    var ch=text[k];
+    if(q){ if(esc2){esc2=false} else if(ch==='\\'){esc2=true} else if(ch==='"'){q=false} continue; }
+    if(ch==='"'){q=true;continue}
+    if(ch===open)d++;
+    else if(ch===close){ d--; if(d===0){ try{ return JSON.parse(text.slice(j,k+1)); }catch(e){ return null; } } }
+  }
+  return null;
+}
+
+function buildIndex(html,srcLabel){
+  var bomObj=grab(html,'BOM_DATA','{')||{}, base=(bomObj&&bomObj.bom)||{};
+  var prods=grab(html,'SEED_PRODUCTS','[')||[];
+  var user=rd(USER_BOM_KEY)||{};
+  var bom={};
+  Object.keys(base).forEach(function(k){ bom[k]=(base[k]||[]).slice(); });
+  Object.keys(user).forEach(function(k){ bom[k]=(bom[k]||[]).concat(user[k]||[]); });
+  if(!Object.keys(bom).length)throw new Error('BOM 자료를 찾지 못했습니다.');
+  var pmap={}; (prods||[]).forEach(function(p){ if(p&&p.pn)pmap[String(p.pn)]={item:p.item||'',spec:p.spec||''}; });
+
+  var parents={}, isChild={};
+  Object.keys(bom).forEach(function(par){
+    (bom[par]||[]).forEach(function(ch){
+      var c=String((ch&&ch.code)||''); if(!c)return;
+      (parents[c]||(parents[c]=[])).push(par); isChild[c]=1;
+    });
+  });
+  function topsOf(code){
+    var out={}, seen={}, stack=[code], guard=0;
+    while(stack.length&&guard++<8000){
+      var c=stack.pop();
+      (parents[c]||[]).forEach(function(p){
+        if(seen[p])return; seen[p]=1;
+        if(isChild[p])stack.push(p); else out[p]=1;
+      });
+    }
+    return Object.keys(out);
+  }
+  var items={}, byCode={};
+  Object.keys(bom).forEach(function(par){
+    (bom[par]||[]).forEach(function(ch){
+      if(!ch)return;
+      var kind=String(ch.kind||'').trim();
+      if(kind!=='원자재'&&kind!=='스크랩')return;
+      var k=keyOf(ch.name,ch.spec);
+      if(items[k])return;
+      var tops=topsOf(String(ch.code||'')).map(function(pn){
+        /* BOM 품번은 ARIC00001_N 처럼 접미사가 붙어 있고 제품목록은 ARIC00001 이라 둘 다 찾아본다 */
+        var p=pmap[pn]||pmap[String(pn).replace(/_[A-Za-z0-9]+$/,'')]||{};
+        return {pn:pn,item:p.item||'',spec:p.spec||''};
+      }).sort(function(a,b){
+        if(!!a.item!==!!b.item)return a.item?-1:1;
+        return String(a.item).localeCompare(String(b.item),'ko')||String(a.spec).localeCompare(String(b.spec),'ko')||String(a.pn).localeCompare(String(b.pn));
+      });
+      items[k]={code:ch.code||'',name:ch.name||'',spec:ch.spec||'',unit:ch.unit||'',kind:kind,
+                direct:(parents[String(ch.code||'')]||[]).length,tops:tops};
+      var ck=codeKey(ch.code); if(ck&&!byCode[ck])byCode[ck]=k;
+    });
+  });
+  return {builtAt:Date.now(),src:srcLabel||'',count:Object.keys(items).length,items:items,byCode:byCode};
+}
+
+function saveIdx(ix){ IDX=ix; wr(IDX_KEY,ix); }
+function loadIdx(){ if(IDX)return IDX; var v=rd(IDX_KEY); if(v&&v.items)IDX=v; return IDX; }
+
+function lookup(item){
+  var ix=loadIdx(); if(!ix)return null;
+  var hit=ix.items[keyOf(item&&item.name,item&&item.spec)];
+  if(!hit){ var ck=codeKey(item&&item.code); if(ck&&ix.byCode&&ix.byCode[ck])hit=ix.items[ix.byCode[ck]]; }
+  return hit||null;
+}
+
+/* ── 원자재 여부 판정 ── */
+function isRaw(item,row){
+  try{ if(row&&row.srcRows&&row.srcRows[0]&&isRawMaterialRow(row.srcRows[0]))return true; }catch(e){}
+  try{ if(row&&isRawMaterialRow(row))return true; }catch(e){}
+  var t=[item&&item.name,item&&item.spec,item&&item.code].join(' ').toUpperCase();
+  return /EGI|HGI|\bPO\b|\bCR\b|\bHR\b|STS|SUS|SGCC|SECC|SPCC|SPHC|GI\b|코일|COIL|강판|스크랩|SK-?5/.test(t);
+}
+
+/* ── 화면에 붙는 박스 ── */
+window.bomUsageBoxHtml=function(item,row){
+  item=item||{};
+  if(!isRaw(item,row))return '';
+  var ix=loadIdx(), hit=ix?lookup(item):null;
+  var head='<div class="bom-usage"><div class="bom-usage-head"><b>🧩 사용제품 품목</b>'
+    +'<span class="sub2">제품별 제조원가 프로그램 BOM 기준</span><span class="bom-usage-sp"></span>'
+    +'<button type="button" class="bom-usage-btn" data-bomact="refresh" title="제조원가 프로그램에서 BOM 을 다시 읽어옵니다">🔄 BOM 새로고침</button>'
+    +'<button type="button" class="bom-usage-btn" data-bomact="file" title="제조원가 프로그램 HTML 파일을 직접 선택합니다">📄 BOM 파일 선택</button>'
+    +'</div>';
+  var body;
+  if(!ix){
+    body='<div class="bom-usage-empty">BOM 자료를 아직 읽지 않았습니다. <b>🔄 BOM 새로고침</b>을 누르면 제조원가 프로그램에서 가져옵니다.'
+      +'<br><span class="sub2">파일을 직접 열어 쓰는 중이라면 <b>📄 BOM 파일 선택</b>으로 제조원가 프로그램 HTML 을 고르세요.</span></div>';
+  }else if(!hit){
+    body='<div class="bom-usage-empty">BOM 에 <b>'+ES(item.name||'')+(item.spec?' ('+ES(item.spec)+')':'')+'</b> 가 등록되어 있지 않습니다.'
+      +'<br><span class="sub2">제조원가 프로그램에서 이 원자재를 BOM 에 넣으면 여기에 사용제품이 나옵니다. (BOM 원자재 '+ES(ix.count||0)+'종 · '+ES(new Date(ix.builtAt).toLocaleDateString('ko-KR'))+' 기준)</span></div>';
+  }else{
+    var tops=hit.tops||[], SHOW=14;
+    var chip=function(t){
+      return '<span class="bom-usage-chip" title="'+ES(t.pn)+'"><b>'+ES(t.item||t.pn)+'</b>'+(t.spec?'<small>'+ES(t.spec)+'</small>':'')+'</span>';
+    };
+    var chips=tops.slice(0,SHOW).map(chip).join('')
+      +(tops.length>SHOW?'<span class="bom-usage-rest" hidden>'+tops.slice(SHOW).map(chip).join('')+'</span>':'');
+    body='<div class="bom-usage-body">'
+      +'<div class="bom-usage-meta">BOM 품번 <b>'+ES(hit.code||'-')+'</b> · '+ES(hit.name||'')+(hit.spec?' ('+ES(hit.spec)+')':'')
+      +' · 직접 투입 <b>'+ES(hit.direct||0)+'</b>곳 · 사용제품 <b>'+ES(tops.length)+'</b>종</div>'
+      +(tops.length?'<div class="bom-usage-chips">'+chips+'</div>'
+        +(tops.length>SHOW?'<button type="button" class="bom-usage-more" data-bomact="more">+ '+(tops.length-SHOW)+'개 더보기</button>':'')
+        :'<div class="bom-usage-empty">상위 완제품을 찾지 못했습니다(반제품에만 연결됨).</div>')
+      +'</div>';
+  }
+  return head+body+'</div>';
+};
+
+/* ── BOM 읽어오기 ── */
+function status(t,col){
+  var b=document.querySelector('#content .bom-usage');
+  if(!b)return;
+  var e=b.querySelector('.bom-usage-state');
+  if(!e){ e=document.createElement('div'); e.className='bom-usage-state'; b.appendChild(e); }
+  e.style.color=col||'#64748b'; e.innerHTML=t;
+}
+function repaint(){ try{ if(typeof runAct==='function')runAct(); }catch(e){} }
+
+async function refreshFromWeb(){
+  if(BUSY)return; BUSY=true;
+  try{
+    status('⏳ 제조원가 프로그램에서 BOM 을 읽는 중…');
+    var u=srcUrl()+(srcUrl().indexOf('?')>=0?'&':'?')+'_b='+Date.now();
+    var r=await fetch(u,{cache:'no-store'});
+    if(!r.ok)throw new Error('페이지를 읽지 못했습니다 (HTTP '+r.status+')');
+    var t=await r.text();
+    var ix=buildIndex(t,srcUrl());
+    saveIdx(ix);
+    status('🟢 BOM 원자재 '+ix.count+'종을 읽었습니다.','#0f766e');
+    setTimeout(repaint,400);
+  }catch(e){
+    status('🔴 '+ES(String(e.message||e))+' — <b>📄 BOM 파일 선택</b>으로 제조원가 프로그램 HTML 을 직접 고를 수 있습니다.','#dc2626');
+  }finally{ BUSY=false; }
+}
+function pickBomFile(){
+  var inp=document.getElementById('bomUsageFile');
+  if(!inp){
+    inp=document.createElement('input'); inp.type='file'; inp.id='bomUsageFile';
+    inp.accept='.html,.htm,.json,text/html,application/json'; inp.style.display='none';
+    document.body.appendChild(inp);
+  }
+  inp.value='';
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0]; if(!f)return;
+    status('⏳ '+ES(f.name)+' 읽는 중…');
+    var rdr=new FileReader();
+    rdr.onload=function(){
+      try{
+        var txt=String(rdr.result||''), ix;
+        if(/\.json$/i.test(f.name)){
+          var d=JSON.parse(txt);
+          var fake='BOM_DATA '+JSON.stringify({bom:(d&&d.bom)||(d&&d.userBom)||{}})+' SEED_PRODUCTS '+JSON.stringify((d&&d.products)||[]);
+          ix=buildIndex(fake,f.name);
+        }else ix=buildIndex(txt,f.name);
+        saveIdx(ix);
+        status('🟢 BOM 원자재 '+ix.count+'종을 읽었습니다. ('+ES(f.name)+')','#0f766e');
+        setTimeout(repaint,400);
+      }catch(e){ status('🔴 '+ES(String(e.message||e)),'#dc2626'); }
+    };
+    rdr.onerror=function(){ status('🔴 파일을 읽지 못했습니다.','#dc2626'); };
+    rdr.readAsText(f,'utf-8');
+  };
+  inp.click();
+}
+
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest?e.target.closest('[data-bomact]'):null;
+  if(!b)return;
+  e.preventDefault(); e.stopPropagation();
+  var a=b.dataset.bomact;
+  if(a==='refresh')refreshFromWeb();
+  else if(a==='file')pickBomFile();
+  else if(a==='more'){
+    var wrap=b.parentElement&&b.parentElement.querySelector('.bom-usage-rest');
+    if(wrap){ wrap.hidden=false; wrap.style.display='contents'; }
+    b.remove();
+  }
+},true);
+
+/* 화면에 박스가 처음 보이는데 색인이 없으면 조용히 한 번 시도 */
+var mo=new MutationObserver(function(){
+  if(TRIED||loadIdx())return;
+  if(!document.querySelector('#content .bom-usage'))return;
+  TRIED=true;
+  if(location.protocol!=='file:')refreshFromWeb();
+});
+function startObs(){ var c=document.getElementById('content'); if(!c){setTimeout(startObs,400);return} mo.observe(c,{childList:true,subtree:true}); }
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startObs,{once:true}); else startObs();
+
+window.__bomUsageIndex=function(){ return loadIdx(); };
+window.__bomUsageRefresh=refreshFromWeb;
+})();
+</script>
+<style id="bom-usage-style-v130">
+.chart-cycle-summary{margin-top:2px;color:#64748b}
+.chart-cycle-summary .cycle-late b{color:#b91c1c}
+.chart-cycle-summary .cycle-soon b{color:#b45309}
+.chart-cycle-summary .cycle-ok b{color:#0f766e}
+.bom-usage{margin:10px 12px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;overflow:hidden}
+.bom-usage-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 11px;border-bottom:1px solid #eef2f7;background:#f8fafc;font-size:12.5px;color:#16284a}
+.bom-usage-head .bom-usage-sp{flex:1}
+.bom-usage-btn{border:1px solid #cfd8e5;background:#fff;color:#334155;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.bom-usage-btn:hover{border-color:#2f6fb0;color:#2f6fb0}
+.bom-usage-body{padding:9px 11px}
+.bom-usage-meta{font-size:11.5px;color:#64748b;margin-bottom:7px}
+.bom-usage-meta b{color:#16284a}
+.bom-usage-chips{display:flex;flex-wrap:wrap;gap:6px}
+.bom-usage-rest[hidden]{display:none}
+.bom-usage-chip{display:inline-flex;align-items:baseline;gap:5px;border:1px solid #d7e3f2;background:#fff;border-radius:999px;padding:3px 10px;font-size:11.5px;color:#1e3a5f}
+.bom-usage-chip b{font-weight:800}
+.bom-usage-chip small{color:#7b8798;font-size:10.5px}
+.bom-usage-more{margin-top:7px;border:1px dashed #b9cbe0;background:#fff;color:#2f6fb0;border-radius:7px;padding:4px 11px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.bom-usage-empty{padding:10px 11px;font-size:11.5px;color:#7b8798;line-height:1.6}
+.bom-usage-state{padding:7px 11px;border-top:1px dashed #e2e8f0;font-size:11.5px;font-weight:700}
+</style>
 </body>
 </html>
