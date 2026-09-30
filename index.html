@@ -1115,7 +1115,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v131 · 월매입 추이 금액·중량(kg) 선택';
+const VERNO='v132 · 입고일별 그래프 단가·금액·중량 선택';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -2875,21 +2875,44 @@ function vendorPriceSummary(vendor,nav){
   });
 }
 
+/* v132 : 입고일별 그래프 지표 — 매입단가 / 금액 / 중량(kg) */
+function priceChartMetric(){
+  try{ var v=localStorage.getItem('dbfastec_pricechart_metric_v132'); if(v==='amt'||v==='qty')return v; }catch(e){}
+  return 'price';
+}
+function priceChartMetricSave(v){ try{ localStorage.setItem('dbfastec_pricechart_metric_v132',v); }catch(e){} }
+function priceChartKg(data){
+  try{ if(typeof isKgList==='function'){ var rs=[]; (data||[]).forEach(function(o){ (o.srcRows||[]).forEach(function(r){rs.push(r)}); }); if(rs.length)return isKgList(rs); } }catch(e){}
+  return (data||[]).some(function(o){return Math.abs(+o.qty||0)>0})&&(data||[]).every(function(o){return !Math.abs(+o.qty||0)||/kg/i.test(String(o.unit||''))});
+}
 function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,selectedName='',selectedSpec='',item=null){
   const bomUsageHtml=(typeof window.bomUsageBoxHtml==='function')
     ? window.bomUsageBoxHtml(item||{name:selectedName,spec:selectedSpec},(data&&data[0])||null) : '';
+  const kgOk=priceChartKg(data);
+  let metric=priceChartMetric(); if(metric==='qty'&&!kgOk)metric='price';
+  const metricLabel=metric==='amt'?'입고 금액':(metric==='qty'?'입고 중량':'매입단가');
+  const valOf=o=>metric==='amt'?(+o.amt||0):(metric==='qty'?(+o.qty||0):(+o.price||0));
+  const fmtV=v=>won(Math.round(v))+(metric==='qty'?'kg':'');
+  const metricBtns='<span class="price-metric-group">'
+    +'<button type="button" class="price-metric'+(metric==='price'?' on':'')+'" data-pcm="price">매입단가</button>'
+    +'<button type="button" class="price-metric'+(metric==='amt'?' on':'')+'" data-pcm="amt">금액</button>'
+    +(kgOk?'<button type="button" class="price-metric'+(metric==='qty'?' on':'')+'" data-pcm="qty">중량(kg)</button>':'')
+    +'</span>';
   if(!data.length)return '<div class="vendor-price-history-chart"><div class="sub2" style="padding:24px;text-align:center">입고일 추이그래프를 표시할 단가 이력이 없습니다.</div></div>';
   const W=1600,H=372,L=82,R=34,T=42,B=100,innerW=W-L-R,innerH=H-T-B;
-  const prices=data.map(o=>+o.price||0),minPrice=Math.min(...prices),maxPrice=Math.max(...prices);
+  const prices=data.map(valOf),minPrice=Math.min(...prices),maxPrice=Math.max(...prices);
+  /* 지표가 단가가 아닐 때는 그린 값 기준으로 인상·인하선을 판단 */
+  const stat=data.map((o,i)=>{ if(metric==='price')return o.status; if(!i)return 'first';
+    const a=prices[i-1],b=prices[i]; return b>a?'up':b<a?'down':'same'; });
   const pad=Math.max((maxPrice-minPrice)*.15,maxPrice*.05,1),yMin=Math.max(0,minPrice-pad),yMax=Math.max(yMin+1,maxPrice+pad);
   const x=i=>data.length===1?L+innerW/2:L+i*(innerW/(data.length-1));
   const y=v=>T+(yMax-v)/(yMax-yMin)*innerH;
   const gridCount=4;
-  const grid=Array.from({length:gridCount+1},(_,i)=>{const value=yMax-(yMax-yMin)*i/gridCount,yy=y(value);return `<line x1="${L}" y1="${yy.toFixed(1)}" x2="${W-R}" y2="${yy.toFixed(1)}" stroke="#e2e8f0" stroke-width="1"/><text x="${L-10}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="12" fill="#64748b">${won(Math.round(value))}</text>`;}).join('');
-  const segments=data.slice(1).map((o,i)=>{const p=data[i],color=o.status==='up'?'#dc2626':o.status==='down'?'#2563eb':'#94a3b8';return `<line x1="${x(i).toFixed(1)}" y1="${y(p.price).toFixed(1)}" x2="${x(i+1).toFixed(1)}" y2="${y(o.price).toFixed(1)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;}).join('');
+  const grid=Array.from({length:gridCount+1},(_,i)=>{const value=yMax-(yMax-yMin)*i/gridCount,yy=y(value);return `<line x1="${L}" y1="${yy.toFixed(1)}" x2="${W-R}" y2="${yy.toFixed(1)}" stroke="#e2e8f0" stroke-width="1"/><text x="${L-10}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="12" fill="#64748b">${fmtV(value)}</text>`;}).join('');
+  const segments=data.slice(1).map((o,i)=>{const st=stat[i+1],color=st==='up'?'#dc2626':st==='down'?'#2563eb':'#94a3b8';return `<line x1="${x(i).toFixed(1)}" y1="${y(prices[i]).toFixed(1)}" x2="${x(i+1).toFixed(1)}" y2="${y(prices[i+1]).toFixed(1)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;}).join('');
   const labelStep=Math.max(1,Math.ceil(data.length/12));
   const showLabel=i=>i===0||i===data.length-1||i%labelStep===0;
-  const dots=data.map((o,i)=>{const xx=x(i),yy=y(o.price),fill=allVendorMode?'#0f766e':(o.vendor===selectedVendor?'#0f766e':'#f59e0b'),status=o.status==='up'?'인상':o.status==='down'?'인하':o.status==='same'?'동일':'최초';return `<g><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="5" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · ${won(Math.round(o.price))}원 · ${status}</title></circle>${showLabel(i)?`<text x="${xx.toFixed(1)}" y="${Math.max(15,yy-11).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">${won(Math.round(o.price))}</text>`:''}</g>`;}).join('');
+  const dots=data.map((o,i)=>{const xx=x(i),yy=y(prices[i]),fill=allVendorMode?'#0f766e':(o.vendor===selectedVendor?'#0f766e':'#f59e0b'),st=stat[i],status=st==='up'?'인상':st==='down'?'인하':st==='same'?'동일':'최초';return `<g><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="5" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · 단가 ${won(Math.round(o.price))}원 · 금액 ${won(Math.round(o.amt||0))}원 · 중량 ${won(Math.round(o.qty||0))}kg · ${status}</title></circle>${showLabel(i)?`<text x="${xx.toFixed(1)}" y="${Math.max(15,yy-11).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">${fmtV(prices[i])}</text>`:''}</g>`;}).join('');
   const dates=data.map((o,i)=>showLabel(i)?`<text x="${x(i).toFixed(1)}" y="${H-62}" text-anchor="middle" font-size="12" fill="#64748b">${esc(String(o.d||'').slice(2))}</text>`:'').join('');
   /* v130 : 구매주기(입고 간격) — 점과 점 사이에 며칠 만에 다시 들어왔는지 표시 */
   const DAY=86400000;
@@ -2932,7 +2955,7 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
   const vendorLegend=allVendorMode?`<button type="button" class="price-history-other-toggle" aria-expanded="false" aria-controls="priceHistoryOtherList" title="매입처 목록 보기"><i class="current"></i>매입처 <b>${otherList.length}개사</b></button>`:`<span><i class="current"></i>선택 매입처</span><button type="button" class="price-history-other-toggle" aria-expanded="false" aria-controls="priceHistoryOtherList" title="타 매입처 목록 보기"><i class="other"></i>타 매입처 <b>${otherList.length}개사</b></button>`;
   const selectedProductInfo=[selectedName,selectedSpec].filter(Boolean).join(' · ');
   const selectedSpecHtml=selectedProductInfo?`<span class="vendor-price-history-selected-spec">${esc(selectedProductInfo)}</span>`:'';
-  return `<div class="vendor-price-history-chart"><div class="vendor-price-history-chart-head"><h3>📊 입고일별 매입단가 추이</h3>${selectedSpecHtml}<span class="sub2">왼쪽 → 오른쪽: 과거 → 최근</span><span class="spacer"></span><div class="vendor-price-history-legend">${vendorLegend}<span><i class="up"></i>인상선</span><span><i class="down"></i>인하선</span><span><i class="same"></i>동일선</span></div></div><div class="price-history-other-list" id="priceHistoryOtherList" hidden><div class="price-history-other-list-head">🏷️ ${listName} 목록 <span class="sub2">${otherList.length}개사 · 제외 처리된 단가이력은 포함하지 않음</span></div><div class="price-history-other-list-body">${otherListHtml}</div></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="입고일별 매입단가 추이그래프">${grid}<line x1="${L}" y1="${avgY.toFixed(1)}" x2="${W-R}" y2="${avgY.toFixed(1)}" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-R-4}" y="${(avgY-6).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="#0f766e">평균 ${won(Math.round(avg))}</text>${segments}${dots}${dates}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#94a3b8"/>${cycleAxis}${cycles}</svg><div class="chart-summary"><span>최저 <b>${won(Math.round(minPrice))}원</b></span><span>최고 <b>${won(Math.round(maxPrice))}원</b></span><span>평균 <b>${won(Math.round(avg))}원</b></span><span>입고단가 <b>${data.length}회</b></span></div><div class="chart-summary chart-cycle-summary">🔁 ${cycleSummary}</div>${bomUsageHtml}</div>`;
+  return `<div class="vendor-price-history-chart"><div class="vendor-price-history-chart-head"><h3>📊 입고일별 ${metricLabel} 추이</h3>${selectedSpecHtml}${metricBtns}<span class="sub2">왼쪽 → 오른쪽: 과거 → 최근</span><span class="spacer"></span><div class="vendor-price-history-legend">${vendorLegend}<span><i class="up"></i>${metric==='price'?'인상선':'증가선'}</span><span><i class="down"></i>${metric==='price'?'인하선':'감소선'}</span><span><i class="same"></i>동일선</span></div></div><div class="price-history-other-list" id="priceHistoryOtherList" hidden><div class="price-history-other-list-head">🏷️ ${listName} 목록 <span class="sub2">${otherList.length}개사 · 제외 처리된 단가이력은 포함하지 않음</span></div><div class="price-history-other-list-body">${otherListHtml}</div></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="입고일별 매입단가 추이그래프">${grid}<line x1="${L}" y1="${avgY.toFixed(1)}" x2="${W-R}" y2="${avgY.toFixed(1)}" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-R-4}" y="${(avgY-6).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="#0f766e">평균 ${fmtV(avg)}</text>${segments}${dots}${dates}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#94a3b8"/>${cycleAxis}${cycles}</svg><div class="chart-summary"><span>${metricLabel} 최저 <b>${fmtV(minPrice)}${metric==='qty'?'':'원'}</b></span><span>최고 <b>${fmtV(maxPrice)}${metric==='qty'?'':'원'}</b></span><span>평균 <b>${fmtV(avg)}${metric==='qty'?'':'원'}</b></span><span>합계 <b>${metric==='price'?won(Math.round(data.reduce((a,o)=>a+(+o.amt||0),0)))+'원':fmtV(data.reduce((a,o)=>a+valOf(o),0))+(metric==='qty'?'':'원')}</b></span><span>입고 <b>${data.length}회</b></span></div><div class="chart-summary chart-cycle-summary">🔁 ${cycleSummary}</div>${bomUsageHtml}</div>`;
 }
 
 /* 매입처 단가정리 제품 선택: 전체 기간·전체 매입처·전체 사업부의 동일 품목 단가 이력 */
@@ -3005,6 +3028,13 @@ function vendorPriceHistory(selectedVendor,item,nav){
     afterRender:()=>{
       const table=$('#tbl'),wrap=table&&table.closest('.tablewrap');
       if(wrap){wrap.classList.add('vendor-price-history-wrap');wrap.insertAdjacentHTML('beforebegin',chartHtml);}
+      /* v132 : 매입단가 / 금액 / 중량(kg) 전환 */
+      window.__priceChartRefresh=()=>vendorPriceHistory(selectedVendor,item,nav);
+      $$('#content .price-metric').forEach(btn=>btn.onclick=e=>{
+        e.preventDefault();e.stopPropagation();
+        priceChartMetricSave(btn.dataset.pcm);
+        vendorPriceHistory(selectedVendor,item,nav);
+      });
       const otherToggle=$('#content .price-history-other-toggle'),otherList=$('#content .price-history-other-list');
       if(otherToggle&&otherList)otherToggle.onclick=()=>{
         const open=otherList.hasAttribute('hidden');
@@ -10662,6 +10692,11 @@ window.__bomUsageRefresh=refreshFromWeb;
 })();
 </script>
 <style id="bom-usage-style-v130">
+.price-metric-group{display:inline-flex;border:1px solid #d7dfea;border-radius:999px;overflow:hidden;margin-left:2px;vertical-align:middle}
+.price-metric{border:0;background:#fff;color:#5b6b82;padding:3px 11px;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer;line-height:1.6}
+.price-metric+.price-metric{border-left:1px solid #e6ecf4}
+.price-metric:hover{color:#0f766e}
+.price-metric.on{background:#0f766e;color:#fff}
 .chart-cycle-summary{margin-top:2px;color:#64748b}
 .chart-cycle-summary .cycle-late b{color:#b91c1c}
 .chart-cycle-summary .cycle-soon b{color:#b45309}
