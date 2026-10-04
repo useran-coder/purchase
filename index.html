@@ -1122,7 +1122,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v139 · 수량 버튼 · 챗봇 하이브리드 AI';
+const VERNO='v140 · 그래프 금액·수량·중량(kg) 버튼';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -2863,7 +2863,6 @@ function vendorPriceSummary(vendor,nav){
     backAct:()=>nav.backAct(),
     searchFields:['nat','name','code','spec'],
     note:`${esc(vendor)}에서 구매한 제품만 표시합니다. 최근 매입단가는 해당 제품의 가장 최근 단가가 입력된 입고 기록 기준입니다. 제품을 선택하면 타 매입처·타 사업부 입고를 포함한 이전 단가 이력을 확인할 수 있습니다.`,
-    headExtra:monthlyMetricControls,
     monthKey:'vendor-price-summary',
     monthlyMetric,
     monthlyVendorColumns:false,
@@ -10426,7 +10425,7 @@ if(window.__ptrendV127)return; window.__ptrendV127=true;
 var STORE={}, SEQ=0;
 /* v131 : 금액 / 중량(kg) 단위 선택 — 마지막 선택을 브라우저에 기억 */
 var UNIT_KEY='dbfastec_ptrend_unit_v131';
-function lastUnit(){ try{ var v=localStorage.getItem(UNIT_KEY); return (v==='qty')?'qty':'amt'; }catch(e){ return 'amt'; } }
+function lastUnit(){ try{ var v=localStorage.getItem(UNIT_KEY); return (v==='qty'||v==='kg')?v:'amt'; }catch(e){ return 'amt'; } }
 function saveUnit(u){ try{ localStorage.setItem(UNIT_KEY,u); }catch(e){} }
 function qtyOf(r){ var q=+((r&&r.qty)||0); return isFinite(q)?q:0; }
 function hasKg(rows){
@@ -10434,6 +10433,12 @@ function hasKg(rows){
   var any=(rows||[]).some(function(r){return Math.abs(qtyOf(r))>0});
   return any&&(rows||[]).every(function(r){return !Math.abs(qtyOf(r))||/kg/i.test(String(r.unit||''))});
 }
+/* v140 : 행 단위로 kg 여부 — 섞여 있어도 «중량(kg)» 버튼을 쓸 수 있게 */
+function isKg1(r){
+  try{ if(typeof isKgRow==='function')return !!isKgRow(r); }catch(e){}
+  return /kg/i.test(String((r&&r.unit)||''));
+}
+function anyKg(rows){ return (rows||[]).some(function(r){ return Math.abs(qtyOf(r))>0 && isKg1(r); }); }
 
 function W(n){try{return won(Math.round(+n||0))}catch(e){return String(Math.round(+n||0))}}
 function WM(n){try{return wonM(+n||0)}catch(e){return W(n)}}
@@ -10493,17 +10498,18 @@ function build(id){
   var cy=String(new Date().getFullYear());
   var year=st.year&&ys.indexOf(st.year)>=0?st.year:(ys.indexOf(cy)>=0?cy:ys[0]);
   st.year=year;
-  var kgOk=hasKg(rows);
-  var unit=(st.unit==='qty')?'qty':'amt';
+  var kgOk=hasKg(rows);            /* 전부 kg 자료 */
+  var kgSome=kgOk||anyKg(rows);    /* kg 행이 하나라도 있음 */
+  var unit=(st.unit==='qty'||st.unit==='kg')?st.unit:'amt';
+  if(unit==='kg'&&!kgSome)unit='amt';
+  if(unit==='qty'&&kgOk)unit='kg';   /* 전부 kg 이면 수량 대신 중량으로 */
   st.unit=unit;
-  var qLabel=kgOk?'중량(kg)':'수량';
-  var qSuffix=kgOk?'kg':'';
-  var U=function(x){ return W(x)+(unit==='qty'?qSuffix:''); };
+  var U=function(x){ return W(x)+(unit==='kg'?'kg':''); };
   var v=Array(12).fill(0), n=Array(12).fill(0);
   rows.forEach(function(r){
     var ym=String(r.ym||''); if(ym.slice(0,4)!==year)return;
     var mi=+ym.slice(5,7)-1; if(mi<0||mi>11)return;
-    v[mi]+=(unit==='qty'?qtyOf(r):amt(r)); n[mi]++;
+    v[mi]+=(unit==='qty'?qtyOf(r):(unit==='kg'?(isKg1(r)?qtyOf(r):0):amt(r))); n[mi]++;
   });
   var tot=v.reduce(function(a,b){return a+b},0), cnt=n.reduce(function(a,b){return a+b},0);
   var live=[]; for(var i=0;i<12;i++)if(n[i]>0)live.push(i);
@@ -10567,11 +10573,13 @@ function build(id){
     dots+labs+xa+'</svg>';
 
   var chips=ys.map(function(y2){return '<button type="button" class="pt-year'+(y2===year?' on':'')+'" data-pty="'+E(y2)+'">'+E(y2)+'년</button>'}).join('');
-  /* v139 : 금액 오른쪽에 «수량/중량» 버튼을 항상 둡니다 — kg 자료면 «중량(kg)», 아니면 «수량» */
+  /* v140 : 금액 · 수량 · 중량(kg) — kg 행이 섞여 있어도 중량 버튼을 함께 보여 줍니다 */
   var units='<span class="pt-units"><button type="button" class="pt-unit'+(unit==='amt'?' on':'')+'" data-ptu="amt">금액</button>'
-    +'<button type="button" class="pt-unit'+(unit==='qty'?' on':'')+'" data-ptu="qty">'+qLabel+'</button></span>';
+    +(kgOk?'':'<button type="button" class="pt-unit'+(unit==='qty'?' on':'')+'" data-ptu="qty">수량</button>')
+    +(kgSome?('<button type="button" class="pt-unit'+(unit==='kg'?' on':'')+'" data-ptu="kg">중량(kg)</button>'):'')
+    +'</span>';
   var head='<div class="pt-head">'+
-    '<span class="pt-title">📈 '+E(st.label)+' · '+E(year)+'년 · 월별 매입 '+(unit==='qty'?(kgOk?'중량 추이':'수량 추이'):'추이')+'</span>'+
+    '<span class="pt-title">📈 '+E(st.label)+' · '+E(year)+'년 · 월별 매입 '+(unit==='kg'?'중량 추이':(unit==='qty'?'수량 추이':'추이'))+'</span>'+
     '<span class="pt-years">'+chips+'</span>'+units+
     '<span class="pt-stats">합계 <b>'+U(tot)+'</b> · 평균 <b class="y">'+U(Math.round(avg))+'</b>(거래월 '+live.length+'개월) · 최고 <b class="r">'+U(v[mxi])+'</b>('+(mxi+1)+'월) · 최저 <b class="g">'+U(v[mni])+'</b>('+(mni+1)+'월) · 건수 '+W(cnt)+'건'+
     (curMonth?' · '+curMonth+'월 진행 중':'')+'</span>'+
@@ -10611,7 +10619,7 @@ document.addEventListener('click',function(e){
   var host=t.closest('.ptrend'); if(!host||!STORE[host.id])return;
   e.preventDefault(); e.stopPropagation();
   if(t.classList.contains('pt-unit')){
-    var u=t.dataset.ptu==='qty'?'qty':'amt';
+    var u=(t.dataset.ptu==='qty'||t.dataset.ptu==='kg')?t.dataset.ptu:'amt';
     saveUnit(u);
     Object.keys(STORE).forEach(function(k){STORE[k].unit=u});   /* 다른 그래프도 같은 단위로 */
     document.querySelectorAll('.ptrend[data-ptrend]').forEach(function(el){paint(el,true)});
