@@ -1131,7 +1131,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v142 · 그래프에 사업부 매입비중';
+const VERNO='v143 · 그래프 선택 → 표 연동';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -2319,6 +2319,7 @@ function render(title, meta, data, cols, defSortKey, note, opts={}){
   const eb=$('#exportBtn'); if(eb) eb.onclick=()=>exportTable(title,displayCols,view);
   bindMonthlyToggle(()=>{if(typeof opts.viewRefresh==='function')opts.viewRefresh();else render(title,meta,data,cols,null,note,opts);});
   if(opts.chips){ $$('#content .chip').forEach(ch=>ch.onclick=()=>{ state.chipVal=ch.dataset.v; if(opts.onChip){opts.onChip();return;} render(title,meta,data,cols,null,note,opts); }); }
+  try{ window.__lastView=view; window.__lastViewTitle=String(title||''); }catch(_e){}
   if(opts.afterRender) opts.afterRender(view);
   bindTableRowSelection();
 }
@@ -2960,7 +2961,7 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
       badge=`<g><rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="22" rx="11" fill="${isHi?'#fef2f2':'#f0fdfa'}" stroke="${isHi?'#fecaca':'#99f6e4'}" stroke-width="1.5"/>`
         +`<text x="${(bx+bw/2).toFixed(1)}" y="${(by+15.5).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="800" fill="${isHi?'#dc2626':'#0f766e'}">${isHi?'최고':'최저'}</text></g>`;
     }
-    return `<g><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="${isHi||isLo?7:5}" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · 단가 ${won(Math.round(o.price))}원 · 금액 ${won(Math.round(o.amt||0))}원 · ${kgOk?'중량':'수량'} ${won(Math.round(o.qty||0))}${kgOk?'kg':''} · ${status}</title></circle>${val}${badge}</g>`;
+    return `<g class="pch-dot" data-d="${esc(o.d||'')}" data-v="${esc(o.vendor||'')}" style="cursor:pointer"><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="13" fill="transparent"/><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="${isHi||isLo?7:5}" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · 단가 ${won(Math.round(o.price))}원 · 금액 ${won(Math.round(o.amt||0))}원 · ${kgOk?'중량':'수량'} ${won(Math.round(o.qty||0))}${kgOk?'kg':''} · ${status} — 눌러서 아래 표 보기</title></circle>${val}${badge}</g>`;
   }).join('');
   const dates=data.map((o,i)=>showLabel(i)?`<text x="${x(i).toFixed(1)}" y="${H-62}" text-anchor="middle" font-size="12" fill="#64748b">${esc(String(o.d||'').slice(2))}</text>`:'').join('');
   /* v130 : 구매주기(입고 간격) — 점과 점 사이에 며칠 만에 다시 들어왔는지 표시 */
@@ -10482,10 +10483,11 @@ function E(v){try{return esc(v)}catch(e){return String(v==null?'':v)}}
 function amt(r){try{return amtOf(r)||0}catch(e){return +((r&&r.supply)||0)}}
 
 /* 기간 필터를 뺀 전체 매입행 — 추이는 1~12월을 모두 보여줘야 한다 */
+var NODIV=false;   /* v143 : 사업부 매입비중은 «사업부 선택과 무관하게» 전체를 봅니다 */
 function allRows(){
   try{
     return CUR.filter(function(r){
-      if(state.division!=='전체'&&r.div!==state.division)return false;
+      if(!NODIV&&state.division!=='전체'&&r.div!==state.division)return false;
       if(!state.inclOverhead&&r.natCls==='ovh')return false;
       return true;
     });
@@ -10520,8 +10522,10 @@ window.purchaseTrendHtml=function(rows,label,opts){
   opts=opts||{};
   var src=opts.raw?(rows||[]):expand(rows);
   if(!src.length)return '';
+  var srcAll=src;
+  try{ NODIV=true; srcAll=expand(rows&&rows.length?rows:src)||src; }catch(e){ srcAll=src; } finally{ NODIV=false; }
   var id='pt'+(++SEQ);
-  STORE[id]={rows:src,label:label||'',year:null,unit:lastUnit()};
+  STORE[id]={rows:src,rowsAll:srcAll,label:label||'',year:null,unit:lastUnit()};
   var ks=Object.keys(STORE);                 /* 메모리 누적 방지 — 최근 60개만 보관 */
   if(ks.length>60)ks.slice(0,ks.length-60).forEach(function(k){delete STORE[k]});
   return '<div class="ptrend" id="'+id+'" data-ptrend="1"></div>';
@@ -10571,7 +10575,10 @@ function build(id){
     var isMax=(i2===mxi),isMin=(i2===mni)&&mxi!==mni;
     var col=isMax?'#ef4444':(isMin?'#10b981':'#2f7ef0');
     var r=isMax||isMin?6.5:4.5;
-    dots+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+col+'" stroke="#fff" stroke-width="'+(isMax||isMin?2:1.5)+'"/>';
+    dots+='<g class="pt-dot" data-ym="'+year+'-'+String(i2+1).padStart(2,'0')+'" style="cursor:pointer">'
+      +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="14" fill="transparent"/>'
+      +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+col+'" stroke="#fff" stroke-width="'+(isMax||isMin?2:1.5)+'">'
+      +'<title>'+(i2+1)+'월 '+U(v[i2])+' · 입고 '+W(n[i2])+'건 — 눌러서 아래 표 보기</title></circle></g>';
     var anchor=i2===0?'start':(i2===11?'end':'middle');
     var lx=i2===0?x-4:(i2===11?x+4:x);
     labs+='<text x="'+lx.toFixed(1)+'" y="'+(y-14).toFixed(1)+'" text-anchor="'+anchor+'" font-size="13" font-weight="'+(isMax||isMin?'800':'600')+'" fill="'+(isMax?'#ef4444':(isMin?'#0d9488':'#334155'))+'">'+U(v[i2])+'</text>';
@@ -10621,8 +10628,9 @@ function build(id){
     (curMonth?' · '+curMonth+'월 진행 중':'')+'</span>'+
     '</div>';
   /* v142 : 선택 연도 매입의 사업부 비중 */
-  var yrRows=rows.filter(function(r){ return String(r.ym||'').slice(0,4)===year; });
-  var dsh=(typeof window.divShareBarHtml==='function')?window.divShareBarHtml(yrRows):'';
+  var baseAll=(st.rowsAll&&st.rowsAll.length)?st.rowsAll:rows;
+  var yrRows=baseAll.filter(function(r){ return String(r.ym||'').slice(0,4)===year; });
+  var dsh=(typeof window.divShareBarHtml==='function')?window.divShareBarHtml(yrRows,{year:year}):'';
   return head+'<div class="pt-svg">'+svg+'</div>'+dsh;
 }
 
@@ -11338,14 +11346,16 @@ header .hbar .logo:active{transform:translateY(0)}
     for(var i=0;i<rows.length;i++){ var s=split(rows[i]); bf+=s.bf; pd+=s.pd; etc+=s.etc; tot+=s.a; }
     if(!(tot>0))return '';
     var P=function(v){ return tot?(v/tot*100):0; };
-    var seg=function(cls,v,nm){ var p=P(v); return p>0.04?('<i class="'+cls+'" style="width:'+p.toFixed(2)+'%"><title>'+nm+' '+p.toFixed(1)+'%</title></i>'):''; };
+    var seg=function(cls,v,nm){ var p=P(v); if(!(p>0.04))return '';
+      return '<i class="'+cls+'" data-ds="'+cls+'" style="width:'+p.toFixed(2)+'%" title="'+nm+' '+p.toFixed(1)+'% — 눌러서 아래 표 보기"></i>'; };
     var item=function(cls,nm,v){ var p=P(v); if(!(v>0))return '';
-      return '<span class="ds-item '+cls+'"><em></em>'+nm+' <b>'+p.toFixed(1)+'%</b> <small>'+WM(v)+'</small></span>'; };
+      return '<span class="ds-item '+cls+'" data-ds="'+cls+'" title="'+nm+' 내역만 아래 표에 보기"><em></em>'+nm+' <b>'+p.toFixed(1)+'%</b> <small>'+WM(v)+'</small></span>'; };
     var title=opts.title||'🏭 사업부 매입비중';
     return '<div class="divshare">'
       +'<span class="ds-title">'+title+'</span>'
       +'<span class="ds-bar">'+seg('bf',bf,'방화문부자재')+seg('pd',pd,'PD사업부')+seg('etc',etc,'기타')+'</span>'
       +item('bf','방화문부자재',bf)+item('pd','PD사업부',pd)+item('etc','기타',etc)
+      +'<span class="ds-note">전체 사업부 기준</span>'
       +'</div>';
   };
   /* 그래프 데이터에서 원본 매입행을 모읍니다 */
@@ -11358,6 +11368,172 @@ header .hbar .logo:active{transform:translateY(0)}
     });
     return out;
   };
+})();
+</script>
+<style id="pu-v143-filter">
+/* v143 · 그래프에서 고른 조건으로 아래 표를 좁혀 보기 */
+.divshare .ds-bar i{cursor:pointer;transition:filter .12s}
+.divshare .ds-bar i:hover{filter:brightness(1.18)}
+.divshare .ds-item{cursor:pointer;padding:2px 7px;border-radius:999px;border:1px solid transparent;transition:background .12s,border-color .12s}
+.divshare .ds-item:hover{background:#eef4ff;border-color:#c7d7f5}
+.divshare .ds-item.on{background:#1e3a5f;border-color:#1e3a5f;color:#fff}
+.divshare .ds-item.on b,.divshare .ds-item.on small{color:#fff}
+.divshare .ds-note{margin-left:auto;font-size:10.5px;color:#94a3b8;font-weight:700;white-space:nowrap}
+.pu-cfilter{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 9px;padding:8px 12px;
+  border:1px solid #bfdbfe;border-left:4px solid #1d4ed8;border-radius:10px;background:#eff6ff;font-size:12px;color:#1e3a5f}
+.pu-cfilter b{font-weight:800}
+.pu-cfilter .lbl{font-weight:800;color:#1d4ed8}
+.pu-cfilter .cnt{color:#64748b;font-weight:700}
+.pu-cfilter button{margin-left:auto;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;
+  padding:3px 10px;font:800 11.5px inherit;cursor:pointer}
+.pu-cfilter button:hover{background:#f1f5f9}
+.pu-cfilter.warn{border-color:#fde68a;border-left-color:#f59e0b;background:#fffbeb;color:#92400e}
+.pu-cfilter.warn .lbl{color:#b45309}
+svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){stroke:#1e3a5f;stroke-width:3}
+</style>
+<script id="pu-v143-chart-filter">
+/* v143 · ① 사업부 비중 띠 클릭 → 그 사업부 내역만 아래 표에
+          ② 그래프 접점(점) 클릭 → 그 날짜(또는 그 달) 내역만 아래 표에
+   표를 다시 그리지 않고 «행을 숨기는» 방식이라 어느 화면에서도 똑같이 동작합니다. */
+(function(){
+  if(window.__puCFV143)return; window.__puCFV143=true;
+  var ACTIVE=null, BUSY=false;
+
+  function tbl(){ return document.querySelector('#content #tbl'); }
+  function titleNow(){ var t=document.querySelector('#content .rhead .title'); return t?String(t.textContent||''):''; }
+  function rowsOf(o){
+    if(!o)return null;
+    if(Array.isArray(o.srcRows)&&o.srcRows.length)return o.srcRows;
+    if(Array.isArray(o.rows)&&o.rows.length)return o.rows;
+    if(o.d||o.ym)return [o];
+    return null;
+  }
+  function splitOf(r){
+    try{ if(typeof dcmpSplit==='function')return dcmpSplit(r); }catch(e){}
+    var a=0; try{ a=amtOf(r)||0; }catch(e){ a=+((r&&r.supply)||0); }
+    var d=String((r&&r.div)||'');
+    return {a:a,bf:d==='방화문부자재'?a:0,pd:d==='PD사업부'?a:0,etc:(d==='방화문부자재'||d==='PD사업부')?0:a};
+  }
+  var DIVNAME={bf:'방화문부자재',pd:'PD사업부',etc:'기타(미지정·관리공통)'};
+
+  /* ── 조건 ── */
+  function divSpec(k){
+    return {kind:'div', key:k, label:DIVNAME[k]||k, icon:'🏭',
+      test:function(o,cells,hd){
+        var rs=rowsOf(o);
+        if(rs)return rs.some(function(r){ return splitOf(r)[k]>0; });
+        var i=hd.indexOf('사업부'); if(i<0)return true;
+        var v=String(cells[i]||'');
+        if(k==='bf')return v.indexOf('방화문부자재')>=0;
+        if(k==='pd')return v.indexOf('PD')>=0;
+        return !(v.indexOf('방화문부자재')>=0||v.indexOf('PD')>=0);
+      }};
+  }
+  function dateSpec(d,vendor){
+    return {kind:'date', key:d+'|'+(vendor||''), label:d+(vendor?(' · '+vendor):''), icon:'📅',
+      test:function(o,cells,hd){
+        var rs=rowsOf(o);
+        if(rs)return rs.some(function(r){ return String(r.d||'')===d && (!vendor||String(r.vendor||'')===vendor); });
+        var di=-1; for(var i=0;i<hd.length;i++)if(/일자|입고일|일시/.test(hd[i])){di=i;break;}
+        if(di<0)return true;
+        if(String(cells[di]||'').indexOf(d)<0)return false;
+        if(vendor){ var vi=hd.indexOf('매입처'); if(vi>=0&&String(cells[vi]||'').indexOf(vendor)<0)return false; }
+        return true;
+      }};
+  }
+  function ymSpec(ym){
+    var lab=ym.slice(0,4)+'년 '+(+ym.slice(5,7))+'월';
+    return {kind:'ym', key:ym, label:lab, icon:'📅',
+      test:function(o,cells,hd){
+        var rs=rowsOf(o);
+        if(rs)return rs.some(function(r){ return String(r.ym||String(r.d||'').slice(0,7))===ym; });
+        var di=-1; for(var i=0;i<hd.length;i++)if(/일자|입고일|일시/.test(hd[i])){di=i;break;}
+        if(di<0)return true;
+        return String(cells[di]||'').indexOf(ym)>=0;
+      }};
+  }
+
+  /* ── 표시 ── */
+  function chipHtml(spec,n,warn){
+    if(warn)return '<div class="pu-cfilter warn"><b>'+spec.icon+' '+esc2(spec.label)+'</b>'
+      +'<span class="cnt">이 표에는 해당 내역이 없습니다 — 필터를 적용하지 않았습니다.</span>'
+      +'<button type="button" data-cfx="1">✕ 닫기</button></div>';
+    return '<div class="pu-cfilter"><b>'+spec.icon+' 선택 보기</b><span class="lbl">'+esc2(spec.label)+'</span>'
+      +'<span class="cnt">표시 '+n+'행</span><button type="button" data-cfx="1">✕ 전체 보기</button></div>';
+  }
+  function esc2(v){ try{ return esc(v); }catch(e){ return String(v==null?'':v); } }
+  function setChip(html){
+    var old=document.getElementById('puCFBar'); if(old&&old.parentNode)old.parentNode.removeChild(old);
+    if(!html)return;
+    var wrap=document.querySelector('#content .tablewrap'); if(!wrap)return;
+    var d=document.createElement('div'); d.id='puCFBar'; d.innerHTML=html;
+    wrap.parentNode.insertBefore(d.firstChild?d.firstChild:d, wrap);
+    var b=document.querySelector('#content [data-cfx]');
+    if(b)b.addEventListener('click',function(){ clear(); });
+    var node=document.querySelector('#content .pu-cfilter'); if(node)node.id='puCFBar';
+  }
+  function markItems(){
+    var k=ACTIVE&&ACTIVE.kind==='div'?ACTIVE.key:null;
+    Array.prototype.forEach.call(document.querySelectorAll('.divshare .ds-item'),function(el){
+      el.classList.toggle('on',!!k&&el.dataset.ds===k);
+    });
+  }
+  function showAll(){
+    var t=tbl(); if(!t)return;
+    Array.prototype.forEach.call(t.querySelectorAll('tbody tr'),function(tr){ tr.style.display=''; });
+  }
+  function apply(spec){
+    var t=tbl(); if(!t)return;
+    if(ACTIVE&&ACTIVE.kind===spec.kind&&ACTIVE.key===spec.key){ clear(); return; }
+    var trs=[].slice.call(t.querySelectorAll('tbody tr[data-i]'));
+    if(!trs.length)return;
+    var view=null; try{ view=window.__lastView||null; }catch(e){}
+    var hd=[].slice.call(t.querySelectorAll('thead th')).map(function(x){ return String(x.innerText||'').replace(/\s+/g,'').trim(); });
+    var n=0, res=[];
+    trs.forEach(function(tr){
+      var o=view?view[+tr.dataset.i]:null;
+      var cells=[].slice.call(tr.children).map(function(td){ return String(td.innerText||'').replace(/\s+/g,' ').trim(); });
+      var ok=true; try{ ok=!!spec.test(o,cells,hd); }catch(e){ ok=true; }
+      res.push(ok); if(ok)n++;
+    });
+    BUSY=true;
+    if(!n){ showAll(); ACTIVE=null; setChip(chipHtml(spec,0,true)); markItems(); BUSY=false; return; }
+    trs.forEach(function(tr,i){ tr.style.display=res[i]?'':'none'; });
+    Array.prototype.forEach.call(t.querySelectorAll('tbody tr.total-row'),function(tr){ tr.style.display=''; });
+    ACTIVE={kind:spec.kind,key:spec.key,label:spec.label,icon:spec.icon,test:spec.test,title:titleNow()};
+    setChip(chipHtml(spec,n,false)); markItems(); BUSY=false;
+  }
+  function clear(){
+    BUSY=true; showAll(); ACTIVE=null; setChip(''); markItems(); BUSY=false;
+  }
+  function reapply(){
+    if(!ACTIVE)return;
+    if(titleNow()!==ACTIVE.title){ clear(); return; }
+    var spec={kind:ACTIVE.kind,key:ACTIVE.key,label:ACTIVE.label,icon:ACTIVE.icon,test:ACTIVE.test};
+    ACTIVE=null; apply(spec);
+  }
+
+  /* ── 클릭 ── */
+  document.addEventListener('click',function(e){
+    var t=e.target; if(!t||!t.closest)return;
+    var ds=t.closest('.divshare [data-ds]');
+    if(ds){ e.preventDefault(); e.stopPropagation(); apply(divSpec(ds.dataset.ds)); return; }
+    var pd=t.closest('svg .pch-dot');
+    if(pd){ e.preventDefault(); e.stopPropagation(); apply(dateSpec(pd.getAttribute('data-d'),pd.getAttribute('data-v'))); return; }
+    var pt=t.closest('svg .pt-dot');
+    if(pt){ e.preventDefault(); e.stopPropagation(); apply(ymSpec(pt.getAttribute('data-ym'))); return; }
+  },true);
+
+  /* 표가 다시 그려지면 같은 화면이면 다시 적용, 다른 화면이면 해제 */
+  var mo=new MutationObserver(function(){
+    if(BUSY||!ACTIVE)return;
+    if(!document.getElementById('puCFBar')||!tbl()){ setTimeout(reapply,0); }
+  });
+  function start(){ var c=document.getElementById('content'); if(!c){ setTimeout(start,400); return; }
+    mo.observe(c,{childList:true,subtree:true}); }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
+
+  window.puChartFilter={apply:apply,clear:clear,div:function(k){apply(divSpec(k))},active:function(){return ACTIVE}};
 })();
 </script>
 </body>
