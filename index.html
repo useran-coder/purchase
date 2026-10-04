@@ -811,6 +811,14 @@
   .dcmp-howto{font-size:11.5px;line-height:1.7;color:#475569}
   .dcmp-howto b{color:#0f172a}
 </style>
+<style id="pu-v134-header">
+/* v134 · 헤더 정리 : 회사명 줄 제거 → 그 자리에 작은 사업부 버튼 / 검색창을 매출분석 도구 크기로 + 중앙 배치 */
+.divwrap.sm{position:relative;display:inline-flex;align-self:flex-start;margin-top:1px}
+.divbtn.sm{padding:2px 8px;font-size:10.5px;font-weight:800;border-radius:6px;line-height:1.5;letter-spacing:-.01em}
+.divwrap.sm .divpop{top:calc(100% + 6px);left:0;transform:none}
+.hbar>div[style*="flex-direction:column"]{flex:0 0 auto}
+@media(max-width:980px){.hp-search{margin-left:auto;margin-right:0}}
+</style>
 </head>
 <body>
 <header>
@@ -818,16 +826,15 @@
     <span class="logo"><img src="data:image/jpeg;base64,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" alt="동방파스텍"></span>
     <div style="display:flex;flex-direction:column;gap:1px">
       <span style="font-weight:800;font-size:16px;color:var(--navy);white-space:nowrap">매입 분석 도구</span>
-      <span class="hsub">(주)동방파스텍 · 방화문부자재사업부</span>
-    </div>
-    <div class="divwrap" id="divWrap">
-      <button class="divbtn" id="divBtn" type="button" title="사업부 선택">🏢 사업부 (방화문부자재)</button>
-      <div class="divpop" id="divPop">
-        <div class="dp-row" id="divRow">
-          <button data-v="방화문부자재">방화문부자재</button>
-          <button data-v="PD사업부">PD사업부</button>
-          <button data-v="관리·공통">관리·공통</button>
-          <button data-v="전체">전체(통합)</button>
+      <div class="divwrap sm" id="divWrap">
+        <button class="divbtn sm" id="divBtn" type="button" title="사업부 선택">🏢 사업부 (방화문부자재)</button>
+        <div class="divpop" id="divPop">
+          <div class="dp-row" id="divRow">
+            <button data-v="방화문부자재">방화문부자재</button>
+            <button data-v="PD사업부">PD사업부</button>
+            <button data-v="관리·공통">관리·공통</button>
+            <button data-v="전체">전체(통합)</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1115,7 +1122,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v133 · 로그인 서버 주소 자가진단·교체';
+const VERNO='v139 · 수량 버튼 · 챗봇 하이브리드 AI';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -2835,6 +2842,11 @@ function vendorPriceSummary(vendor,nav){
   state.vendorPriceMonthlyMetric=state.vendorPriceMonthlyMetric||'qty';
   const monthlyMetric=state.vendorPriceMonthlyMetric;
   const monthlyMetricControls=`<div class="seg" title="월별 표 표시 기준"><button type="button" class="vendorPriceMonthlyMetricBtn ${monthlyMetric==='amount'?'on':''}" data-metric="amount">금액</button><button type="button" class="vendorPriceMonthlyMetricBtn ${monthlyMetric==='qty'?'on':''}" data-metric="qty">수량</button></div>`;
+  /* v138 : 표 위에 이 매입처의 월매입 추이 그래프 (매출분석 도구와 같은 형식 · 기간 필터와 무관하게 1~12월 전체) */
+  const vpsTrendRows=(typeof CUR!=='undefined'?CUR:[]).filter(r=>r.vendor===vendor
+    && (state.division==='전체'||r.div===state.division)
+    && (state.inclOverhead||r.natCls!=='ovh'));
+  const vpsTrendHtml=(typeof purchaseTrendHtml==='function')?purchaseTrendHtml(vpsTrendRows,'🏷️ '+vendor,{raw:true}):'';
   render(`🏷️ ${vendor} · 단가정리`, `제품 ${arr.length}종 · 매입액 ${wonM(total)}`, arr, [
     {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
     {h:'매입구분',l:1,k:'nat',cell:o=>{const c=natureInfo(o.nat);return `<span class="tag ${c.cls||'custom'}">${esc(o.nat)}</span>`;},raw:o=>o.nat},
@@ -2864,6 +2876,7 @@ function vendorPriceSummary(vendor,nav){
     monthlyEqualMonths:true,
     monthlyQtyHeader:'수량',
     monthlyQtySuffix:'',
+    controlsHtml:vpsTrendHtml,
     tableClass:'vendor-price-summary-table',
     afterRender:(view)=>{
       $$('#content .vendorPriceMonthlyMetricBtn').forEach(btn=>btn.onclick=()=>{
@@ -2889,22 +2902,31 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
   const bomUsageHtml=(typeof window.bomUsageBoxHtml==='function')
     ? window.bomUsageBoxHtml(item||{name:selectedName,spec:selectedSpec},(data&&data[0])||null) : '';
   const kgOk=priceChartKg(data);
-  let metric=priceChartMetric(); if(metric==='qty'&&!kgOk)metric='price';
-  const metricLabel=metric==='amt'?'입고 금액':(metric==='qty'?'입고 중량':'매입단가');
+  const metric=priceChartMetric();
+  const qtyUnit=kgOk?'kg':'';
+  const qtyLabel=kgOk?'중량(kg)':'수량';
+  const metricLabel=metric==='amt'?'입고 금액':(metric==='qty'?(kgOk?'입고 중량':'입고 수량'):'매입단가');
   const valOf=o=>metric==='amt'?(+o.amt||0):(metric==='qty'?(+o.qty||0):(+o.price||0));
-  const fmtV=v=>won(Math.round(v))+(metric==='qty'?'kg':'');
+  const fmtV=v=>won(Math.round(v))+(metric==='qty'?qtyUnit:'');
+  const unitTxt=metric==='qty'?(kgOk?'':'개'):'원';
   const metricBtns='<span class="price-metric-group">'
     +'<button type="button" class="price-metric'+(metric==='price'?' on':'')+'" data-pcm="price">매입단가</button>'
     +'<button type="button" class="price-metric'+(metric==='amt'?' on':'')+'" data-pcm="amt">금액</button>'
-    +(kgOk?'<button type="button" class="price-metric'+(metric==='qty'?' on':'')+'" data-pcm="qty">중량(kg)</button>':'')
+    +'<button type="button" class="price-metric'+(metric==='qty'?' on':'')+'" data-pcm="qty">'+qtyLabel+'</button>'
     +'</span>';
+  /* v137 : 연도 배지 — 그래프에 담긴 기간의 연도 */
+  const yrList=[...new Set(data.map(o=>String(o.d||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort();
+  const yrBadge=yrList.length?('<span class="pch-year">'+esc(yrList.length>1?(yrList[0]+'~'+yrList[yrList.length-1]+'년'):(yrList[0]+'년'))+'</span>'):'';
   if(!data.length)return '<div class="vendor-price-history-chart"><div class="sub2" style="padding:24px;text-align:center">입고일 추이그래프를 표시할 단가 이력이 없습니다.</div></div>';
   const W=1600,H=372,L=82,R=34,T=42,B=100,innerW=W-L-R,innerH=H-T-B;
   const prices=data.map(valOf),minPrice=Math.min(...prices),maxPrice=Math.max(...prices);
   /* 지표가 단가가 아닐 때는 그린 값 기준으로 인상·인하선을 판단 */
   const stat=data.map((o,i)=>{ if(metric==='price')return o.status; if(!i)return 'first';
     const a=prices[i-1],b=prices[i]; return b>a?'up':b<a?'down':'same'; });
-  const pad=Math.max((maxPrice-minPrice)*.15,maxPrice*.05,1),yMin=Math.max(0,minPrice-pad),yMax=Math.max(yMin+1,maxPrice+pad);
+  const hiI=prices.indexOf(maxPrice), loI=prices.indexOf(minPrice), showHL=maxPrice>minPrice;
+  const padT=Math.max((maxPrice-minPrice)*.15,maxPrice*.05,1);
+  const padB=showHL?Math.max((maxPrice-minPrice)*.30,maxPrice*.08,1):padT;
+  const yMin=Math.max(0,minPrice-padB),yMax=Math.max(yMin+1,maxPrice+padT);
   const x=i=>data.length===1?L+innerW/2:L+i*(innerW/(data.length-1));
   const y=v=>T+(yMax-v)/(yMax-yMin)*innerH;
   const gridCount=4;
@@ -2912,7 +2934,26 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
   const segments=data.slice(1).map((o,i)=>{const st=stat[i+1],color=st==='up'?'#dc2626':st==='down'?'#2563eb':'#94a3b8';return `<line x1="${x(i).toFixed(1)}" y1="${y(prices[i]).toFixed(1)}" x2="${x(i+1).toFixed(1)}" y2="${y(prices[i+1]).toFixed(1)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;}).join('');
   const labelStep=Math.max(1,Math.ceil(data.length/12));
   const showLabel=i=>i===0||i===data.length-1||i%labelStep===0;
-  const dots=data.map((o,i)=>{const xx=x(i),yy=y(prices[i]),fill=allVendorMode?'#0f766e':(o.vendor===selectedVendor?'#0f766e':'#f59e0b'),st=stat[i],status=st==='up'?'인상':st==='down'?'인하':st==='same'?'동일':'최초';return `<g><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="5" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · 단가 ${won(Math.round(o.price))}원 · 금액 ${won(Math.round(o.amt||0))}원 · 중량 ${won(Math.round(o.qty||0))}kg · ${status}</title></circle>${showLabel(i)?`<text x="${xx.toFixed(1)}" y="${Math.max(15,yy-11).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">${fmtV(prices[i])}</text>`:''}</g>`;}).join('');
+  const dots=data.map((o,i)=>{
+    const xx=x(i),yy=y(prices[i]);
+    const isHi=showHL&&i===hiI, isLo=showHL&&i===loI;
+    const fill=isHi?'#dc2626':(isLo?'#0f766e':(allVendorMode?'#0f766e':(o.vendor===selectedVendor?'#0f766e':'#f59e0b')));
+    const st=stat[i],status=st==='up'?'인상':st==='down'?'인하':st==='same'?'동일':'최초';
+    const txtCol=isHi?'#dc2626':(isLo?'#0f766e':'#334155');
+    const show=showLabel(i)||isHi||isLo;
+    /* 아래 공간이 모자라면 배지를 점 위로 올리고 값 글자도 그만큼 위로 */
+    const below=(yy+34)<=(H-B-2);
+    const valY=(isHi||isLo)?(below?Math.max(15,yy-12):Math.max(15,yy-44)):Math.max(15,yy-12);
+    const val=show?`<text x="${xx.toFixed(1)}" y="${valY.toFixed(1)}" text-anchor="middle" font-size="${isHi||isLo?13:12}" font-weight="${isHi||isLo?800:700}" fill="${txtCol}">${fmtV(prices[i])}</text>`:'';
+    let badge='';
+    if(isHi||isLo){
+      const by=below?(yy+12):(yy-36), bw=46;
+      const bx=Math.min(Math.max(xx-bw/2,L-18),W-R-bw+18);
+      badge=`<g><rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="22" rx="11" fill="${isHi?'#fef2f2':'#f0fdfa'}" stroke="${isHi?'#fecaca':'#99f6e4'}" stroke-width="1.5"/>`
+        +`<text x="${(bx+bw/2).toFixed(1)}" y="${(by+15.5).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="800" fill="${isHi?'#dc2626':'#0f766e'}">${isHi?'최고':'최저'}</text></g>`;
+    }
+    return `<g><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="${isHi||isLo?7:5}" fill="${fill}" stroke="#fff" stroke-width="2"><title>${esc(o.d)} · ${esc(o.vendor)} · 단가 ${won(Math.round(o.price))}원 · 금액 ${won(Math.round(o.amt||0))}원 · ${kgOk?'중량':'수량'} ${won(Math.round(o.qty||0))}${kgOk?'kg':''} · ${status}</title></circle>${val}${badge}</g>`;
+  }).join('');
   const dates=data.map((o,i)=>showLabel(i)?`<text x="${x(i).toFixed(1)}" y="${H-62}" text-anchor="middle" font-size="12" fill="#64748b">${esc(String(o.d||'').slice(2))}</text>`:'').join('');
   /* v130 : 구매주기(입고 간격) — 점과 점 사이에 며칠 만에 다시 들어왔는지 표시 */
   const DAY=86400000;
@@ -2955,7 +2996,7 @@ function vendorPriceHistoryChartHtml(data,selectedVendor,allVendorMode=false,sel
   const vendorLegend=allVendorMode?`<button type="button" class="price-history-other-toggle" aria-expanded="false" aria-controls="priceHistoryOtherList" title="매입처 목록 보기"><i class="current"></i>매입처 <b>${otherList.length}개사</b></button>`:`<span><i class="current"></i>선택 매입처</span><button type="button" class="price-history-other-toggle" aria-expanded="false" aria-controls="priceHistoryOtherList" title="타 매입처 목록 보기"><i class="other"></i>타 매입처 <b>${otherList.length}개사</b></button>`;
   const selectedProductInfo=[selectedName,selectedSpec].filter(Boolean).join(' · ');
   const selectedSpecHtml=selectedProductInfo?`<span class="vendor-price-history-selected-spec">${esc(selectedProductInfo)}</span>`:'';
-  return `<div class="vendor-price-history-chart"><div class="vendor-price-history-chart-head"><h3>📊 입고일별 ${metricLabel} 추이</h3>${selectedSpecHtml}${metricBtns}<span class="sub2">왼쪽 → 오른쪽: 과거 → 최근</span><span class="spacer"></span><div class="vendor-price-history-legend">${vendorLegend}<span><i class="up"></i>${metric==='price'?'인상선':'증가선'}</span><span><i class="down"></i>${metric==='price'?'인하선':'감소선'}</span><span><i class="same"></i>동일선</span></div></div><div class="price-history-other-list" id="priceHistoryOtherList" hidden><div class="price-history-other-list-head">🏷️ ${listName} 목록 <span class="sub2">${otherList.length}개사 · 제외 처리된 단가이력은 포함하지 않음</span></div><div class="price-history-other-list-body">${otherListHtml}</div></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="입고일별 매입단가 추이그래프">${grid}<line x1="${L}" y1="${avgY.toFixed(1)}" x2="${W-R}" y2="${avgY.toFixed(1)}" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-R-4}" y="${(avgY-6).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="#0f766e">평균 ${fmtV(avg)}</text>${segments}${dots}${dates}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#94a3b8"/>${cycleAxis}${cycles}</svg><div class="chart-summary"><span>${metricLabel} 최저 <b>${fmtV(minPrice)}${metric==='qty'?'':'원'}</b></span><span>최고 <b>${fmtV(maxPrice)}${metric==='qty'?'':'원'}</b></span><span>평균 <b>${fmtV(avg)}${metric==='qty'?'':'원'}</b></span><span>합계 <b>${metric==='price'?won(Math.round(data.reduce((a,o)=>a+(+o.amt||0),0)))+'원':fmtV(data.reduce((a,o)=>a+valOf(o),0))+(metric==='qty'?'':'원')}</b></span><span>입고 <b>${data.length}회</b></span></div><div class="chart-summary chart-cycle-summary">🔁 ${cycleSummary}</div>${bomUsageHtml}</div>`;
+  return `<div class="vendor-price-history-chart"><div class="vendor-price-history-chart-head"><h3>📊 입고일별 ${metricLabel} 추이</h3>${selectedSpecHtml}${yrBadge}${metricBtns}<span class="sub2">왼쪽 → 오른쪽: 과거 → 최근</span><span class="spacer"></span><div class="vendor-price-history-legend">${vendorLegend}<span><i class="up"></i>${metric==='price'?'인상선':'증가선'}</span><span><i class="down"></i>${metric==='price'?'인하선':'감소선'}</span><span><i class="same"></i>동일선</span></div></div><div class="price-history-other-list" id="priceHistoryOtherList" hidden><div class="price-history-other-list-head">🏷️ ${listName} 목록 <span class="sub2">${otherList.length}개사 · 제외 처리된 단가이력은 포함하지 않음</span></div><div class="price-history-other-list-body">${otherListHtml}</div></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="입고일별 매입단가 추이그래프">${grid}<line x1="${L}" y1="${avgY.toFixed(1)}" x2="${W-R}" y2="${avgY.toFixed(1)}" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-R-4}" y="${(avgY-6).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="#0f766e">평균 ${fmtV(avg)}</text>${segments}${dots}${dates}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#94a3b8"/>${cycleAxis}${cycles}</svg><div class="chart-summary"><span>${metricLabel} <span class="pch-lo">최저 <b>${fmtV(minPrice)}${unitTxt}</b>${showHL?`<i>(${esc(String(data[loI].d||'').slice(2))})</i>`:''}</span></span><span class="pch-hi">최고 <b>${fmtV(maxPrice)}${unitTxt}</b>${showHL?`<i>(${esc(String(data[hiI].d||'').slice(2))})</i>`:''}</span><span>평균 <b>${fmtV(avg)}${unitTxt}</b></span><span>합계 <b>${metric==='price'?won(Math.round(data.reduce((a,o)=>a+(+o.amt||0),0)))+'원':fmtV(data.reduce((a,o)=>a+valOf(o),0))+unitTxt}</b></span><span>입고 <b>${data.length}회</b></span>${yrList.length?`<span class="sub2">기간 ${esc(String(data[0].d||''))} ~ ${esc(String(data[data.length-1].d||''))}</span>`:''}</div><div class="chart-summary chart-cycle-summary">🔁 ${cycleSummary}</div>${bomUsageHtml}</div>`;
 }
 
 /* 매입처 단가정리 제품 선택: 전체 기간·전체 매입처·전체 사업부의 동일 품목 단가 이력 */
@@ -8883,23 +8924,23 @@ window.auBoot=auBoot;
 
 <style id="pu-v108-style">
 /* v108 · 상단 매입단가 검색창 (매출분석 도구와 동일 사용법) */
-.hp-search{display:flex;align-items:center;gap:0;width:min(370px,30vw);min-width:230px;height:32px;
-  border:1px solid #cbd5e1;border-radius:8px;background:#fff;overflow:hidden;box-sizing:border-box;
-  transition:border-color .15s,box-shadow .15s;margin-left:auto}
+.hp-search{display:flex;align-items:center;gap:0;width:min(468px,38.4vw);min-width:250px;height:36px;
+  border:1px solid #cbd5e1;border-radius:9px;background:#fff;overflow:hidden;box-sizing:border-box;
+  transition:border-color .15s,box-shadow .15s;margin-left:auto;margin-right:auto}
 .hp-search:focus-within{border-color:#94a3b8;box-shadow:0 0 0 3px rgba(100,116,139,.10)}
-.hp-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;padding:0 11px;
-  font-family:inherit;font-size:12.5px;color:var(--txt)}
+.hp-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;padding:0 12px;
+  font-family:inherit;font-size:13px;color:var(--txt)}
 .hp-search input::placeholder{color:#94a3b8}
-.hp-search button{display:flex;align-items:center;justify-content:center;width:38px;height:100%;padding:0;
+.hp-search button{display:flex;align-items:center;justify-content:center;width:42px;height:100%;padding:0;
   border:0;border-left:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;font-family:inherit}
-.hp-search button svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hp-search button svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .hp-search button:hover{background:#eef2f6;color:#334155;transform:none;box-shadow:none;filter:none}
-.hp-search .hps-mode{width:auto;padding:0 10px;gap:5px;font-size:12.5px;font-weight:800;color:#475569;white-space:nowrap}
+.hp-search .hps-mode{width:auto;padding:0 11px;gap:5px;font-size:12px;font-weight:800;color:#475569;white-space:nowrap}
 .hp-search .hps-mode.on{background:#1e3a5f;color:#fff;border-left-color:#1e3a5f}
 .hp-search .hps-mode:hover{background:#eef2f6;color:#334155}
 .hp-search .hps-mode.on:hover{background:#17304f;color:#fff}
 .hbar>span[style*="flex:1"]{display:none}
-@media(max-width:1180px){.hp-search{width:210px;min-width:150px}}
+@media(max-width:1180px){.hp-search{width:min(360px,31.2vw);min-width:200px}}
 /* v108 · 동기화·버전 배지를 파일·관리 로그인 줄로 이동 */
 #hdrMovedBox{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto}
 #hdrMovedBox:empty{display:none}
@@ -8940,8 +8981,8 @@ function puFindItems(q,rows){
   (rows||[]).forEach(function(r){
     var k=(r.code||'')+'|'+(r.name||'')+'|'+(r.spec||'');
     var o=m.get(k);
-    if(!o){ o={code:r.code||'',name:r.name||'',spec:r.spec||'',amt:0,n:0,vendors:{}}; m.set(k,o); }
-    o.amt+=(typeof amtOf==='function'?amtOf(r):(+r.supply||0)); o.n++;
+    if(!o){ o={code:r.code||'',name:r.name||'',spec:r.spec||'',amt:0,n:0,vendors:{},rows:[]}; m.set(k,o); }
+    o.amt+=(typeof amtOf==='function'?amtOf(r):(+r.supply||0)); o.n++; o.rows.push(r);
     if(r.vendor)o.vendors[r.vendor]=1;
   });
   var all=Array.from(m.values());
@@ -8964,8 +9005,10 @@ function puSearchItem(){
   state.priceTrendItem=null; state.priceTrendBack=null; state.sortKey=null;
   try{ setAct('price-trend'); }catch(e){}
   state.priceTrendSearch=q; state.sortKey=null;
-  if(hits.length){
+  if(hits.length===1){
     puOpenItemHistory(hits[0],hits,q);
+  }else if(hits.length){
+    puItemList(q,hits);
   }else{
     try{ priceTrend(); }catch(e){ console.error(e); }
     alert('[' + q + '] 에 해당하는 품목을 찾지 못했습니다.');
@@ -8975,12 +9018,83 @@ function puSearchItem(){
 
 /* 검색된 품목의 📈 제품별 · 이전단가 이력 열기 (여러 건이면 위에 후보 선택줄을 붙인다) */
 function puOpenItemHistory(it,hits,q){
+  var multi=!!(hits&&hits.length>1);
   try{
     vendorPriceHistory('',{code:it.code,name:it.name,spec:it.spec},
-      {allVendors:true,backLabel:'품목 단가 추이',
-       backAct:function(){ state.priceTrendSearch=q; state.priceTrendItem=null; priceTrend(); }});
+      {allVendors:true,backLabel:multi?('['+q+'] 품목 리스트'):'품목 단가 추이',
+       backAct:function(){
+         if(multi){ puItemList(q,hits); return; }
+         state.priceTrendSearch=q; state.priceTrendItem=null; priceTrend();
+       }});
   }catch(e){ console.error(e); try{ priceTrend(); }catch(e2){} return; }
-  if(hits&&hits.length>1) setTimeout(function(){ puCandBar(hits,it,q); },20);
+}
+
+/* v136 · 검색 결과를 «아래 표»에 품목 리스트로 보여주고, 품목을 고르면 그 품목의 입고일별 매입단가 추이로 이동 */
+function puItemStat(o){
+  var rr=o.rows||[];
+  var priced=rr.filter(function(r){ return (+r.qty||0)>0 && (+r.price||0)>0; });
+  var src=priced.length?priced:rr.filter(function(r){ return (+r.price||0)>0; });
+  var qty=0,sum=0,mn=0,mx=0,last=null;
+  priced.forEach(function(r){ qty+=(+r.qty||0); sum+=(+r.price||0)*(+r.qty||0); });
+  src.forEach(function(r){ var p=+r.price||0; if(!p)return; if(!mn||p<mn)mn=p; if(p>mx)mx=p; if(!last||String(r.d)>String(last.d))last=r; });
+  var ds=rr.map(function(r){ return String(r.d||''); }).filter(Boolean).sort();
+  return {code:o.code,name:o.name,spec:o.spec,amt:o.amt,n:o.n,
+    vendors:Object.keys(o.vendors||{}),
+    vendorTxt:Object.keys(o.vendors||{}).join(', '),
+    avg:qty?sum/qty:0, lastPrice:last?(+last.price||0):0, lastDate:last?String(last.d||''):'',
+    min:mn, max:mx, qty:qty, first:ds[0]||'', srcRows:rr, _it:o};
+}
+function puItemList(q,hits){
+  var data=hits.map(puItemStat);
+  var totAmt=data.reduce(function(a,o){ return a+(+o.amt||0); },0);
+  var vn=new Set(); data.forEach(function(o){ o.vendors.forEach(function(v){ vn.add(v); }); });
+  var starOf=function(o){ try{ return (typeof majorProductStar==='function')?majorProductStar(o):''; }catch(e){ return ''; } };
+  var cols=[
+    {h:'순위',cell:function(o,i){ return (i+1); }},
+    {h:'품번',l:1,k:'code',cell:function(o){ return esc(o.code||'-'); },raw:function(o){ return o.code||''; }},
+    {h:'품명',l:1,k:'name',cell:function(o){ return '<a href="#" class="puItemLink" style="font-weight:800;color:#0f766e;text-decoration:none">'+esc(o.name||'')+'</a>'+starOf(o); },raw:function(o){ return o.name||''; }},
+    {h:'규격',l:1,k:'spec',cell:function(o){ return esc(o.spec||''); },raw:function(o){ return o.spec||''; }},
+    {h:'매입처',l:1,k:'vendorTxt',cell:function(o){ return esc(o.vendorTxt||'-'); },raw:function(o){ return o.vendorTxt||''; }},
+    {h:'평균단가',k:'avg',cell:function(o){ return o.avg?won(Math.round(o.avg)):'-'; },raw:function(o){ return Math.round(o.avg||0); }},
+    {h:'최근 매입단가',k:'lastPrice',cell:function(o){ return o.lastPrice?('<b>'+won(Math.round(o.lastPrice))+'</b>'):'-'; },raw:function(o){ return Math.round(o.lastPrice||0); }},
+    {h:'마지막 입고일',k:'lastDate',cell:function(o){ return o.lastDate||'-'; },raw:function(o){ return o.lastDate||''; }},
+    {h:'최저단가',k:'min',cell:function(o){ return o.min?won(Math.round(o.min)):'-'; },raw:function(o){ return Math.round(o.min||0); }},
+    {h:'최고단가',k:'max',cell:function(o){ return o.max?won(Math.round(o.max)):'-'; },raw:function(o){ return Math.round(o.max||0); }},
+    {h:'수량·중량',k:'qty',cell:function(o){ return won(Math.round(o.qty)); },raw:function(o){ return Math.round(o.qty||0); }},
+    {h:'매입액',k:'amt',cell:function(o){ return won(Math.round(o.amt)); },raw:function(o){ return Math.round(o.amt||0); }},
+    {h:'입고 건수',k:'n',cell:function(o){ return won(o.n); },raw:function(o){ return o.n||0; }}
+  ];
+  state.sortKey=null;
+  render('🔎 ['+q+'] 검색 · 품목 리스트',
+    hits.length+'개 품목 · 매입처 '+vn.size+'개사 · 합계 '+wonM(totAmt),
+    data, cols, 'amt',
+    '품목을 선택하면 그 품목의 <b>입고일별 매입단가 추이</b>와 이전단가 이력이 열립니다.',
+    {back:'홈', backAct:function(){ try{ homeDashboard(); }catch(e){} },
+     searchFields:['code','name','spec','vendorTxt'],
+     tableClass:'pu-search-table',
+     viewRefresh:function(){ try{ var rs=activeRows(); puItemList(q,puFindItems(q,rs)); }catch(e){} },
+     headExtra:'<button type="button" class="btn ghost sm" id="puToTrend" style="font-size:11.5px">💰 품목 단가 추이 화면</button>',
+     afterRender:function(view){
+       var tb=document.getElementById('tbl'); if(tb){
+         var go=function(tr){ var o=view[+tr.dataset.i]; if(o&&o._it)puOpenItemHistory(o._it,hits,q); };
+         /* 품명 링크 — render() 가 행 클릭을 이 링크로 연결합니다 */
+         Array.prototype.forEach.call(tb.querySelectorAll('a.puItemLink'),function(a){
+           a.onclick=function(e){ e.preventDefault(); e.stopPropagation(); var tr=a.closest('tr'); if(tr)go(tr); };
+         });
+         Array.prototype.forEach.call(tb.querySelectorAll('tbody tr[data-i]'),function(tr){
+           tr.classList.add('row-selectable');
+           tr.title='선택하면 이 품목의 입고일별 매입단가 추이를 봅니다.';
+           tr.onclick=function(e){
+             if(e.target.closest('input,select,textarea,button,label,[contenteditable="true"]'))return;
+             e.preventDefault(); go(tr);
+           };
+         });
+       }
+       var tb2=document.getElementById('puToTrend');
+       if(tb2)tb2.onclick=function(){ state.priceTrendSearch=q; state.priceTrendItem=null; state.sortKey=null;
+         try{ setAct('price-trend'); state.priceTrendSearch=q; priceTrend(); }catch(e){ console.error(e); } };
+     }});
+  puScroll();
 }
 function puCandBar(hits,cur,q){
   var c=document.getElementById('content'); if(!c) return;
@@ -9155,6 +9269,182 @@ function T(head,rows,left){
 function chips(a){return a&&a.length?'<div class="pcb-chips">'+a.map(function(q){return '<button class="pcb-chip" data-q="'+E(q)+'">'+E(q)+'</button>'}).join('')+'</div>':''}
 function GO(act,label){return {act:act,label:label}}
 function response(sumText,table,chipList,go){return {sum:sumText,tbl:table||'',chips:chipList||[],go:go||null}}
+/* ═══════════ 🤖 v139 · 하이브리드 AI (매출분석 도구와 같은 방식) ═══════════
+   AI 는 «질문 해석» 만 맡고, 숫자는 아래 도구들이 이 파일 안에서 직접 계산합니다.
+   그래서 AI 가 숫자를 지어낼 수 없습니다.                                      */
+var AI={state:'unknown',model:'',note:'',free:false,url:''};
+try{ AI.url=localStorage.getItem('dbfastec_pcb_aiurl_v1')||''; }catch(_e){}
+function aiSetUrl(u){ AI.url=String(u||'').trim();
+  try{ if(AI.url)localStorage.setItem('dbfastec_pcb_aiurl_v1',AI.url); else localStorage.removeItem('dbfastec_pcb_aiurl_v1'); }catch(_e){}
+  AI.state='unknown'; AI.note=''; aiBadge(); }
+/* 전용 주소가 있으면 그쪽, 없으면 기존 서버 주소로 — 서버가 돌려준 error 도 그대로 받아 보여 줍니다 */
+function aiPost(payload,ms){
+  var u=AI.url;
+  var pl=Object.assign({},payload||{});
+  if(!u){
+    try{ u=(typeof auUrl==='function')?auUrl():''; }catch(_e){ u=''; }
+    try{ pl.key=(typeof AU_KEY!=='undefined'&&AU_KEY)||((window.state&&state.gsync&&state.gsync.key)||''); }catch(_e){}
+    try{ if(typeof AU!=='undefined'&&AU&&AU.token)pl.token=AU.token; }catch(_e){}
+  }
+  if(!u)return Promise.reject(new Error('AI 중계 주소가 설정되지 않았습니다.'));
+  pl._nonce=Date.now();
+  var ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+  var tm=ctl?setTimeout(function(){ try{ctl.abort();}catch(_e){} },ms||20000):null;
+  return fetch(u,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(pl),signal:ctl?ctl.signal:undefined})
+    .then(function(r){ if(tm)clearTimeout(tm); if(!r.ok)throw new Error('AI 중계 HTTP 오류 '+r.status); return r.text(); })
+    .then(function(t){ try{ return JSON.parse(t); }catch(e){ throw new Error('응답이 JSON 이 아닙니다 — 배포 «액세스 권한: 모든 사용자» 를 확인하세요.'); } });
+}
+var TOOLS={
+  brief:{d:'오늘의 매입 종합 브리핑',a:[]},
+  summary:{d:'기간 전체 매입 요약(총매입·매입처수·품목수)',a:['period']},
+  vendorPurchase:{d:'특정 매입처의 매입 내역',a:['vendor','period']},
+  topVendors:{d:'매입액 상위 매입처',a:['period','n']},
+  topProducts:{d:'매입액 상위 품목',a:['period','n']},
+  productPurchase:{d:'특정 품목의 매입액·수량·단가·매입처',a:['prod','vendor','period']},
+  priceChange:{d:'직전 기간 대비 단가가 오르거나 내린 품목',a:['period','vendor','dir']},
+  trend:{d:'월별 매입 추이',a:['period']},
+  nature:{d:'매입구분(대·중·소분류)별 매입',a:['period','nature']},
+  raw:{d:'원자재(철판·코일 등) 매입 현황과 kg단가',a:['period']},
+  project:{d:'프로젝트·현장별 매입',a:['period','project']},
+  ratio:{d:'매출대비 매입비율(원가율)',a:['period']},
+  forecast:{d:'향후 매입 전망(최근 추세 기준)',a:['period','vendor','prod','months']},
+  search:{d:'그 밖의 단어로 매입 전체 검색',a:['q','period']},
+  open:{d:'특정 화면 열기',a:['page']}
+};
+function periodFrom(v){
+  if(!v)return defaultPeriod();
+  var t=String(v), p=null;
+  try{ p=parsePeriod(t); }catch(_e){}
+  if(p)return p;
+  if(/^\d{4}-\d{2}$/.test(t))return {yms:[t],label:ymLabel(t),explicit:true};
+  if(/^\d{4}$/.test(t))return {yms:yearMonths(+t),label:t+'년',explicit:true};
+  return defaultPeriod();
+}
+function runTool(name,args){
+  args=args||{};
+  var P=periodFrom(args.period);
+  var v=args.vendor?findVendor(String(args.vendor)):null;
+  var p=args.prod?findProduct(String(args.prod)):null;
+  var nat=args.nature?findNature(String(args.nature)):null;
+  var pr=args.project?findProject(String(args.project)):null;
+  var n=Math.max(1,Math.min(50,+args.n||10));
+  switch(name){
+    case 'brief': return brief();
+    case 'summary': return summary(P);
+    case 'vendorPurchase': return v?vendorDetail(v,P):topVendors(P,n);
+    case 'topVendors': return topVendors(P,n);
+    case 'topProducts': return topProducts(P,n);
+    case 'productPurchase': return p?productDetail(p,P,v):topProducts(P,n);
+    case 'priceChange': return priceChange(P,v,(args.dir==='up'||args.dir==='down')?args.dir:'all');
+    case 'trend': return trend(P);
+    case 'nature': return natureSummary(P,nat);
+    case 'raw': return rawSummary(P);
+    case 'project': return projectSummary(P,pr);
+    case 'ratio': return ratio(P);
+    case 'forecast': return forecast(P,v,p,nat,pr,(args.months?(args.months+'개월'):''));
+    case 'search': { var q2=String(args.q||''); return searchAll(q2,P)||suggest(q2); }
+    case 'open': { var pg=args.page?findPage(String(args.page)):null;
+      return pg?{sum:'✅ <b>'+E(pg.label)+'</b> 화면으로 이동합니다.',go:GO(pg.act,'▶ '+pg.label),auto:true}:suggest(String(args.page||'')); }
+  }
+  return null;
+}
+function aiCtx(){
+  var vs=[],ns={},pg=[];
+  try{ vs=vendorList().slice(0,60).map(function(o){return o.name}); }catch(_e){}
+  try{ baseRows().forEach(function(r){ [r.nat,r.big,r.mid].forEach(function(x){ if(x)ns[x]=1; }); }); }catch(_e){}
+  try{ pg=pages().slice(0,80).map(function(o){return o.label}); }catch(_e){}
+  return { domain:'purchase', today:(new Date()).toISOString().slice(0,10),
+    months:(function(){try{return months().slice(-18)}catch(_e){return []}})(),
+    lastMonth:(function(){try{return lastYm()}catch(_e){return ''}})(),
+    vendors:vs, natures:Object.keys(ns).slice(0,40), pages:pg };
+}
+function aiPing(){
+  if(!AI.url&&typeof auCall!=='function'){ AI.state='off'; AI.note='AI 중계 주소가 설정되지 않았습니다.'; aiBadge(); return; }
+  setTimeout(function(){ if(AI.state==='unknown'){ AI.state='off'; AI.note='서버가 응답하지 않았습니다.'; aiBadge(); } },13000);
+  try{
+    aiPost({action:'ai',ping:1},11000).then(function(d){
+      if(d&&(d.ok||d.model)){ AI.state='on'; AI.model=String(d.model||''); AI.free=!!d.free; AI.note=''; }
+      else { AI.state='off'; AI.note=String((d&&d.error)||'주소에는 연결됐지만 action:"ai" 응답이 없습니다.'); }
+      aiBadge();
+    }).catch(function(e){ AI.state='off'; AI.note=String((e&&e.message)||e).slice(0,90); aiBadge(); });
+  }catch(e){ AI.state='off'; AI.note=String(e.message||e).slice(0,90); aiBadge(); }
+}
+function aiRoute(q,done){
+  if(AI.state!=='on'){ done(null); return; }
+  var cat={}; Object.keys(TOOLS).forEach(function(k){ cat[k]={desc:TOOLS[k].d,args:TOOLS[k].a}; });
+  var t=setTimeout(function(){ done(null); },20000);
+  try{
+    aiPost({action:'ai',q:q,tools:cat,ctx:aiCtx()},19000).then(function(d){
+      clearTimeout(t); done(d&&typeof d==='object'?d:null);
+    }).catch(function(){ clearTimeout(t); done(null); });
+  }catch(_e){ clearTimeout(t); done(null); }
+}
+var RX_AI=/(왜|이유|어째서|어떻게|어떤|분석|설명|추천|해석|의견|판단|괜찮|문제|대책|전략|정리해|비교해|요약해)/;
+function aiWorth(q,a){
+  if(AI.state!=='on')return false;
+  if(!a)return true;
+  var sm=String(a.sum||'');
+  if(sm.indexOf('정확히 일치하는 질문을 찾지 못했습니다')>=0)return true;
+  if(sm.indexOf('알아듣지')>=0)return true;
+  return RX_AI.test(q);
+}
+/* 못 알아들은 질문 모음 */
+var MISS=[];
+function missLoad(){ try{ MISS=JSON.parse(localStorage.getItem('dbfastec_pcb_miss_v1')||'[]')||[]; }catch(_e){ MISS=[]; } }
+function missAdd(q){ if(!q)return; if(MISS.some(function(x){return x.q===q})) return;
+  MISS.push({q:q,at:(new Date()).toISOString().slice(0,16).replace('T',' ')});
+  if(MISS.length>200)MISS=MISS.slice(-200);
+  try{ localStorage.setItem('dbfastec_pcb_miss_v1',JSON.stringify(MISS)); }catch(_e){} }
+function missClear(){ MISS=[]; try{ localStorage.removeItem('dbfastec_pcb_miss_v1'); }catch(_e){} }
+function aiBadge(){
+  var el=document.getElementById('pcbAi'); if(!el)return;
+  var on=(AI.state==='on');
+  el.textContent=on?('🤖 AI 켜짐'+(AI.free?' · 무료':'')):(AI.state==='off'?'🤖 AI 꺼짐':'🤖 확인 중…');
+  el.style.background=on?'rgba(16,185,129,.30)':'rgba(255,255,255,.16)';
+  el.title=on?('질문 해석에 AI 를 함께 씁니다'+(AI.model?(' ('+AI.model+')'):'')+'. 숫자는 항상 이 파일이 계산합니다.')
+             :('AI 중계가 없습니다 — '+(AI.note||'서버에 action:\'ai\' 를 추가하면 켜집니다.'));
+}
+function aiInfo(){
+  var on=(AI.state==='on'); missLoad();
+  var miss=MISS.slice().reverse().slice(0,40);
+  var h='<b class="pcb-big">🤖 하이브리드 AI</b>'
+    +'<div class="pcb-sub">현재 상태 : <b style="color:'+(on?'#0f766e':'#dc2626')+'">'
+      +(on?('켜짐'+(AI.free?' · 무료(Gemini)':'')+(AI.model?(' · '+E(AI.model)):'')):'꺼짐')+'</b>'
+    +(on?'':('<br>'+E(AI.note||'서버에 ai 중계가 없습니다.')))+'</div>'
+    +'<div class="pcb-sub">· <b>숫자는 언제나 이 파일이 직접 계산</b>합니다. AI 는 «무엇을 물었는지» 해석해 알맞은 도구를 고르는 일만 합니다 — 그래서 AI 가 숫자를 지어낼 수 없습니다.<br>'
+    +'· <b>돈 안 드는 방법</b> : 앱스스크립트 속성에 <b>GEMINI_KEY</b>(구글 AI 스튜디오 무료 키) 하나만 넣으면 무료 한도로 동작합니다.<br>'
+    +'· 꺼져 있어도 아래 규칙 기반 답변은 <b>전부 그대로</b> 동작합니다.</div>'
+    +'<div class="pcb-sub" style="margin-top:8px;font-weight:800;color:#0f766e">🔗 AI 중계 주소 (구글 앱스스크립트 웹 앱 URL)</div>'
+    +'<input id="pcbAiUrl" type="text" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" value="'+E(AI.url||'')+'" '
+      +'style="width:100%;height:32px;border:1px solid #cbd5e1;border-radius:8px;padding:0 9px;font:12px inherit;color:#334155;background:#fff;margin-top:5px">'
+    +'<div class="pcb-chips" style="margin-top:6px">'
+      +'<button class="pcb-chip" id="pcbAiSave">💾 저장하고 연결 테스트</button>'
+      +'<button class="pcb-chip" id="pcbAiDel">✕ 주소 지우기</button></div>'
+    +'<div class="pcb-sub">비워 두면 기존 로그인·동기화 서버로 물어봅니다. 전용 주소를 넣으면 그쪽만 씁니다.</div>'
+    +'<div class="pcb-sub" style="margin-top:8px;font-weight:800;color:#0f766e">📋 못 알아들은 질문 '+W(MISS.length)+'건</div>';
+  if(!miss.length) h+='<div class="pcb-sub">아직 없습니다. 챗봇이 못 알아듣는 말이 나오면 여기에 자동으로 쌓입니다.</div>';
+  else h+='<div class="pcb-sub">이 목록을 복사해 보내주시면 규칙에 넣어 다음 버전부터 알아듣게 만들어 드립니다.</div>'
+      +'<textarea id="pcbMissBox" readonly style="width:100%;height:110px;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;font:12px/1.6 inherit;color:#334155;background:#fff;resize:vertical">'
+      +E(miss.map(function(x){return x.at+'  '+x.q}).join('\n'))+'</textarea>'
+      +'<div class="pcb-chips" style="margin-top:6px"><button class="pcb-chip" id="pcbMissCopy">📄 전체 복사</button>'
+      +'<button class="pcb-chip" id="pcbMissClr">🗑 목록 비우기</button></div>';
+  LOG.push({bot:h}); save(); draw();
+  setTimeout(function(){
+    var sv=document.getElementById('pcbAiSave');
+    if(sv)sv.addEventListener('click',function(){ var el=document.getElementById('pcbAiUrl');
+      aiSetUrl(el?el.value:''); sv.textContent='⏳ 확인 중…'; aiPing();
+      setTimeout(function(){ sv.textContent=(AI.state==='on')?('✅ 연결됨 · '+(AI.model||'')):('❌ '+(AI.note||'실패')); },2600); });
+    var dl=document.getElementById('pcbAiDel');
+    if(dl)dl.addEventListener('click',function(){ aiSetUrl(''); var el=document.getElementById('pcbAiUrl'); if(el)el.value=''; dl.textContent='✅ 지웠습니다'; });
+    var cp=document.getElementById('pcbMissCopy');
+    if(cp)cp.addEventListener('click',function(){ var b=document.getElementById('pcbMissBox'); if(!b)return; b.select();
+      try{ document.execCommand('copy'); cp.textContent='✅ 복사했습니다'; }catch(_e){ cp.textContent='직접 선택해 복사해 주세요'; } });
+    var cl=document.getElementById('pcbMissClr');
+    if(cl)cl.addEventListener('click',function(){ missClear(); cl.textContent='✅ 비웠습니다'; });
+  },60);
+}
+
 
 function vendorList(){var m={};baseRows().forEach(function(r){var k=r.vendor||'(미상)';m[k]=(m[k]||0)+A(r)});return Object.keys(m).map(function(k){return {name:k,n:NM(k),amt:m[k]}}).sort(function(a,b){return b.amt-a.amt})}
 function productList(){var m={};baseRows().forEach(function(r){var k=itemKey(r),o=m[k]||(m[k]={key:k,code:r.code||'',name:r.name||'',spec:r.spec||'',amt:0,qty:0});o.amt+=A(r);o.qty+=+r.qty||0});return Object.keys(m).map(function(k){var o=m[k];o.n=NM((o.code||'')+(o.name||'')+(o.spec||''));o.nn=NM(o.name||'');return o}).sort(function(a,b){return b.amt-a.amt})}
@@ -9241,11 +9531,38 @@ function restore(){try{LOG=JSON.parse(localStorage.getItem('dbfastec_purchase_cb
 function answerHtml(a){var h=a.sum||'';if(a.html)h+=a.html;if(a.tbl)h+=a.tbl;if(a.chips&&a.chips.length)h+=chips(a.chips);if(a.go)h+='<button class="pcb-go" data-act="'+E(a.go.act)+'">'+E(a.go.label)+' →</button>';return h}
 function draw(){var b=document.getElementById('pcbBody');if(!b)return;if(!LOG.length){var h=help();b.innerHTML='<div class="pcb-msg"><div class="pcb-bot">'+h.sum+h.html+'</div></div>';return}b.innerHTML=LOG.map(function(m){return m.me?'<div class="pcb-msg me"><span class="pcb-me">'+E(m.me)+'</span></div>':'<div class="pcb-msg"><div class="pcb-bot">'+m.bot+'</div></div>'}).join('');b.scrollTop=b.scrollHeight}
 function go(act){try{if(typeof closePurchaseFilePanel==='function')closePurchaseFilePanel();if(typeof setAct==='function')setAct(act);else{var s=ST();if(s)s.act=act;if(typeof runAct==='function')runAct(true)}window.scrollTo({top:0,behavior:'smooth'})}catch(_){}}
-function ask(q,silent){var a;try{a=route(q)}catch(e){a={sum:'계산 중 문제가 생겼습니다.<div class="pcb-sub">'+E(e&&e.message||e)+'</div>'}}if(!silent&&q)LOG.push({me:q});LOG.push({bot:answerHtml(a)});save();draw();if(a.auto&&a.go)setTimeout(function(){go(a.go.act)},100)}
+function ask(q,silent){var a;try{a=route(q)}catch(e){a={sum:'계산 중 문제가 생겼습니다.<div class="pcb-sub">'+E(e&&e.message||e)+'</div>'}}if(!silent&&q)LOG.push({me:q});
+  if(q&&String(a&&a.sum||'').indexOf('정확히 일치하는 질문을 찾지 못했습니다')>=0)missAdd(q);
+  var useAI=!!(q&&aiWorth(q,a));
+  var ix=LOG.push({bot:answerHtml(a)+(useAI?'<div class="pcb-ai" id="pcbAiWait">🤖 AI 가 질문을 다시 해석하는 중입니다…</div>':'')})-1;
+  save();draw();if(a.auto&&a.go)setTimeout(function(){go(a.go.act)},100);
+  if(!useAI)return;
+  aiRoute(q,function(d){
+    var html='';
+    if(!d){ html='<div class="pcb-ai">🤖 AI 중계가 응답하지 않아 위 결과만 보여드립니다.</div>'; }
+    else if(d.ok===false&&d.error){
+      var em=String(d.error);
+      var tip=/script\.external_request|permissions are not sufficient/i.test(em)
+        ? '<br>→ 앱스스크립트 편집기에서 <b>한 번 실행 → 권한 허용(외부 요청)</b> 한 뒤 <b>배포 → 배포 관리 → 버전: 새 버전</b> 으로 다시 배포하면 켜집니다.'
+        : '';
+      html='<div class="pcb-ai">🤖 AI 중계 오류 — '+E(em.slice(0,180))+tip+'</div>';
+    }
+    else{
+      var b2=null;
+      if(d.tool&&TOOLS[d.tool]){ try{ b2=runTool(d.tool,d.args||{}); }catch(_e){} }
+      if(b2){ html='<div class="pcb-ai">🤖 '+E(d.say||('«'+d.tool+'» 로 다시 찾았습니다.'))+'</div>'+answerHtml(b2);
+        if(b2.auto&&b2.go)setTimeout(function(){go(b2.go.act)},120); }
+      else if(d.say){ html='<div class="pcb-ai">🤖 '+E(d.say)+'</div>'; }
+      else html='<div class="pcb-ai">🤖 이 질문은 AI 도 정확히 해석하지 못했습니다.</div>';
+    }
+    if(LOG[ix])LOG[ix].bot=String(LOG[ix].bot).replace(/<div class="pcb-ai" id="pcbAiWait">[\s\S]*?<\/div>/,'')+html;
+    save();draw();
+  });
+}
 function send(){var i=document.getElementById('pcbInput');if(!i)return;var q=i.value.trim();if(!q)return;i.value='';ask(q)}
-function toggle(force){var p=document.getElementById('pcbPanel'),b=document.getElementById('pcbBtn');if(!p)return;var on=force==null?!p.classList.contains('open'):!!force;p.classList.toggle('open',on);b.classList.toggle('on',on);b.textContent=on?'✕':'💬';if(on)setTimeout(function(){var i=document.getElementById('pcbInput');if(i)i.focus()},220)}
-function mount(){if(document.getElementById('pcbPanel'))return;var st=document.createElement('style');st.id='purchase-chatbot-v113-style';st.textContent=CSS;document.head.appendChild(st);var b=document.createElement('button');b.id='pcbBtn';b.type='button';b.title='매입 분석 챗봇 (Alt+C)';b.textContent='💬';var p=document.createElement('aside');p.id='pcbPanel';p.setAttribute('aria-label','매입 분석 챗봇');p.innerHTML='<div class="pcb-head"><div><b>💬 (주)동방파스텍 도우미</b><br><small>매입 · 원자재 · 단가 · 매입처 · 전체 검색 · 전망</small></div><span class="pcb-spacer"></span><button id="pcbClear">비우기</button><button class="pcb-x" id="pcbX">✕</button></div><div class="pcb-body" id="pcbBody"></div><div class="pcb-foot"><input id="pcbInput" autocomplete="off" placeholder="예) 이번달 매입처 순위 / EGI 1.6 단가 / 다음달 전망"><button id="pcbSend">전송</button></div>';document.body.appendChild(b);document.body.appendChild(p);b.addEventListener('click',function(){toggle()});p.querySelector('#pcbX').addEventListener('click',function(){toggle(false)});p.querySelector('#pcbClear').addEventListener('click',function(){LOG=[];save();draw()});p.querySelector('#pcbSend').addEventListener('click',send);p.querySelector('#pcbInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();send()}});p.querySelector('#pcbBody').addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.pcb-chip');if(c){ask(c.dataset.q);return}var g=e.target.closest&&e.target.closest('.pcb-go');if(g)go(g.dataset.act)});document.addEventListener('keydown',function(e){if(e.altKey&&(e.key==='c'||e.key==='C')){e.preventDefault();toggle()}});restore();draw()}
-window.PurchaseCB={open:function(){toggle(true)},close:function(){toggle(false)},ask:ask,route:route};
+function toggle(force){var p=document.getElementById('pcbPanel'),b=document.getElementById('pcbBtn');if(!p)return;var on=force==null?!p.classList.contains('open'):!!force;p.classList.toggle('open',on);b.classList.toggle('on',on);b.textContent=on?'✕':'💬';if(on){if(AI.state==='unknown')aiPing();setTimeout(function(){var i=document.getElementById('pcbInput');if(i)i.focus()},220)}}
+function mount(){if(document.getElementById('pcbPanel'))return;var st=document.createElement('style');st.id='purchase-chatbot-v113-style';st.textContent=CSS;document.head.appendChild(st);var b=document.createElement('button');b.id='pcbBtn';b.type='button';b.title='매입 분석 챗봇 (Alt+C)';b.textContent='💬';var p=document.createElement('aside');p.id='pcbPanel';p.setAttribute('aria-label','매입 분석 챗봇');p.innerHTML='<div class="pcb-head"><div><b>💬 (주)동방파스텍 도우미</b><br><small>매입 · 원자재 · 단가 · 매입처 · 전체 검색 · 전망</small></div><span class="pcb-spacer"></span><button id="pcbAi" title="AI 상태">🤖 확인 중…</button><button id="pcbClear">비우기</button><button class="pcb-x" id="pcbX">✕</button></div><div class="pcb-body" id="pcbBody"></div><div class="pcb-foot"><input id="pcbInput" autocomplete="off" placeholder="예) 이번달 매입처 순위 / EGI 1.6 단가 / 다음달 전망"><button id="pcbSend">전송</button></div>';document.body.appendChild(b);document.body.appendChild(p);b.addEventListener('click',function(){toggle()});p.querySelector('#pcbX').addEventListener('click',function(){toggle(false)});p.querySelector('#pcbClear').addEventListener('click',function(){LOG=[];save();draw()});var _aiB=p.querySelector('#pcbAi');if(_aiB)_aiB.addEventListener('click',function(){aiInfo()});p.querySelector('#pcbSend').addEventListener('click',send);p.querySelector('#pcbInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();send()}});p.querySelector('#pcbBody').addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.pcb-chip');if(c){ask(c.dataset.q);return}var g=e.target.closest&&e.target.closest('.pcb-go');if(g)go(g.dataset.act)});document.addEventListener('keydown',function(e){if(e.altKey&&(e.key==='c'||e.key==='C')){e.preventDefault();toggle()}});restore();missLoad();draw();aiBadge();setTimeout(function(){if(AI.state==='unknown')aiPing()},1500)}
+window.PurchaseCB={open:function(){toggle(true)},close:function(){toggle(false)},ask:ask,route:route,ai:AI,aiPing:aiPing,tools:TOOLS,runTool:runTool};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 </script>
@@ -10177,9 +10494,11 @@ function build(id){
   var year=st.year&&ys.indexOf(st.year)>=0?st.year:(ys.indexOf(cy)>=0?cy:ys[0]);
   st.year=year;
   var kgOk=hasKg(rows);
-  var unit=(st.unit==='qty'&&kgOk)?'qty':'amt';
+  var unit=(st.unit==='qty')?'qty':'amt';
   st.unit=unit;
-  var U=function(x){ return W(x)+(unit==='qty'?'kg':''); };
+  var qLabel=kgOk?'중량(kg)':'수량';
+  var qSuffix=kgOk?'kg':'';
+  var U=function(x){ return W(x)+(unit==='qty'?qSuffix:''); };
   var v=Array(12).fill(0), n=Array(12).fill(0);
   rows.forEach(function(r){
     var ym=String(r.ym||''); if(ym.slice(0,4)!==year)return;
@@ -10248,12 +10567,11 @@ function build(id){
     dots+labs+xa+'</svg>';
 
   var chips=ys.map(function(y2){return '<button type="button" class="pt-year'+(y2===year?' on':'')+'" data-pty="'+E(y2)+'">'+E(y2)+'년</button>'}).join('');
-  var units=kgOk
-    ? '<span class="pt-units"><button type="button" class="pt-unit'+(unit==='amt'?' on':'')+'" data-ptu="amt">금액</button>'
-      +'<button type="button" class="pt-unit'+(unit==='qty'?' on':'')+'" data-ptu="qty">중량(kg)</button></span>'
-    : '';
+  /* v139 : 금액 오른쪽에 «수량/중량» 버튼을 항상 둡니다 — kg 자료면 «중량(kg)», 아니면 «수량» */
+  var units='<span class="pt-units"><button type="button" class="pt-unit'+(unit==='amt'?' on':'')+'" data-ptu="amt">금액</button>'
+    +'<button type="button" class="pt-unit'+(unit==='qty'?' on':'')+'" data-ptu="qty">'+qLabel+'</button></span>';
   var head='<div class="pt-head">'+
-    '<span class="pt-title">📈 '+E(st.label)+' · '+E(year)+'년 · 월별 매입 '+(unit==='qty'?'중량 추이':'추이')+'</span>'+
+    '<span class="pt-title">📈 '+E(st.label)+' · '+E(year)+'년 · 월별 매입 '+(unit==='qty'?(kgOk?'중량 추이':'수량 추이'):'추이')+'</span>'+
     '<span class="pt-years">'+chips+'</span>'+units+
     '<span class="pt-stats">합계 <b>'+U(tot)+'</b> · 평균 <b class="y">'+U(Math.round(avg))+'</b>(거래월 '+live.length+'개월) · 최고 <b class="r">'+U(v[mxi])+'</b>('+(mxi+1)+'월) · 최저 <b class="g">'+U(v[mni])+'</b>('+(mni+1)+'월) · 건수 '+W(cnt)+'건'+
     (curMonth?' · '+curMonth+'월 진행 중':'')+'</span>'+
@@ -10780,6 +11098,157 @@ window.__bomUsageRefresh=refreshFromWeb;
 .bom-usage-more{margin-top:7px;border:1px dashed #b9cbe0;background:#fff;color:#2f6fb0;border-radius:7px;padding:4px 11px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer}
 .bom-usage-empty{padding:10px 11px;font-size:11.5px;color:#7b8798;line-height:1.6}
 .bom-usage-state{padding:7px 11px;border-top:1px dashed #e2e8f0;font-size:11.5px;font-weight:700}
+</style>
+<style id="pu-v135-panel">
+/* v135 · 📁 파일·관리 패널을 매출분석 도구와 같은 모양으로
+   ① 로그인 줄 : 오른쪽 끝 알약 상자
+   ② 🚀 GitHub 업로드 → ☁️ 구글 동기화 순서, 둘 다 외곽 박스 + 「펼쳐보기 ▾」 */
+.filepanel .au-topbar-row{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin:0;overflow:visible!important}
+.filepanel .au-topbar{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;
+  font-size:12px;color:#475569;padding:4px 9px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc}
+.filepanel .au-topbar .au-topbar-lab{font-size:12.5px;color:#1e3a5f;font-weight:800;flex:0 0 auto}
+.filepanel .au-topbar #auBar{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:#475569;padding:0;border:0;background:transparent}
+#puLoginSec{border:0!important;background:transparent!important;padding:0!important;margin:0 0 9px!important}
+
+/* 외곽 박스 (두 줄 공통) */
+#gsSyncDet,#ghBoxV128{width:100%;box-sizing:border-box;margin:0 0 9px!important;
+  padding:9px 12px!important;border:1px solid #cbd5e1!important;border-radius:10px!important;
+  background:#fcfdff!important;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+#gsSyncDet[open],#ghBoxV128[open]{border-color:#94a3b8!important}
+#gsSyncDet>summary,#ghBoxV128>summary{list-style:none;cursor:pointer;display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap;padding:0!important;min-height:0;line-height:1.15}
+#gsSyncDet>summary::-webkit-details-marker,#ghBoxV128>summary::-webkit-details-marker{display:none}
+#gsSyncDet>summary::marker,#ghBoxV128>summary::marker{content:''}
+#gsSyncDet>summary:hover,#ghBoxV128>summary:hover{background:none!important;box-shadow:none!important}
+#gsSyncDet>summary>b,#ghBoxV128>summary>b{line-height:1.15}
+#gsSyncDet>summary #hdrMovedBox{margin-left:auto}
+#gsSyncDet>summary .mk-bmore,#ghBoxV128>summary .mk-bmore{margin-left:8px;padding:3px 10px;line-height:1.15;
+  font-size:11px;font-weight:800;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;white-space:nowrap}
+#gsSyncDet>summary #hdrMovedBox+.mk-bmore{margin-left:8px}
+#ghBoxV128>summary .mk-bmore{margin-left:auto}
+#gsSyncDet[open]>summary .mk-bmore,#ghBoxV128[open]>summary .mk-bmore{font-size:0;color:#64748b;border-color:#cbd5e1;background:#fff}
+#gsSyncDet[open]>summary .mk-bmore::before,#ghBoxV128[open]>summary .mk-bmore::before{content:'접기 ▴';font-size:11px}
+#gsSyncDet>summary:hover .mk-bmore,#ghBoxV128>summary:hover .mk-bmore{background:#0f766e;color:#fff;border-color:#0f766e}
+#gsSyncDet[open]>summary:hover .mk-bmore::before,#ghBoxV128[open]>summary:hover .mk-bmore::before{color:#fff}
+.filepanel .file-sync-flat{margin:0!important;border-bottom:0!important;padding-bottom:0!important}
+#puGhSec{border:0!important;background:transparent!important;padding:0!important;margin:0!important}
+@media(max-width:900px){.filepanel .au-topbar-row{justify-content:flex-start}.filepanel .au-topbar{width:100%}}
+</style>
+<script id="pu-v135-panel-js">
+/* v135 · 파일·관리 패널 재배치 (매출분석 도구와 동일한 줄 구성) */
+(function(){
+  if(window.__puV135)return; window.__puV135=true;
+  function $(s,r){return (r||document).querySelector(s);}
+  function build(){
+    var panel=$('#filePanel'); if(!panel)return false;
+    var gsDet=$('.file-sync-flat details',panel);
+    var ghBox=$('#ghBoxV128',panel);
+    if(!gsDet||!ghBox)return false;
+    if(panel.__v135)return true;
+
+    /* ① 로그인 줄 : 알약 상자 + 오른쪽 정렬 */
+    var loginSec=panel.firstElementChild;
+    while(loginSec&&!$('#auBar',loginSec))loginSec=loginSec.nextElementSibling;
+    var moved=$('#hdrMovedBox',panel);
+    if(loginSec){
+      loginSec.id='puLoginSec';
+      var row=$('#auBar',loginSec).parentElement;
+      row.classList.add('au-topbar-row');
+      row.setAttribute('style','');
+      var lab=row.querySelector('b');
+      var bar=$('#auBar',loginSec);
+      var pill=document.createElement('span');
+      pill.className='au-topbar'; pill.id='auTopBar';
+      if(lab){lab.className='au-topbar-lab';lab.setAttribute('style','');pill.appendChild(lab);}
+      bar.setAttribute('style','');
+      pill.appendChild(bar);
+      row.appendChild(pill);
+      /* 눌러도 패널이 접히지 않게 */
+      pill.addEventListener('click',function(e){e.stopPropagation();});
+    }
+
+    /* ② 구글 동기화 : 외곽 박스 + 배지/펼쳐보기 오른쪽 */
+    gsDet.id='gsSyncDet';
+    gsDet.classList.add('mk-carddet');
+    gsDet.setAttribute('style','');
+    var gsSum=gsDet.querySelector('summary');
+    var gsMore=gsSum.querySelector('.mk-bmore');
+    if(moved&&gsMore)gsSum.insertBefore(moved,gsMore);
+    if(moved)moved.addEventListener('click',function(e){e.stopPropagation();});
+
+    /* ③ GitHub 업로드 : 「펼쳐보기 ▾」 추가 */
+    var ghSum=ghBox.querySelector('summary');
+    if(ghSum&&!ghSum.querySelector('.mk-bmore')){
+      var s=document.createElement('span'); s.className='mk-bmore'; s.textContent='펼쳐보기 ▾';
+      ghSum.appendChild(s);
+    }
+    ghBox.setAttribute('style','');
+
+    /* ④ 순서 : 로그인 → GitHub 업로드 → 구글 동기화 */
+    var ghSec=ghBox.parentElement;
+    if(ghSec&&ghSec!==panel){ghSec.id='puGhSec';}
+    var gsSec=gsDet.closest('.file-sync-flat')||gsDet;
+    if(ghSec&&gsSec&&ghSec.parentElement===gsSec.parentElement){
+      gsSec.parentElement.insertBefore(ghSec,gsSec);
+    }
+    panel.__v135=true;
+    return true;
+  }
+  function boot(){ if(!build()){ var n=0,t=setInterval(function(){ if(build()||++n>40)clearInterval(t); },250); } }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
+</script>
+<style id="pu-v135-logo">
+/* v135 · CI(로고)를 누르면 홈으로 */
+header .hbar .logo{cursor:pointer;border-radius:8px;transition:background .15s,transform .12s}
+header .hbar .logo:hover{background:#f1f5f9;transform:translateY(-1px)}
+header .hbar .logo:active{transform:translateY(0)}
+</style>
+<script id="pu-v135-logo-js">
+(function(){
+  if(window.__puLogoHome)return; window.__puLogoHome=true;
+  function bind(){
+    var lg=document.querySelector('header .hbar .logo'); if(!lg||lg.__home)return !!lg;
+    lg.__home=true;
+    lg.setAttribute('title','홈으로 이동');
+    lg.setAttribute('role','button');
+    lg.setAttribute('tabindex','0');
+    function go(e){
+      if(e)e.preventDefault();
+      var h=document.getElementById('homeBtn');
+      if(h){h.click();return;}
+      try{ if(typeof go==='function'){} if(typeof renderPage==='function'&&typeof state!=='undefined'){ } }catch(_e){}
+      try{ if(typeof goHome==='function')goHome(); }catch(_e){}
+    }
+    lg.addEventListener('click',go);
+    lg.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' ')go(e); });
+    return true;
+  }
+  function boot(){ if(!bind()){ var n=0,t=setInterval(function(){ if(bind()||++n>40)clearInterval(t); },250); } }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
+</script>
+<style id="pu-v137-chart">
+/* v137 · 입고일별 추이 그래프 — 연도 배지 / 최고·최저 강조 (매출분석 도구 방식) */
+.vendor-price-history-chart-head .pch-year{display:inline-flex;align-items:center;height:22px;padding:0 10px;
+  border-radius:999px;background:#1e3a5f;color:#fff;font-size:11.5px;font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+.vendor-price-history-chart .chart-summary .pch-hi b{color:#dc2626}
+.vendor-price-history-chart .chart-summary .pch-lo b{color:#0f766e}
+.vendor-price-history-chart .chart-summary .pch-hi i,
+.vendor-price-history-chart .chart-summary .pch-lo i{font-style:normal;margin-left:3px;color:#94a3b8;font-weight:700}
+</style>
+<style id="pu-v139-ai">
+/* v139 · 매입 챗봇 하이브리드 AI */
+#pcbPanel .pcb-head{gap:6px}
+#pcbPanel .pcb-head>div:first-child{min-width:0;flex:1 1 auto}
+#pcbPanel .pcb-head>div:first-child small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pcbPanel .pcb-head button{white-space:nowrap;flex:0 0 auto}
+#pcbPanel .pcb-head #pcbAi{margin-left:auto;font-size:10.5px;padding:0 8px}
+#pcbPanel .pcb-head #pcbClear{font-size:10.5px;padding:0 8px}
+#pcbPanel .pcb-head .pcb-spacer{flex:0 0 0}
+.pcb-ai{margin-top:9px;padding:8px 10px;border:1px solid #ddd6fe;border-left:3px solid #7c3aed;border-radius:8px;background:#faf5ff;font-size:12px;color:#4c1d95;line-height:1.6}
 </style>
 </body>
 </html>
