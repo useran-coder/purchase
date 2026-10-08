@@ -11536,5 +11536,38 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
   window.puChartFilter={apply:apply,clear:clear,div:function(k){apply(divSpec(k))},active:function(){return ACTIVE}};
 })();
 </script>
+<script id="v128-purchase-monthly-authoritative-sync">
+/* ══════════ v128 · 월별 매입합계 권위 원본 복구 ══════════
+   매출 도구나 다른 PC의 오래된 purchaseMonthlySync가 서버에 남아 있어도,
+   이 매입 도구가 가진 원본 매입자료(CUR)로 다시 집계해 자동으로 서버에 반영합니다. */
+(function(){
+'use strict';
+function refresh(){try{return typeof refreshPurchaseMonthlySync==='function'?refreshPurchaseMonthlySync():null;}catch(_e){return null;}}
+function push(){try{if(typeof gsAutoPush==='function')gsAutoPush();}catch(_e){}}
+
+/* 서버 자료를 받은 직후 서버의 옛 월합계를 그대로 두지 않고 원본 매입자료로 재계산합니다. */
+try{
+  var oldLoad=window.gsLoad;
+  if(typeof oldLoad==='function'&&!oldLoad.__purchaseAuthoritativeV128){
+    var gl=async function(){var r=await oldLoad.apply(this,arguments);refresh();push();return r;};
+    gl.__purchaseAuthoritativeV128=true;window.gsLoad=gl;try{gsLoad=gl;}catch(_e2){}
+  }
+  var oldSave=window.gsSave;
+  if(typeof oldSave==='function'&&!oldSave.__purchaseAuthoritativeV128){
+    var gs=async function(){refresh();return await oldSave.apply(this,arguments);};
+    gs.__purchaseAuthoritativeV128=true;window.gsSave=gs;try{gsSave=gs;}catch(_e3){}
+  }
+}catch(_e){}
+
+/* 처음 열 때도 저장된 원본을 기준으로 즉시 재집계하고, 달라진 경우 자동저장을 예약합니다. */
+function boot(){
+  var before='';try{before=JSON.stringify(state.purchaseMonthlySync||{});}catch(_e){}
+  refresh();
+  var after='';try{after=JSON.stringify(state.purchaseMonthlySync||{});}catch(_e2){}
+  if(before!==after)push();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,900);},{once:true});else setTimeout(boot,900);
+})();
+</script>
 </body>
 </html>
