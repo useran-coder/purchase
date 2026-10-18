@@ -1173,7 +1173,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v154 · 프로젝트 매핑 동기화 복구';
+const VERNO='v155 · 동기화 진단·분할 올리기';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -5583,7 +5583,7 @@ const APP_VERSION='purchase_v47_sync_v12';
   }
   function gsStartPoll(){bindLifecycle();if(_gsPollT)clearInterval(_gsPollT);_gsPollT=setInterval(pollNow,POLL_MS)}
   function gsGuide(){const w=window.open('','_blank');if(!w)return;w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;padding:20px;line-height:1.6">'+gesc('구글시트 동기화 설정 가이드\n\n이 매입 분석 파일은 매출 분석 파일에서 사용 중인 Apps Script 웹앱과 호환됩니다.\n\n1) 매출 분석 파일의 Apps Script /exec URL과 비밀키를 그대로 입력합니다.\n2) Apps Script 배포 액세스는 "모든 사용자"여야 합니다.\n3) 매출 파일의 최신 Apps Script(v03)로 배포되어 있는지 확인합니다.\n4) URL과 비밀키를 입력한 뒤 [연결 테스트] → [동기화] 순서로 실행합니다.\n\n자동 동기화는 변경 후 5초 뒤 저장되고, 연결 지연 시 자동 재시도합니다. 동기화 중 다른 화면에서 수정한 값은 저장 완료 후 다시 적용됩니다.')+'</pre>');w.document.close()}
-  window.gsFullObj=gsFullObj;window.gsResetBase=async function(){_gsBase=null;try{await idbSet(BASE_KEY,null)}catch(_e){}};window.gsPutStatus=putStatus;window.gsUpdateBtn=gsUpdateBtn;window.gsAutoPush=gsAutoPush;window.gsLoad=gsLoad;window.gsSave=gsSave;window.gsTest=gsTest;window.gsStartPoll=gsStartPoll;window.gsGuide=gsGuide;window.gsFmtTime=gsFmtTime;window.gsRenderHistory=gsRenderHistory;window.ensureBase=ensureBase;window._isO=plain;
+  window.gsFullObj=gsFullObj;window.gsFieldNames=function(){return gsFields().map(function(f){return f[0]})};window.gsResetBase=async function(){_gsBase=null;try{await idbSet(BASE_KEY,null)}catch(_e){}};window.gsPutStatus=putStatus;window.gsUpdateBtn=gsUpdateBtn;window.gsAutoPush=gsAutoPush;window.gsLoad=gsLoad;window.gsSave=gsSave;window.gsTest=gsTest;window.gsStartPoll=gsStartPoll;window.gsGuide=gsGuide;window.gsFmtTime=gsFmtTime;window.gsRenderHistory=gsRenderHistory;window.ensureBase=ensureBase;window._isO=plain;
 })();
 
 /* ============================================================
@@ -12149,6 +12149,152 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
       if(b)b.style.display=(typeof auUrl==='function'&&auUrl()&&typeof auCan==='function'&&!auCan('upload'))?'none':''; }catch(e){} }
   setTimeout(perm,1500); setTimeout(perm,4000);
   var _aa=window.auApply; if(typeof _aa==='function'){ window.auApply=function(){ var r=_aa.apply(this,arguments); setTimeout(function(){ bind(); perm(); },40); return r; }; }
+})();
+</script>
+<script id="pu-v155-syncdiag">
+/* ══ v155 · 동기화 진단 + 전체 속성 «분할» 올리기 ══
+   · 🔎 동기화 진단 : 이 PC 와 서버에 각 지정값이 몇 건씩 들어 있는지 표로 보여 줍니다.
+     (새 PC에서 속성이 비는 원인이 «서버에 없음» 인지 «받지 못함» 인지 바로 구분됩니다)
+   · 📦 전체 속성 올리기 : 한 덩어리로 보내면 용량·시간 제한에 걸려 통째로 실패하므로
+     항목을 «하나씩» 나눠 올리고, 올린 뒤 서버를 다시 읽어 건수로 확인합니다.
+     이 PC에서 «비어 있는» 항목은 보내지 않아 서버 값을 지우지 않습니다. */
+(function(){
+  if(window.__puSyncDiagV155)return; window.__puSyncDiagV155=true;
+
+  var LBL={natureOverride:'매입구분 지정',categoryOverride:'품목분류 지정',divisionOverride:'사업부 지정',
+    divisionSplitOverride:'사업부 배분',txnDivisionOverride:'거래별 사업부',projectOverride:'프로젝트 지정',
+    txnProjectOverride:'거래별 프로젝트',projectRename:'프로젝트명 변경',projectDivision:'프로젝트→사업부',
+    projectCustom:'프로젝트 추가',projectMemo:'프로젝트 메모',itemStd:'품목 기준정보',vendorCat:'거래처 분류',
+    vendorNatureOverride:'거래처 매입구분',vendorExcl:'거래처 제외',vendorMemo:'거래처 메모',
+    mgrOverride:'담당자 지정',materialDB:'소재 DB',materialBase:'소재 기준',majorProducts:'주요제품',
+    commonProducts:'공용제품',categoryRename:'분류 명칭변경',categoryCustom:'분류 추가',natureCustom:'매입구분 추가',
+    outsourcedKindOverride:'외주 종류',priceMemo:'단가 메모',priceHistoryExcl:'단가이력 제외',targetPct:'목표비율',
+    monthlySales:'월매출',monthlyPdSales:'PD 월매출',laserSales:'레이저 매출',salesMonthlyManual:'월매출 수동입력',
+    laserMonthlyManual:'레이저 수동입력',purchaseMonthlySync:'월매입 집계',salesMonthlySync:'월매출 집계',
+    laserMonthlySync:'레이저 집계',editLog:'수정이력',syncLog:'동기화 이력'};
+  var SKIP={syncLog:1,editLog:1,purchaseMonthlySync:1,salesMonthlySync:1,laserMonthlySync:1,
+            salesSrc:1,salesFiles:1,pdSalesSrc:1,pdSalesFiles:1};   /* 자동 생성·대용량 항목은 진단 표에서 제외 */
+
+  function cnt(v){ try{ return Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:(v==null||v===''?0:1)); }catch(e){ return 0; } }
+  function cfg(){ try{ return {u:String(state.gsync&&state.gsync.url||''),k:String(state.gsync&&state.gsync.key||'')}; }catch(e){ return {u:'',k:''}; } }
+
+  async function serverGet(){
+    var c=cfg(); if(!c.u||!c.k)throw new Error('동기화 URL·비밀키가 없습니다. 로그인 후 다시 시도하세요.');
+    var r=await fetch(c.u+(c.u.indexOf('?')>=0?'&':'?')+'action=get&key='+encodeURIComponent(c.k)+'&_t='+Date.now(),{cache:'no-store'});
+    var d=await r.json();
+    if(!d||d.ok!==true)throw new Error((d&&d.error)||'서버 응답 오류');
+    return (d.data&&typeof d.data==='object')?d.data:d;
+  }
+  async function serverPut(name,value){
+    var c=cfg(); if(!c.u||!c.k)throw new Error('동기화 URL·비밀키가 없습니다.');
+    var body={action:'save',key:c.k,data:{},clientId:String((state.gsync&&state.gsync.user)||'사용자'),
+      clientVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),requestId:'full_'+name+'_'+Date.now()};
+    body.data[name]=value;
+    var r=await fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+    var tx=await r.text(), d=null;
+    try{ d=JSON.parse(tx); }catch(e){ throw new Error('서버가 JSON이 아닌 응답을 보냈습니다'); }
+    if(!d||d.ok!==true)throw new Error((d&&d.error)||'저장 실패');
+    return true;
+  }
+
+  function box(){
+    var b=document.getElementById('gsDiagBox');
+    if(!b){ var h=document.getElementById('gsHistory');
+      if(!h)return null;
+      b=document.createElement('div'); b.id='gsDiagBox';
+      b.style.cssText='width:100%;margin-top:9px;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;background:#fcfdff;font-size:11.5px;color:#334155';
+      h.parentNode.insertBefore(b,h);
+    }
+    return b;
+  }
+  function paint(html){ var b=box(); if(b)b.innerHTML=html; }
+
+  function rowsHtml(rows){
+    return '<div style="max-height:240px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">'+
+      '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:3px 6px">항목</th>'+
+      '<th style="text-align:right;padding:3px 6px">이 PC</th><th style="text-align:right;padding:3px 6px">서버</th>'+
+      '<th style="text-align:left;padding:3px 8px">상태</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        var cl=r.state==='부족'?'#dc2626':(r.state==='올릴 것'?'#b45309':'#0f766e');
+        return '<tr style="border-top:1px solid #e2e8f0"><td style="padding:3px 6px;text-align:left">'+r.label+'</td>'+
+          '<td style="padding:3px 6px;text-align:right;font-weight:700">'+r.loc+'</td>'+
+          '<td style="padding:3px 6px;text-align:right;font-weight:700">'+r.rem+'</td>'+
+          '<td style="padding:3px 8px;color:'+cl+';font-weight:700">'+r.state+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  async function diag(){
+    paint('<b>🔎 동기화 진단</b> — 서버를 읽는 중입니다…');
+    var rem;
+    try{ rem=await serverGet(); }catch(e){ paint('<b style="color:#dc2626">🔎 진단 실패</b> — '+((e&&e.message)||e)); return null; }
+    var names=(window.gsFieldNames?window.gsFieldNames():[]).filter(function(n){ return !SKIP[n]; });
+    var rows=[],thin=0,push=0;
+    names.forEach(function(n){
+      var lo=cnt(state[n]), re=cnt(rem[n]);
+      if(!lo&&!re)return;
+      var st=(re>lo)?'부족':((lo>re)?'올릴 것':'일치');
+      if(st==='부족')thin++; if(st==='올릴 것')push++;
+      rows.push({label:(LBL[n]||n)+' <span style="color:#94a3b8">('+n+')</span>',loc:lo,rem:re,state:st});
+    });
+    rows.sort(function(a,b){ var o={'부족':0,'올릴 것':1,'일치':2}; return o[a.state]-o[b.state]; });
+    paint('<b>🔎 동기화 진단</b> <span style="color:#64748b">· '+new Date().toLocaleString()+'</span><br>'+
+      '<span style="color:#64748b">「부족」= 서버가 더 많음(이 PC가 아직 못 받음) · 「올릴 것」= 이 PC가 더 많음(서버에 아직 없음)</span>'+
+      '<div style="margin:6px 0 7px"><b style="color:#dc2626">부족 '+thin+'개</b> · <b style="color:#b45309">올릴 것 '+push+'개</b></div>'+rowsHtml(rows));
+    return {rows:rows,thin:thin,push:push,rem:rem};
+  }
+
+  async function fullPush(btn){
+    var d=await diag();
+    if(!d)return;
+    if(d.thin){
+      if(!confirm('⚠ 서버가 더 많이 가진 항목이 '+d.thin+'개 있습니다.\n이 PC는 아직 다 받지 못한 상태일 수 있습니다.\n\n여기서 올리면 그 항목은 그대로 두고, 이 PC에만 있는 값만 올립니다.\n계속할까요?'))return;
+    }else if(!d.push){
+      if(!confirm('이 PC와 서버가 모두 같습니다. 그래도 다시 올릴까요?'))return;
+    }
+    var full; try{ full=window.gsFullObj(); }catch(e){ alert('현재 설정을 읽지 못했습니다: '+e.message); return; }
+    var names=(window.gsFieldNames?window.gsFieldNames():[]).filter(function(n){
+      return n!=='syncLog' && cnt(full[n])>0;            /* 빈 항목은 보내지 않습니다 (서버 값 보호) */
+    });
+    var okN=0,fail=[];
+    for(var i=0;i<names.length;i++){
+      var n=names[i];
+      if(btn)btn.textContent='올리는 중 '+(i+1)+'/'+names.length;
+      paint('<b>📦 전체 속성 올리기</b> — '+(i+1)+' / '+names.length+' · '+(LBL[n]||n)+' 전송 중…');
+      try{ await serverPut(n,full[n]); okN++; }
+      catch(e){ fail.push((LBL[n]||n)+' : '+((e&&e.message)||e)); }
+    }
+    paint('<b>📦 전체 속성 올리기</b> — 서버를 다시 읽어 확인하는 중입니다…');
+    try{ if(window.gsResetBase)await window.gsResetBase(); }catch(_e){}
+    try{ if(window.gsLoad)await window.gsLoad(true); }catch(_e){}
+    var after=await diag();
+    var head='<b>📦 전체 속성 올리기 완료</b> — 성공 '+okN+'개'+(fail.length?(' · <b style="color:#dc2626">실패 '+fail.length+'개</b>'):'')+
+      (fail.length?('<div style="color:#dc2626;margin-top:4px">'+fail.map(function(x){return '· '+x;}).join('<br>')+'</div>'):'')+'<hr style="border:0;border-top:1px dashed #cbd5e1;margin:7px 0">';
+    var b=box(); if(b)b.innerHTML=head+b.innerHTML;
+  }
+
+  function ensureBtns(){
+    var host=document.querySelector('.gs-config-actions'); if(!host)return;
+    var full=document.getElementById('gsFullBackup');
+    if(full&&!full.__v155){ full.__v155=true;
+      full.onclick=async function(){ var o=full.textContent; full.disabled=true;
+        try{ await fullPush(full); }catch(e){ paint('<b style="color:#dc2626">올리기 실패</b> — '+((e&&e.message)||e)); }
+        full.disabled=false; full.textContent=o; };
+    }
+    if(!document.getElementById('gsDiagBtn')){
+      var d=document.createElement('button');
+      d.id='gsDiagBtn'; d.type='button'; d.className='btn';
+      d.style.cssText='background:#f8fafc;color:#334155;border-color:#cbd5e1';
+      d.textContent='🔎 동기화 진단';
+      d.onclick=async function(){ var o=d.textContent; d.disabled=true; d.textContent='확인 중…';
+        try{ await diag(); }catch(e){ paint('<b style="color:#dc2626">진단 실패</b> — '+((e&&e.message)||e)); }
+        d.disabled=false; d.textContent=o; };
+      if(full&&full.parentNode)full.parentNode.insertBefore(d,full.nextSibling); else host.appendChild(d);
+    }
+  }
+  ensureBtns();
+  document.addEventListener('click',function(){ setTimeout(ensureBtns,60); },true);
+  setTimeout(ensureBtns,1200); setTimeout(ensureBtns,3000); setTimeout(ensureBtns,6000);
+  window.puSyncDiag=diag;
 })();
 </script>
 </body>
