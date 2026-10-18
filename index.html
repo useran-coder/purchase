@@ -1174,7 +1174,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v156 · 월별 자료 품질 진단';
+const VERNO='v157 · 공유목록 12개월 표시';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -8165,7 +8165,7 @@ function dsRender(){
  box.innerHTML = '<div style="margin-bottom:5px">'+ownTxt+
    (mf&&mf.updatedAt?(' <span class="sub2">· 서버 최종 '+esc(String(mf.updatedAt).slice(0,16).replace('T',' '))+'</span>'):'')+'</div>'+
    dupHtml+
-   (all.length? ('<div style="max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:8px">'+
+   (all.length? ('<div style="max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:8px">'+
      '<table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:1000px"><thead><tr style="background:#f1f5f9">'+
      ['월','파일 이름','내 PC','서버','용량','상태','올린 사람','올린 일시','관리']
       .map(function(h){ return '<th style="padding:4px 8px;text-align:right;color:#475569;white-space:nowrap">'+h+'</th>'; }).join('')+
