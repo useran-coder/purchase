@@ -1072,7 +1072,7 @@
   <!-- v128 : GitHub 한 번에 올리기 (매출분석 도구와 동일 방식) -->
   <div class="fp-sec">
     <details id="ghBoxV128" style="width:100%;margin:0;border:1px solid #d8dee9;border-radius:10px;padding:10px 12px;background:#fbfcfe">
-      <summary style="cursor:pointer;font-weight:800;font-size:13px;color:#1e3a5f">🚀 GitHub 업로드 <span class="sub2" style="font-weight:600">(이 파일을 저장소에 바로 배포합니다)</span></summary>
+      <summary style="cursor:pointer;font-weight:800;font-size:13px;color:#1e3a5f"><b style="font-weight:800">🚀 GitHub 업로드 <span class="sub2" style="font-weight:600">(이 파일을 저장소에 바로 배포합니다)</span></b><span class="gh-rel" id="ghRelBadge" aria-label="업로드 상태"><span class="gh-rel-ver" id="ghRelVer">-</span><span class="gh-rel-state" id="ghRelState">확인 중…</span><span class="gh-rel-time" id="ghRelTime"></span></span></summary>
       <div style="margin-top:9px">
         <div class="gs-config-grid">
           <input type="text" id="ghOwner" placeholder="GitHub 계정(owner)" autocomplete="off">
@@ -1086,7 +1086,7 @@
         </div>
         <div class="gs-config-actions" style="margin-top:8px">
           <button class="btn" id="ghUploadBtn" type="button" style="background:#1e3a5f;color:#fff;border-color:#1e3a5f;font-weight:800">🚀 지금 올리기</button>
-          <button class="btn ghost" id="ghPickBtn" type="button" style="font-size:12px;color:#1d4ed8;border-color:#bfd4f2">📄 파일 선택해 올리기</button>
+          <button class="btn" id="ghPickBtn" type="button" style="background:#eef2ff;color:#4338ca;border-color:#c7d2fe;font-weight:800">📄 파일 선택해 올리기</button>
           <button class="btn ghost" id="ghCheckBtn" type="button" style="font-size:12px">🔍 현재 배포 버전 확인</button>
           <button class="btn ghost" id="ghForgetBtn" type="button" style="font-size:12px;color:#b91c1c;border-color:#fecaca">🗑 토큰 지우기</button>
           <span class="sub2 gs-config-status" id="ghStatus" style="font-weight:700"></span>
@@ -1171,7 +1171,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v149 · 매입자료 자동 받기';
+const VERNO='v151 · GitHub 업로드창 · 수정이력 위치';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -10908,11 +10908,13 @@ window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(funct
         throw new Error(em);
       }
       var url=(d&&d.commit&&d.commit.html_url)||'';
+      ghRelSave({ver:(fv||v||''),at:Date.now(),state:'uploaded',url:url,path:c.owner+'/'+c.repo+'/'+c.path});
       say('🟢 <b>올렸습니다</b> — '+ES(c.owner+'/'+c.repo+'/'+c.path)+' · '+ES(fv||v)
          +(fromName?(' <span style="color:#64748b">('+ES(fromName)+')</span>'):'')
-         +'<br><span style="font-weight:600;color:#475569">GitHub Pages 반영까지 1~2분 걸립니다.</span>'
+         +'<br><span style="font-weight:600;color:#475569">GitHub Pages 반영을 자동으로 확인합니다…</span>'
          +(url?(' <a href="'+url+'" target="_blank" rel="noopener" style="color:#1d4ed8">커밋 보기 ↗</a>'):''),'#0f766e');
       try{ if(typeof logEdit==='function')logEdit('배포','GitHub 업로드 '+(fv||v||'')+' → '+c.owner+'/'+c.repo+'/'+c.path); }catch(_l){}
+      ghWatchPages(c,(fv||v||''),url,fromName||'');
     }catch(e){ say('🔴 '+ES(String(e.message||e)),'#dc2626'); throw e; }
     finally{ if(btn)btn.disabled=false; }
   }
@@ -10928,12 +10930,73 @@ window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(funct
       var m=t.match(/VERNO='([^']+)'/)||t.match(/APP_BUILD='([^']+)'/);
       var here=ver()||'?';
       var there=m?m[1]:'?';
-      say((there===here?'🟢':'🟠')+' 배포된 버전 <b>'+ES(there)+'</b> · 지금 보고 있는 버전 <b>'+ES(here)+'</b>'
-        +(there===here?' — 같습니다.':' — 다릅니다. 올리기를 눌러 주세요.'), there===here?'#0f766e':'#b45309');
+      if(there===here){ var _o=ghRelLoad()||{}; ghRelSave({ver:here,at:_o.at||Date.now(),state:'live',url:_o.url||'',
+        path:c.owner+'/'+c.repo+'/'+c.path,liveAt:Date.now()}); }
+      say((there===here?'✅':'🟠')+' 배포된 버전 <b>'+ES(there)+'</b> · 지금 보고 있는 버전 <b>'+ES(here)+'</b>'
+        +(there===here?' — 같습니다. 반영 완료.':' — 다릅니다. 올리기를 눌러 주세요.'), there===here?'#0f766e':'#b45309');
     }catch(e){ say('🔴 '+ES(String(e.message||e)),'#dc2626'); }
   }
+  /* ══ v150 · 올린 버전·시각을 제목줄 배지로 (매출분석 도구와 동일) ══ */
+  var GH_REL='gh_release_v150';
+  function ghRelLoad(){ try{ return JSON.parse(localStorage.getItem(GH_REL)||'null')||null; }catch(_e){ return null; } }
+  function ghRelSave(o){ try{ localStorage.setItem(GH_REL,JSON.stringify(o)); }catch(_e){} ghRelPaint(); }
+  function ghTimeText(ms){
+    try{ var d=new Date(ms),z=function(n){return ('0'+n).slice(-2);};
+      return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+' KST';
+    }catch(_e){ return ''; }
+  }
+  /* 긴 VERNO 에서 «v150» 부분만 — 매출분석 도구 배지와 같은 모양 */
+  function sver(x){ var t=String(x||'').trim(); var m=t.match(/^v\s*[\d.]+[a-z]?/i); return m?m[0].replace(/\s+/g,''):t.slice(0,16); }
+  function ghRelPaint(){
+    var v=el('ghRelVer'),st=el('ghRelState'),tm=el('ghRelTime'),bx=el('ghRelBadge');
+    if(!v||!st||!tm)return;
+    var here=ver()||'';
+    var o=ghRelLoad();
+    v.textContent=sver(here)||'-'; v.title=here||'';
+    if(!o||!o.ver){ st.textContent='아직 올린 기록 없음'; tm.textContent='';
+      if(bx)bx.title='이 PC에서 아직 올린 적이 없습니다.'; return; }
+    var same=(String(o.ver)===here);
+    var label=(o.state==='live')?'✅ 반영 완료':(o.state==='uploaded'?'⏳ 반영 확인 중':'🟠 반영 지연');
+    if(!same)label='올림 '+sver(o.ver)+' (현재 파일 '+sver(here)+')';
+    st.textContent=label;
+    tm.textContent='올림 '+ghTimeText(o.at);
+    if(bx)bx.title=(o.path||'')+' · 올린 버전 '+o.ver+' · '+ghTimeText(o.at)
+      +(o.state==='live'?' · GitHub Pages 반영 확인됨':'');
+  }
+  /* 올린 뒤 GitHub Pages 가 새 버전을 돌려줄 때까지 확인합니다 */
+  function ghWatchPages(c,v2,url,from){
+    var tries=0,max=12;
+    var tick=function(){
+      tries++;
+      var u='https://'+c.owner+'.github.io/'+c.repo+'/'+(c.path==='index.html'?'':c.path)+'?_gh='+Date.now();
+      fetch(u,{cache:'no-store'}).then(function(r){ return r.ok?r.text():''; }).then(function(t){
+        var m=t&&(t.match(/VERNO='([^']+)'/)||t.match(/APP_BUILD='([^']+)'/));
+        var there=m?m[1]:'';
+        if(there&&v2&&there===v2){
+          ghRelSave({ver:v2,at:(ghRelLoad()||{}).at||Date.now(),state:'live',url:url,
+            path:c.owner+'/'+c.repo+'/'+c.path,liveAt:Date.now()});
+          say('✅ <b>GitHub Pages 반영 완료</b> — '+ES(c.owner+'/'+c.repo+'/'+c.path)+' · <b>'+ES(v2)+'</b>'
+             +(from?(' · 보낸 파일 '+ES(from)):'')
+             +'<br><span style="font-weight:600;color:#475569">'+ES(ghTimeText(Date.now()))+' 확인 · 이제 다른 PC·태블릿에서도 새 버전이 열립니다.</span>'
+             +(url?(' <a href="'+url+'" target="_blank" rel="noopener" style="color:#1d4ed8">커밋 보기 ↗</a>'):''),'#0f766e');
+          return;
+        }
+        if(tries>=max){
+          ghRelSave(Object.assign(ghRelLoad()||{},{state:'slow'}));
+          say('🟠 <b>올리기는 끝났지만</b> GitHub Pages 반영이 아직 확인되지 않습니다 ('+(tries*15)+'초 경과).'
+             +'<br><span style="font-weight:600;color:#475569">잠시 뒤 «🔍 현재 배포 버전 확인»을 눌러 주세요.</span>','#b45309');
+          return;
+        }
+        setTimeout(tick,15000);
+      }).catch(function(){ if(tries<max)setTimeout(tick,15000); });
+    };
+    setTimeout(tick,12000);
+  }
+  window.ghRelPaintV150=ghRelPaint;
+
   function mount(){
     var box=el('ghBoxV128'); if(!box||box.__v128)return; box.__v128=1;
+    try{ ghRelPaint(); }catch(_e){}
     var c=cfg();
     if(el('ghOwner'))el('ghOwner').value=c.owner;
     if(el('ghRepo'))el('ghRepo').value=c.repo;
@@ -11899,6 +11962,51 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
     if(loggedIn()&&typeof dsFreshManifest==='function'&&window.DS){ clearInterval(t); setTimeout(run,350); }
   },400);
   window.puAutoPull=run;
+})();
+</script>
+<style id="pu-v150-ghbadge">
+/* v150 · 🚀 GitHub 업로드 제목줄 배지 — 매출분석 도구와 동일 */
+#ghBoxV128>summary{gap:8px!important;flex-wrap:nowrap!important;overflow:visible}
+#ghBoxV128>summary>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+#ghBoxV128>summary .gh-rel{display:inline-flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto;
+  white-space:nowrap;font-size:10.5px;color:#475569}
+#ghBoxV128>summary .gh-rel-ver,
+#ghBoxV128>summary .gh-rel-state,
+#ghBoxV128>summary .gh-rel-time{display:inline-flex;align-items:center;height:22px;box-sizing:border-box;
+  border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:0 9px;font-weight:700;line-height:1}
+#ghBoxV128>summary .gh-rel-ver{flex:0 0 auto;color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff;font-weight:800}
+#ghBoxV128>summary .gh-rel-state{min-width:0;max-width:360px;overflow:hidden;text-overflow:ellipsis;color:#334155}
+#ghBoxV128>summary .gh-rel-time{flex:0 0 auto;color:#047857;border-color:#a7f3d0;background:#ecfdf5;font-weight:700}
+#ghBoxV128>summary .gh-rel-time:empty{display:none}
+#ghBoxV128>summary .mk-bmore{flex:0 0 auto;margin-left:auto!important}
+@media(max-width:1200px){#ghBoxV128>summary .gh-rel-state{max-width:180px}}
+@media(max-width:900px){#ghBoxV128>summary .gh-rel-state{display:none}}
+</style>
+<style id="pu-v151-elog">
+/* v151 · 🕘 수정이력 버튼을 파일·관리 로그인 줄의 «🔐 로그인» 왼쪽으로 */
+#filePanel .au-topbar-row #headerElogBtn{
+  height:30px!important;padding:0 11px!important;border-radius:999px!important;
+  font-size:11.5px!important;font-weight:800!important;background:#fff!important;
+  border:1px solid #e2e8f0!important;color:#475569!important;white-space:nowrap;flex:0 0 auto}
+#filePanel .au-topbar-row #headerElogBtn:hover{background:#f1f5f9!important;border-color:#cbd5e1!important}
+#filePanel .au-topbar-row{gap:7px}
+</style>
+<script id="pu-v151-elog-move">
+/* v151 · 🕘 수정이력 버튼을 «🔐 로그인» 알약 왼쪽으로 옮깁니다 */
+(function(){
+  if(window.__puElogV151)return; window.__puElogV151=true;
+  function move(){
+    var row=document.querySelector('#filePanel .au-topbar-row');
+    var btn=document.getElementById('headerElogBtn');
+    var pill=document.getElementById('auTopBar');
+    if(!row||!btn||!pill)return false;
+    if(btn.parentNode!==row){ row.insertBefore(btn,pill); }
+    else if(btn.nextElementSibling!==pill){ row.insertBefore(btn,pill); }
+    return true;
+  }
+  function boot(){ if(!move()){ var n=0,t=setInterval(function(){ if(move()||++n>60)clearInterval(t); },300); } }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+  setInterval(move,2500);
 })();
 </script>
 </body>
