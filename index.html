@@ -1094,8 +1094,8 @@
         <div class="sub2" style="margin-top:7px;line-height:1.65">
           토큰은 <b>이 PC의 브라우저에만</b> 저장되며 서버·동기화에는 절대 올라가지 않습니다. 공용 PC에서는 쓰지 마세요.<br>
           토큰 만들기 — GitHub → Settings → Developer settings → <b>Personal access tokens → Fine-grained tokens</b> → 저장소 <b>이 저장소만</b> 선택 → 권한 <b>Contents: Read and write</b> → 발급.<br>
-          <b>🚀 지금 올리기</b>는 GitHub Pages 주소로 열었을 때 쓰는 버튼입니다(지금 보고 있는 페이지를 그대로 배포).<br>
-          내 컴퓨터의 HTML 파일을 직접 열어 쓰는 중이면 <b>📄 파일 선택해 올리기</b>를 눌러 올릴 HTML 파일을 고르세요.
+          <b>내 컴퓨터의 파일을 직접 연 상태(file://)</b>에서는 브라우저가 보안상 자기 원본을 읽지 못합니다 — 이때는 <b>📄 파일 선택해 올리기</b>로 올릴 HTML을 직접 고르면 됩니다(「🚀 지금 올리기」를 눌러도 파일 선택창이 열립니다).<br>
+          GitHub Pages 주소로 열었을 때는 <b>지금 보고 있는 페이지</b>가 그대로 올라갑니다.
         </div>
         <input type="file" id="ghFile" accept=".html,.htm,text/html" style="display:none">
       </div>
@@ -1171,7 +1171,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v151 · GitHub 업로드창 · 수정이력 위치';
+const VERNO='v152 · GitHub 업로드창 매출도구 동일';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -11964,23 +11964,44 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
   window.puAutoPull=run;
 })();
 </script>
-<style id="pu-v150-ghbadge">
-/* v150 · 🚀 GitHub 업로드 제목줄 배지 — 매출분석 도구와 동일 */
-#ghBoxV128>summary{gap:8px!important;flex-wrap:nowrap!important;overflow:visible}
-#ghBoxV128>summary>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+<style id="pu-v152-ghbox">
+/* v152 · 🚀 GitHub 업로드창 — 매출분석 도구(#ghBoxV784)와 «완전히 동일»하게 맞춤
+   (박스 테두리·여백, 접힌 줄 높이 26px, 배지 3종, 필드 3등분 그리드, 마우스 올림 모션) */
+#ghBoxV128{padding:9px 12px!important;border:1px solid #cbd5e1!important;border-radius:10px!important;
+  background:#fcfdff!important;margin:12px 0 6px!important;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+#ghBoxV128[open]{border-color:#94a3b8!important}
+#ghBoxV128:hover{border-color:#1e3a5f!important;box-shadow:0 8px 22px rgba(30,58,95,.18)}
+#ghBoxV128>summary{min-height:26px!important;height:26px!important;padding:0!important;line-height:1.15;
+  gap:8px;list-style:none;cursor:pointer;display:flex;align-items:center!important;
+  flex-wrap:nowrap!important;overflow:visible}
+#ghBoxV128>summary::-webkit-details-marker{display:none}
+#ghBoxV128>summary::marker{content:''}
+#ghBoxV128>summary:hover{background:none!important;box-shadow:none!important}
+#ghBoxV128>summary>b{line-height:1.15;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 접혀 있을 때 보이는 배지 3종 */
 #ghBoxV128>summary .gh-rel{display:inline-flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto;
-  white-space:nowrap;font-size:10.5px;color:#475569}
+  white-space:nowrap;font-size:10.5px;color:#475569;font-weight:700}
 #ghBoxV128>summary .gh-rel-ver,
 #ghBoxV128>summary .gh-rel-state,
 #ghBoxV128>summary .gh-rel-time{display:inline-flex;align-items:center;height:22px;box-sizing:border-box;
-  border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:0 9px;font-weight:700;line-height:1}
+  border:1px solid #dbe4f0;border-radius:999px;padding:0 8px;background:#f8fafc;font-size:10.5px}
 #ghBoxV128>summary .gh-rel-ver{flex:0 0 auto;color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff;font-weight:800}
-#ghBoxV128>summary .gh-rel-state{min-width:0;max-width:360px;overflow:hidden;text-overflow:ellipsis;color:#334155}
+#ghBoxV128>summary .gh-rel-state{min-width:0;max-width:360px;overflow:hidden;text-overflow:ellipsis;color:#334155;font-weight:700}
 #ghBoxV128>summary .gh-rel-time{flex:0 0 auto;color:#047857;border-color:#a7f3d0;background:#ecfdf5;font-weight:700}
 #ghBoxV128>summary .gh-rel-time:empty{display:none}
-#ghBoxV128>summary .mk-bmore{flex:0 0 auto;margin-left:auto!important}
+#ghBoxV128>summary .mk-bmore{flex:0 0 auto;margin-left:auto!important;height:22px!important;min-height:22px!important;
+  display:inline-flex!important;align-items:center!important;padding:0 10px!important;line-height:1.15!important;
+  box-sizing:border-box!important;font-size:11px}
 @media(max-width:1200px){#ghBoxV128>summary .gh-rel-state{max-width:180px}}
 @media(max-width:900px){#ghBoxV128>summary .gh-rel-state{display:none}}
+/* 펼쳤을 때 필드 — 3등분 (매출도구와 동일) */
+#ghBoxV128 .gs-config-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin-top:8px!important;align-items:stretch!important}
+#ghBoxV128 .gs-config-grid input{width:100%;min-width:0;height:35px;padding:7px 10px;border:1px solid #cfd8e5;
+  border-radius:7px;background:#fff;color:#26364d;font-family:inherit;font-size:12px;box-sizing:border-box}
+#ghBoxV128 .gs-config-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:9px!important}
+#ghBoxV128 .gs-config-status{width:100%;margin-top:8px;font-weight:700}
+#ghBoxV128 .sub2{margin-top:7px}
+@media(max-width:720px){#ghBoxV128 .gs-config-grid{grid-template-columns:1fr!important}}
 </style>
 <style id="pu-v151-elog">
 /* v151 · 🕘 수정이력 버튼을 파일·관리 로그인 줄의 «🔐 로그인» 왼쪽으로 */
