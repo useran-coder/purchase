@@ -1121,6 +1121,7 @@
       <button class="btn sm" id="dsPushBtn" style="background:#ccfbf1;color:#0f766e;border-color:#5eead4">⬆ 매입자료 올리기</button>
       <button class="btn sm" id="dsClaimBtn" style="background:#fef3c7;color:#b45309;border-color:#fcd34d">👑 업로드 담당 지정</button>
       <button class="btn ghost sm" id="dsCheckBtn">🔄 서버 확인</button>
+      <button class="btn sm" id="dsQualBtn" style="background:#f5f3ff;color:#5b21b6;border-color:#ddd6fe">📋 자료 품질 진단</button>
       <label class="ds-auto-lbl" title="로그인하면 서버에 새 자료가 있는지 보고 자동으로 내려받습니다"><input type="checkbox" id="dsAutoChk" checked> 자동 받기</label>
       <span class="sub2" id="dsStatus" style="font-weight:600"></span>
     </div>
@@ -1173,7 +1174,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v155 · 동기화 진단·분할 올리기';
+const VERNO='v156 · 월별 자료 품질 진단';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -12295,6 +12296,88 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
   document.addEventListener('click',function(){ setTimeout(ensureBtns,60); },true);
   setTimeout(ensureBtns,1200); setTimeout(ensureBtns,3000); setTimeout(ensureBtns,6000);
   window.puSyncDiag=diag;
+})();
+</script>
+<script id="pu-v156-dataqual">
+/* ══ v156 · 월별 «매입 원본 자료 품질» 진단 ══
+   매입구분 자동분류는 ERP 「품목대분류」 칸을 1순위로 봅니다. 이 칸이 비어 있으면
+   프로젝트명만 보고 «부품/부속»으로 떨어집니다(자동분류 규칙). 그래서 어떤 달의 원본만
+   품목대분류가 비어 있으면 그 달만 원자재·외주가공이 통째로 부품/부속으로 잡힙니다.
+   이 진단은 «지금 이 PC가 들고 있는 자료»를 월별로 세어, 어느 달 원본이 부실한지 보여 줍니다. */
+(function(){
+  if(window.__puDataQualV156)return; window.__puDataQualV156=true;
+
+  function esc2(v){ return String(v==null?'':v).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function box(){
+    var b=document.getElementById('dsQualBox');
+    if(!b){ var i=document.getElementById('dsInfo'); if(!i)return null;
+      b=document.createElement('div'); b.id='dsQualBox';
+      b.style.cssText='width:100%;margin-top:9px;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;background:#fcfdff;font-size:11.5px;color:#334155';
+      i.parentNode.insertBefore(b,i.nextSibling); }
+    return b;
+  }
+
+  function run(){
+    var months;
+    try{ months=dsLocalMonths()||{}; }catch(e){ months={}; }
+    var keys=Object.keys(months).sort();
+    var b=box(); if(!b)return;
+    if(!keys.length){ b.innerHTML='<b>📋 자료 품질 진단</b> — 이 PC에 매입자료가 없습니다.'; return; }
+    var rows=[],bad=0;
+    keys.forEach(function(ym){
+      var rs=months[ym], n=rs.length, noBig=0, noMgmt=0, noProj=0,
+          a={}, f={}, bigVals={};
+      rs.forEach(function(r){
+        var bg=String(r.big||'').trim();
+        if(!bg)noBig++; else bigVals[bg]=(bigVals[bg]||0)+1;
+        if(!String(r.mgmt||'').trim())noMgmt++;
+        if(!String(r.project||'').trim())noProj++;
+        var ak='?'; try{ ak=automaticNatureDisplayKey(r); }catch(e){}
+        a[ak]=(a[ak]||0)+1;
+        var fk=ak; try{ fk=effectiveNatureOverride(r)||ak; }catch(e){}
+        f[fk]=(f[fk]||0)+1;
+      });
+      var pct=n?Math.round(noBig*100/n):0;
+      if(pct>=50)bad++;
+      var top=Object.keys(bigVals).sort(function(x,y){return bigVals[y]-bigVals[x];}).slice(0,2)
+                .map(function(k){return esc2(k)+'('+bigVals[k]+')';}).join(', ')||'<span style="color:#dc2626">없음</span>';
+      rows.push({ym:ym,n:n,noBig:noBig,pct:pct,noMgmt:noMgmt,noProj:noProj,
+        raw:(f['원자재']||0),out:(f['외주가공']||0),part:(f['부품/부속']||0),top:top});
+    });
+    var head='<b>📋 자료 품질 진단</b> <span style="color:#64748b">· 이 PC가 들고 있는 매입 원본 기준 · '+new Date().toLocaleString()+'</span>'+
+      '<div style="margin:5px 0 7px;color:#64748b">매입구분 자동분류는 ERP <b>품목대분류</b> 칸을 1순위로 봅니다. 이 칸이 빈 행은 프로젝트명만 보고 <b>부품/부속</b>으로 분류됩니다.'+
+      (bad?'<br><b style="color:#dc2626">⚠ 품목대분류가 절반 이상 비어 있는 달이 '+bad+'개 있습니다 — 그 달 원본을 다시 올리셔야 합니다.</b>':'<br><b style="color:#0f766e">✓ 품목대분류가 크게 빈 달은 없습니다.</b>')+'</div>';
+    var tbl='<div style="max-height:300px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">'+
+      '<thead><tr style="background:#f1f5f9">'+
+      ['월','행수','대분류 빈칸','빈칸%','관리구분 빈칸','프로젝트 빈칸','원자재','외주가공','부품/부속','대분류 값(상위2)']
+        .map(function(h,i){return '<th style="padding:3px 6px;text-align:'+(i===0||i===9?'left':'right')+'">'+h+'</th>';}).join('')+
+      '</tr></thead><tbody>'+
+      rows.map(function(r){
+        var warn=r.pct>=50;
+        return '<tr style="border-top:1px solid #e2e8f0;'+(warn?'background:#fef2f2':'')+'">'+
+          '<td style="padding:3px 6px;text-align:left;font-weight:700">'+r.ym+'</td>'+
+          '<td style="padding:3px 6px;text-align:right">'+r.n.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:right;font-weight:700;color:'+(warn?'#dc2626':'#334155')+'">'+r.noBig.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:right;color:'+(warn?'#dc2626':'#64748b')+'">'+r.pct+'%</td>'+
+          '<td style="padding:3px 6px;text-align:right;color:#64748b">'+r.noMgmt.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:right;color:#64748b">'+r.noProj.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:right">'+r.raw.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:right">'+r.out.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:right">'+r.part.toLocaleString()+'</td>'+
+          '<td style="padding:3px 6px;text-align:left;color:#64748b">'+r.top+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    b.innerHTML=head+tbl;
+    try{ b.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+  }
+
+  function bind(){
+    var b=document.getElementById('dsQualBtn');
+    if(b&&!b.__v156){ b.__v156=true; b.onclick=function(){ try{ run(); }catch(e){ var x=box(); if(x)x.innerHTML='<b style="color:#dc2626">진단 실패</b> — '+((e&&e.message)||e); } }; }
+  }
+  bind();
+  document.addEventListener('click',function(){ setTimeout(bind,60); },true);
+  setTimeout(bind,1200); setTimeout(bind,3000);
+  window.puDataQual=run;
 })();
 </script>
 </body>
