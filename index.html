@@ -1056,6 +1056,8 @@
           <button class="btn" id="gsSave" type="button" style="background:#ccfbf1;color:#0f766e;border-color:#5eead4">⬆ 저장(병합)</button>
           <button class="btn" id="gsTest" type="button" style="background:#fef9c3;color:#854d0e;border-color:#fde047">🔌 연결 테스트</button>
           <label class="sub2" style="font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-left:2px;cursor:pointer"><input type="checkbox" id="gsAuto" style="cursor:pointer"> 자동 동기화</label>
+          <label class="sub2" id="gsAutoLoadLbl" title="로그인하면 서버에 저장된 제품 속성·기준정보를 자동으로 내려받습니다" style="font-weight:600;display:inline-flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="gsAutoLoadChk" style="cursor:pointer" checked> 로그인 시 속성 자동 받기</label>
+          <button class="btn" id="gsFullBackup" type="button" style="background:#eef2ff;color:#3730a3;border-color:#c7d2fe">📦 전체 속성 올리기</button>
           <span class="sub2 gs-config-status" id="gsStatus" style="font-weight:600"></span>
           <button class="btn ghost sm" id="gsGuide" type="button" style="display:none">설정 가이드</button>
         </div>
@@ -1171,7 +1173,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v152 · GitHub 업로드창 매출도구 동일';
+const VERNO='v154 · 프로젝트 매핑 동기화 복구';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -1885,7 +1887,7 @@ function queueClassificationSync(isRetry=false){
     }catch(_e){}
   },1200);
 }
-const SETTING_KEYS=['dsAutoPull','basis','inclOverhead','natureCoverageVersion','division','period','homeTopPeriod','homeChartMode','homeChartDefaultVersion','homeChartType','homeChartSeries','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','divCmpNat','divCmpList','paretoNat','paretoPct','costRatioNat','costRatioList','priceTrendBig','priceTrendMid','priceTrendSmall','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceHistoryExcl','priceMemo','priceMemoAt','itemStd','majorProducts','commonProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','materialDB','materialBase','divisionOverride','divisionSplitOverride','txnDivisionOverride','targetPct','projectMemo','projectCustom','projectDivision','projectRename','projectOverride','txnProjectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','editLog','elogSeenTs','gsync'];
+const SETTING_KEYS=['dsAutoPull','gsAutoLoad','basis','inclOverhead','natureCoverageVersion','division','period','homeTopPeriod','homeChartMode','homeChartDefaultVersion','homeChartType','homeChartSeries','periodDefaultVersion','matGrp','matForm','matGradeFilter','matThickFilter','matGradeSelected','purchaseCycleNat','purchaseCycleMetric','purchaseCycleStatus','divCmpNat','divCmpList','paretoNat','paretoPct','costRatioNat','costRatioList','priceTrendBig','priceTrendMid','priceTrendSmall','salesSrc','salesFiles','salesMonthlySync','salesMonthlyManual','pdSalesSrc','pdSalesFiles','mgrOverride','vendorMemo','vendorMemoAt','vendorCat','vendorNatureOverride','vendorExcl','priceHistoryExcl','priceMemo','priceMemoAt','itemStd','majorProducts','commonProducts','monthlySales','monthlyPdSales','laserSales','laserMonthlySync','laserMonthlyManual','purchaseMonthlySync','materialDB','materialBase','divisionOverride','divisionSplitOverride','txnDivisionOverride','targetPct','projectMemo','projectCustom','projectDivision','projectRename','projectOverride','txnProjectOverride','categoryRename','categoryOverride','categoryCustom','outsourcedKindOverride','natureCustom','natureOverride','syncLog','editLog','elogSeenTs','gsync'];
 
 /* ============================================================
    File handling (SheetJS)
@@ -5433,6 +5435,11 @@ const APP_VERSION='purchase_v47_sync_v12';
     ['vendorCat',state,'vendorCat'],['vendorNatureOverride',state,'vendorNatureOverride'],['vendorExcl',state,'vendorExcl'],['priceHistoryExcl',state,'priceHistoryExcl'],
     ['priceMemo',state,'priceMemo'],['priceMemoAt',state,'priceMemoAt'],['itemStd',state,'itemStd'],['majorProducts',state,'majorProducts'],['commonProducts',state,'commonProducts'],
     ['targetPct',state,'targetPct'],['projectMemo',state,'projectMemo'],['projectCustom',state,'projectCustom'],['projectOverride',state,'projectOverride'],['txnProjectOverride',state,'txnProjectOverride'],
+    /* v154 : 아래 4개는 SETTING_KEYS 에만 있고 동기화 목록에서 빠져 있었습니다.
+       그래서 새 PC에서는 프로젝트·현장명 변경(projectRename)과 프로젝트→사업부 매핑(projectDivision)이
+       통째로 사라져 매입구분·사업부 자동분류가 전혀 다르게 집계됐습니다. */
+    ['projectRename',state,'projectRename'],['projectDivision',state,'projectDivision'],
+    ['salesMonthlyManual',state,'salesMonthlyManual'],['laserMonthlyManual',state,'laserMonthlyManual'],
     ['categoryRename',state,'categoryRename'],['categoryOverride',state,'categoryOverride'],['categoryCustom',state,'categoryCustom'],
     ['outsourcedKindOverride',state,'outsourcedKindOverride'],['natureCustom',state,'natureCustom'],['natureOverride',state,'natureOverride'],
     ['editLog',state,'editLog'],['syncLog',state,'syncLog']
@@ -5576,7 +5583,7 @@ const APP_VERSION='purchase_v47_sync_v12';
   }
   function gsStartPoll(){bindLifecycle();if(_gsPollT)clearInterval(_gsPollT);_gsPollT=setInterval(pollNow,POLL_MS)}
   function gsGuide(){const w=window.open('','_blank');if(!w)return;w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;padding:20px;line-height:1.6">'+gesc('구글시트 동기화 설정 가이드\n\n이 매입 분석 파일은 매출 분석 파일에서 사용 중인 Apps Script 웹앱과 호환됩니다.\n\n1) 매출 분석 파일의 Apps Script /exec URL과 비밀키를 그대로 입력합니다.\n2) Apps Script 배포 액세스는 "모든 사용자"여야 합니다.\n3) 매출 파일의 최신 Apps Script(v03)로 배포되어 있는지 확인합니다.\n4) URL과 비밀키를 입력한 뒤 [연결 테스트] → [동기화] 순서로 실행합니다.\n\n자동 동기화는 변경 후 5초 뒤 저장되고, 연결 지연 시 자동 재시도합니다. 동기화 중 다른 화면에서 수정한 값은 저장 완료 후 다시 적용됩니다.')+'</pre>');w.document.close()}
-  window.gsUpdateBtn=gsUpdateBtn;window.gsAutoPush=gsAutoPush;window.gsLoad=gsLoad;window.gsSave=gsSave;window.gsTest=gsTest;window.gsStartPoll=gsStartPoll;window.gsGuide=gsGuide;window.gsFmtTime=gsFmtTime;window.gsRenderHistory=gsRenderHistory;window.ensureBase=ensureBase;window._isO=plain;
+  window.gsFullObj=gsFullObj;window.gsResetBase=async function(){_gsBase=null;try{await idbSet(BASE_KEY,null)}catch(_e){}};window.gsPutStatus=putStatus;window.gsUpdateBtn=gsUpdateBtn;window.gsAutoPush=gsAutoPush;window.gsLoad=gsLoad;window.gsSave=gsSave;window.gsTest=gsTest;window.gsStartPoll=gsStartPoll;window.gsGuide=gsGuide;window.gsFmtTime=gsFmtTime;window.gsRenderHistory=gsRenderHistory;window.ensureBase=ensureBase;window._isO=plain;
 })();
 
 /* ============================================================
@@ -11939,18 +11946,21 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
     if(ran)return; 
     if(!loggedIn()||!autoOn())return;
     if(typeof dsFreshManifest!=='function'||typeof dsCall!=='function')return;
-    ran=true;
+    ran=true; window.__puPullActive=true;
+    try{ if(typeof window.puAutoSettings==='function')await window.puAutoSettings(); }catch(_s){}
     var hadLocal=0; try{ hadLocal=Object.keys(dsLocalMonths()||{}).length; }catch(e){}
     if(!hadLocal)window.bootHold('서버 매입자료를 확인하는 중입니다',10);   /* 첫 실행 PC 는 미리 붙잡음 */
     var mf=null;
     try{ mf=await dsFreshManifest(); }catch(e){ mf=null; }
     var plan=need(mf);
-    if(!plan){ if(!hadLocal)window.bootRelease('준비 완료'); return; }
+    if(!plan){ window.__puPullActive=false; if(!hadLocal||window.__bootHold)window.bootRelease('준비 완료'); return; }
     window.bootHold('매입자료를 받는 중입니다',12);
     try{
       var r=await pull(plan);
+      window.__puPullActive=false;
       window.bootRelease('받기 완료 · '+r.months+'개 월');
     }catch(e){
+      window.__puPullActive=false;
       window.bootRelease('준비 완료');
       try{ dsSet('자동 받기 실패: '+((e&&e.message)||e)+' — ⬇ 매입자료 받기 로 다시 시도하세요.','#dc2626'); }catch(_x){}
     }
@@ -12028,6 +12038,117 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
   function boot(){ if(!move()){ var n=0,t=setInterval(function(){ if(move()||++n>60)clearInterval(t); },300); } }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
   setInterval(move,2500);
+})();
+</script>
+<script id="pu-v153-autoset">
+/* ══ v153 · 제품 속성·기준정보 «자동 받기» ══
+   새 PC(또는 캐시를 지운 PC)에서 열면 매입구분·품목분류·담당자·사업부 배분·주요제품 등
+   모든 기준정보가 비어 있습니다. 예전에는 ☁️ 구글 동기화 → ⬇ 불러오기 를 손으로
+   눌러야 했는데, v153 부터는 로그인 직후 자동으로 서버에서 받아옵니다.
+   · 받는 동안 회전 CI + 숫자 게이지를 그대로 유지합니다(v149 와 공유).
+   · 매입자료 자동 받기(v149)보다 «먼저» 실행되어, 자료 집계에 속성이 바로 반영됩니다.
+   · 📦 전체 속성 올리기 = 이 PC의 모든 기준정보를 서버로 한 번에 올립니다(최초 백업용). */
+(function(){
+  if(window.__puAutoSetV153)return; window.__puAutoSetV153=true;
+
+  function loggedIn(){ try{ return (typeof auValid==='function')&&auValid(); }catch(e){ return false; } }
+  function onOpt(){ try{ return state.gsAutoLoad!==false; }catch(e){ return true; } }
+  function ready(){ try{ return !!(state.gsync&&state.gsync.url&&state.gsync.key&&typeof window.gsLoad==='function'); }catch(e){ return false; } }
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+
+  var _p=null;
+  async function go(){
+    if(!loggedIn()||!onOpt())return false;
+    for(var i=0;i<24 && !ready();i++)await sleep(180);   /* auApply 가 URL·비밀키를 채울 때까지 */
+    if(!ready())return false;
+    var held=false;
+    try{
+      window.bootHold('제품 속성·기준정보를 받는 중입니다',6); held=true;
+      await sleep(30);
+      window.bootStep(9,'제품 속성·기준정보를 받는 중입니다');
+      await window.gsLoad(true);
+      window.bootStep(12,'기준정보를 적용했습니다');
+      try{ if(typeof rebuildCUR==='function')rebuildCUR(); }catch(_e){}
+      try{ if(typeof syncUIFromState==='function')syncUIFromState(); }catch(_e){}
+    }catch(e){
+      try{ if(typeof gsPutStatus==='function')gsPutStatus('속성 자동 받기 실패: '+((e&&e.message)||e),'#dc2626'); }catch(_x){}
+    }
+    if(held){
+      /* 매입자료 자동 받기가 이어서 돌면 그 쪽에서 화면을 내립니다 */
+      setTimeout(function(){
+        if(window.__bootHold && !window.__puPullActive){ try{ window.bootRelease('준비 완료'); }catch(_e){} }
+      },1400);
+    }
+    return true;
+  }
+  window.puAutoSettings=function(){ return _p||(_p=go()); };
+
+  /* 매입자료 자동 받기가 꺼져 있어도 속성은 받아오도록 자체 대기 */
+  var n=0, t=setInterval(function(){
+    if(++n>120){ clearInterval(t); return; }
+    if(loggedIn()&&ready()){ clearInterval(t); setTimeout(function(){ window.puAutoSettings(); },300); }
+  },400);
+
+  /* ── 서버와 지정값 개수 비교 (전체 올리기 안전장치) ── */
+  var CMP_FIELDS=[['natureOverride','매입구분 지정'],['categoryOverride','품목분류 지정'],['divisionOverride','사업부 지정'],
+    ['txnDivisionOverride','거래별 사업부'],['projectOverride','프로젝트 지정'],['txnProjectOverride','거래별 프로젝트'],
+    ['projectRename','프로젝트명 변경'],['projectDivision','프로젝트→사업부'],['itemStd','품목 기준정보'],
+    ['vendorCat','거래처 분류'],['mgrOverride','담당자 지정'],['materialDB','소재 DB'],['majorProducts','주요제품'],['commonProducts','공용제품']];
+  function cnt(v){ try{ return Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:0); }catch(e){ return 0; } }
+  async function compareWithServer(){
+    var u=String(state.gsync&&state.gsync.url||''), k=String(state.gsync&&state.gsync.key||'');
+    if(!u||!k)return null;
+    var res=await fetch(u+(u.indexOf('?')>=0?'&':'?')+'action=get&key='+encodeURIComponent(k)+'&_t='+Date.now(),{cache:'no-store'});
+    var d=await res.json();
+    if(!d||d.ok!==true)return null;
+    var rem=(d.data&&typeof d.data==='object')?d.data:d, thin=[];
+    CMP_FIELDS.forEach(function(f){
+      var lo=cnt(state[f[0]]), re=cnt(rem[f[0]]);
+      if(re>lo)thin.push({label:f[1],loc:lo,rem:re});
+    });
+    return {thin:thin};
+  }
+
+  /* ── 설정 UI 연결 ── */
+  function bind(){
+    var c=document.getElementById('gsAutoLoadChk');
+    if(c&&!c.__v153){ c.__v153=true;
+      try{ c.checked=(state.gsAutoLoad!==false); }catch(e){ c.checked=true; }
+      c.onchange=function(){ try{ state.gsAutoLoad=!!c.checked; saveSettings(); }catch(e){} };
+    }
+    var b=document.getElementById('gsFullBackup');
+    if(b&&!b.__v153){ b.__v153=true;
+      b.onclick=async function(){
+        if(typeof window.gsSave!=='function'){ alert('구글 동기화가 준비되지 않았습니다.'); return; }
+        var old=b.textContent; b.disabled=true; b.textContent='확인 중…';
+        var cmp=null; try{ cmp=await compareWithServer(); }catch(_e){ cmp=null; }
+        b.disabled=false; b.textContent=old;
+        var head='이 PC의 모든 기준정보(매입구분·품목분류·담당자·사업부 배분·프로젝트 매핑·주요제품·메모 등)를\n서버로 한 번에 올립니다.\n';
+        if(cmp&&cmp.thin.length){
+          if(!confirm('⚠ 주의 — 이 PC의 지정값이 서버보다 적습니다.\n\n'+cmp.thin.map(function(x){return '  · '+x.label+' : 이 PC '+x.loc+'건 / 서버 '+x.rem+'건';}).join('\n')+
+            '\n\n이대로 올리면 서버 값이 이 PC 값으로 덮어써질 수 있습니다.\n속성이 제대로 들어 있는 PC에서 올리는 것이 맞습니다.\n\n그래도 계속할까요?'))return;
+        }else{
+          if(!confirm(head+(cmp?'\n서버와 비교: 이 PC가 더 적은 항목은 없습니다.\n':'')+'\n· 서버에 이미 있는 항목은 «병합»되며, 같은 항목은 이 PC 값이 적용됩니다.\n· 다른 PC에서는 로그인하면 자동으로 내려받습니다.\n\n계속할까요?'))return;
+        }
+        b.disabled=true; b.textContent='올리는 중…';
+        try{
+          try{ if(window.gsResetBase)await window.gsResetBase(); }catch(_e){}   /* 기준본을 비워 «전체»가 변경분으로 올라가게 합니다 */
+          var ok=await window.gsSave(false);
+          b.textContent = ok?'✅ 올림 완료':'⚠ 실패';
+        }catch(e){ b.textContent='⚠ 실패'; alert('올리기 실패: '+((e&&e.message)||e)); }
+        setTimeout(function(){ b.disabled=false; b.textContent=old; },2200);
+      };
+    }
+  }
+  bind();
+  document.addEventListener('click',function(){ setTimeout(bind,60); },true);
+  setTimeout(bind,1200); setTimeout(bind,3000);
+
+  /* 권한: 올리기 권한이 없으면 📦 버튼 숨김 */
+  function perm(){ try{ var b=document.getElementById('gsFullBackup');
+      if(b)b.style.display=(typeof auUrl==='function'&&auUrl()&&typeof auCan==='function'&&!auCan('upload'))?'none':''; }catch(e){} }
+  setTimeout(perm,1500); setTimeout(perm,4000);
+  var _aa=window.auApply; if(typeof _aa==='function'){ window.auApply=function(){ var r=_aa.apply(this,arguments); setTimeout(function(){ bind(); perm(); },40); return r; }; }
 })();
 </script>
 </body>
