@@ -1,0 +1,32 @@
+name: cleanup-old-runs
+# 수동 실행: 최근 페이지 배포 기록 10개만 남기고 나머지 Actions 실행 기록 삭제
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: '남길 개수'
+        required: false
+        default: '10'
+permissions:
+  actions: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: delete old runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          KEEP: ${{ inputs.keep || '10' }}
+          SELF: ${{ github.run_id }}
+        run: |
+          gh api --paginate "repos/$REPO/actions/runs?per_page=100" --jq '.workflow_runs[] | [.id, .name, .status] | @tsv' > runs.tsv
+          wc -l runs.tsv
+          # 페이지 배포 기록은 최신 KEEP개만 남김(목록은 최신순)
+          grep -P '\tpages-build-deployment\t' runs.tsv | tail -n +$((KEEP+1)) | cut -f1 > del.txt || true
+          # 이전 정리 실행 기록도 삭제(현재 실행 제외)
+          grep -P '\tcleanup-old-runs\t' runs.tsv | cut -f1 | grep -v "^$SELF$" >> del.txt || true
+          echo "삭제 대상: $(wc -l < del.txt)개"
+          while read id; do
+            gh api -X DELETE "repos/$REPO/actions/runs/$id" && echo "deleted $id" || echo "fail $id"
+          done < del.txt
