@@ -1204,7 +1204,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v191 · 사용제품 규격까지 표시';
+const VERNO='v192 · 월별 매입합계 자동 전송';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -13733,6 +13733,54 @@ P.init=function(opt){
   PLOG.init({call:function(p){ return dsCall(p); },ready:function(){ return typeof auValid==='function'?auValid():false; },
     gap:function(){ return document.querySelector('#content .bom-usage')?60000:600000; }});
   PLOG.on(function(){ try{ if(document.querySelector('#content .bom-usage')&&typeof runAct==='function')runAct(); }catch(_e){} });
+})();
+</script>
+<script id="v192-purchase-monthly-push">
+/* v192 : 월별 매입합계(purchaseMonthlySync)를 매출분석으로 자동 전송
+   원인 ① 서버가 10/25부터 clientBuild 없는 저장을 거부(v189에서 고침)
+   원인 ② 이 값은 «자동 동기화» 체크가 켜진 PC에서만 자동저장으로 나감(기본값 꺼짐) → 누가 동기화 버튼을 누르기 전엔 서버가 옛 값 그대로
+   고침 : 로그인 PC에서 매입자료(CUR)로 계산한 값이 서버 값과 다르면 이 항목 하나만 바로 보냄(자동 동기화 설정과 무관)
+   안전 : 이 PC 자료가 서버보다 오래됐으면(서버에 있는 달이 이 PC에 없거나 마지막 달이 더 앞이면) 보내지 않음 */
+(function(){
+  if(window.__puMonthlyPushV192)return; window.__puMonthlyPushV192=true;
+  var done='', busy=false;
+  function nz(o){ var r={}; Object.keys(o||{}).forEach(function(k){ if(/^20\d{2}-(0[1-9]|1[0-2])$/.test(k)&&Math.round(+o[k]||0)>0)r[k]=Math.round(+o[k]); }); return r; }
+  function cfg(){ var g=(typeof state!=='undefined'&&state&&state.gsync)||{}; return {u:String(g.url||'').trim(),k:String(g.key||'').trim(),who:String(g.user||'사용자')}; }
+  async function getJson(url,opt){ var r=await fetch(url,Object.assign({cache:'no-store'},opt||{})); return JSON.parse(await r.text()); }
+  async function serverValue(c){
+    var q=c.u+(c.u.indexOf('?')>=0?'&':'?')+'key='+encodeURIComponent(c.k)+'&_t='+Date.now();
+    try{ var d=await getJson(q+'&action=status&fields=purchaseMonthlySync'); if(d&&d.ok!==false&&d.data&&typeof d.data==='object')return d.data.purchaseMonthlySync||{}; }catch(_e){}
+    var f=await getJson(q+'&action=get'); if(!f||f.ok===false)throw new Error((f&&f.error)||'서버 응답 오류');
+    var o=(f.data&&typeof f.data==='object')?f.data:f; return o.purchaseMonthlySync||{};
+  }
+  async function run(){
+    if(busy)return;
+    try{
+      if(typeof CUR==='undefined'||!CUR||!CUR.length||window.__puPullActive)return;
+      if(typeof auValid==='function'&&!auValid())return;
+      var c=cfg(); if(!c.u||!c.k)return;
+      if(typeof refreshPurchaseMonthlySync!=='function')return;
+      var loc=refreshPurchaseMonthlySync()||{}, L=nz(loc), lk=Object.keys(L).sort(); if(!lk.length)return;
+      var sig=JSON.stringify([L,loc._meta&&loc._meta.basis]); if(sig===done)return;
+      busy=true;
+      var srv=await serverValue(c), S=nz(srv), sk=Object.keys(S).sort();
+      var sb=srv&&srv._meta&&srv._meta.basis, lb=loc._meta&&loc._meta.basis;
+      if(JSON.stringify(S)===JSON.stringify(L)&&sb===lb){ done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'same',last:lk[lk.length-1]}; return; }
+      var miss=sk.filter(function(k){ return !L[k]; });
+      if(miss.length||(sk.length&&lk[lk.length-1]<sk[sk.length-1])){
+        done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'older',miss:miss}; console.warn('[v192] 이 PC 매입자료가 서버보다 오래돼 월별 매입합계를 보내지 않음',miss); return; }
+      var body={action:'save',key:c.k,data:{purchaseMonthlySync:JSON.parse(JSON.stringify(loc))},clientId:c.who,
+        clientVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),clientBuild:'9999',clientApp:'purchase',
+        requestId:'pmonth_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),fields:'__slimV1098'};
+      var d=await getJson(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+      if(!d||d.ok!==true)throw new Error((d&&d.error)||'저장 실패');
+      done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'sent',last:lk[lk.length-1]};
+      console.log('[v192] 월별 매입합계 서버 전송 · 마지막 달 '+lk[lk.length-1]);
+    }catch(e){ window.__puMonthlyV190={at:new Date().toISOString(),st:'err',err:String(e&&e.message||e)}; console.warn('[v192]',e); }
+    finally{ busy=false; }
+  }
+  window.puMonthlyPushV190=run;
+  setTimeout(run,12000); setTimeout(run,40000); setInterval(run,120000);
 })();
 </script>
 </body>
