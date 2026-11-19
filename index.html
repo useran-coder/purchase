@@ -1204,7 +1204,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v192 · 월별 매입합계 자동 전송';
+const VERNO='v193 · 월별 매입합계 전송 보완';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -5649,7 +5649,7 @@ const PU_CLIENT_BUILD_V189='9999';
   // v46: 델타 푸시 직전에도 월별 매입 집계를 다시 계산합니다. 사업부 지정·공용품 배분·품목분류·
   // 금액기준 변경은 rebuildCUR()만 부르고 refreshPurchaseMonthlySync()는 부르지 않아, 기존에는
   // 옛 매입액이 그대로 영업분석도구로 전송되며 두 화면 숫자가 어긋났습니다.
-  function gsDelta(){if(!_gsBase)return gsFullObj();try{refreshPurchaseMonthlySync()}catch(_){}try{normalizeState()}catch(_){}const d={};gsFields().forEach(([n,p,k])=>{const v=deepDelta(p[k],_gsBase[n]);if(v!==undefined)d[n]=v});return d}
+  function gsDelta(){if(!_gsBase){const _f=gsFullObj();delete _f.purchaseMonthlySync;return _f;}try{refreshPurchaseMonthlySync()}catch(_){}try{normalizeState()}catch(_){}const d={};gsFields().forEach(([n,p,k])=>{const v=deepDelta(p[k],_gsBase[n]);if(v!==undefined)d[n]=v});delete d.purchaseMonthlySync;/* v193 : 월별 매입합계는 v193 전송기만 보냄(자료 오래된 PC가 덮어쓰지 않게) */return d}
   function applyValue(cur,patch){
     if(patch===null)return undefined;
     if(plain(patch)){const out=plain(cur)?gclone(cur):{};Object.keys(patch).forEach(k=>{const v=applyValue(out[k],patch[k]);if(v===undefined)delete out[k];else out[k]=v});return out}
@@ -13735,17 +13735,26 @@ P.init=function(opt){
   PLOG.on(function(){ try{ if(document.querySelector('#content .bom-usage')&&typeof runAct==='function')runAct(); }catch(_e){} });
 })();
 </script>
-<script id="v192-purchase-monthly-push">
-/* v192 : 월별 매입합계(purchaseMonthlySync)를 매출분석으로 자동 전송
-   원인 ① 서버가 10/25부터 clientBuild 없는 저장을 거부(v189에서 고침)
-   원인 ② 이 값은 «자동 동기화» 체크가 켜진 PC에서만 자동저장으로 나감(기본값 꺼짐) → 누가 동기화 버튼을 누르기 전엔 서버가 옛 값 그대로
-   고침 : 로그인 PC에서 매입자료(CUR)로 계산한 값이 서버 값과 다르면 이 항목 하나만 바로 보냄(자동 동기화 설정과 무관)
-   안전 : 이 PC 자료가 서버보다 오래됐으면(서버에 있는 달이 이 PC에 없거나 마지막 달이 더 앞이면) 보내지 않음 */
+<script id="v193-purchase-monthly-push">
+/* v193 : 월별 매입합계(purchaseMonthlySync) → 매출분석 메인 추이그래프 매입선
+   v192 문제 : ① 서버 값에 이 PC에 없는 달(예전 연도 등)이 하나라도 있으면 «이 PC 자료가 오래됨»으로 보고 안 보냄
+              ② 일반 자동저장(자동 동기화 켠 PC)도 이 값을 보내서, 매입자료가 9월까지만 있는 PC가 다시 옛 값으로 덮을 수 있었음
+   고침 : · 일반 자동저장에서는 이 항목을 빼고(gsDelta) 이 전송기만 보냄
+          · 오래된 PC 판정 = 서버 공유 매입자료 목록(dsManifest)의 달·행수와 이 PC 자료가 다르면 보내지 않음
+          · 이 PC에 없는 달은 서버 값을 그대로 두고, 이 PC에 있는 달만 바꿈
+          · 결과를 📁 파일·관리 동기화 칸 아래에 한 줄로 표시 */
 (function(){
-  if(window.__puMonthlyPushV192)return; window.__puMonthlyPushV192=true;
+  if(window.__puMonthlyPushV193)return; window.__puMonthlyPushV193=true;
   var done='', busy=false;
   function nz(o){ var r={}; Object.keys(o||{}).forEach(function(k){ if(/^20\d{2}-(0[1-9]|1[0-2])$/.test(k)&&Math.round(+o[k]||0)>0)r[k]=Math.round(+o[k]); }); return r; }
   function cfg(){ var g=(typeof state!=='undefined'&&state&&state.gsync)||{}; return {u:String(g.url||'').trim(),k:String(g.key||'').trim(),who:String(g.user||'사용자')}; }
+  function hm(){ var d=new Date(),p=function(n){ return (n<10?'0':'')+n; }; return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  function show(t,col){
+    window.__puMonthlyV193Msg={t:t,col:col,at:Date.now()};
+    try{ var h=document.getElementById('gsHistory'); if(!h||!h.parentNode)return; var e=document.getElementById('puMonthlyStV193');
+      if(!e){ e=document.createElement('div'); e.id='puMonthlyStV193'; e.style.cssText='width:100%;margin-top:6px;font-size:11.5px;font-weight:700'; h.parentNode.insertBefore(e,h); }
+      e.textContent='📤 매출분석 월별 매입합계 · '+t; e.style.color=col||'#334155'; }catch(_e){}
+  }
   async function getJson(url,opt){ var r=await fetch(url,Object.assign({cache:'no-store'},opt||{})); return JSON.parse(await r.text()); }
   async function serverValue(c){
     var q=c.u+(c.u.indexOf('?')>=0?'&':'?')+'key='+encodeURIComponent(c.k)+'&_t='+Date.now();
@@ -13753,34 +13762,49 @@ P.init=function(opt){
     var f=await getJson(q+'&action=get'); if(!f||f.ok===false)throw new Error((f&&f.error)||'서버 응답 오류');
     var o=(f.data&&typeof f.data==='object')?f.data:f; return o.purchaseMonthlySync||{};
   }
-  async function run(){
-    if(busy)return;
+  /* 이 PC 매입자료가 서버 공유 매입자료와 같은지(달·행수) */
+  async function staleMonths(){
+    if(typeof dsCall!=='function'||typeof dsLocalMonths!=='function')return null;
+    var d=await dsCall({action:'dsManifest',fresh:Date.now()}); var rm=(d&&d.manifest&&d.manifest.months)||{};
+    var ks=Object.keys(rm); if(!ks.length)return null;
+    var loc=dsLocalMonths()||{};
+    /* 서버에 있는 달이 없거나 행수가 서버보다 적으면 오래된 자료(많으면 이 PC가 새로 올린 자료) */
+    return ks.filter(function(k){ return !loc[k]||(rm[k].rows!=null&&loc[k].length<Number(rm[k].rows)); }).sort();
+  }
+  async function run(force){
+    if(busy)return; busy=true;
     try{
-      if(typeof CUR==='undefined'||!CUR||!CUR.length||window.__puPullActive)return;
-      if(typeof auValid==='function'&&!auValid())return;
-      var c=cfg(); if(!c.u||!c.k)return;
-      if(typeof refreshPurchaseMonthlySync!=='function')return;
-      var loc=refreshPurchaseMonthlySync()||{}, L=nz(loc), lk=Object.keys(L).sort(); if(!lk.length)return;
-      var sig=JSON.stringify([L,loc._meta&&loc._meta.basis]); if(sig===done)return;
-      busy=true;
-      var srv=await serverValue(c), S=nz(srv), sk=Object.keys(S).sort();
+      if(typeof CUR==='undefined'||!CUR||!CUR.length){ show('매입자료 불러오는 중…','#64748b'); return; }
+      if(window.__puPullActive){ show('서버 매입자료 받는 중 · 끝나면 보냄','#64748b'); return; }
+      if(typeof auValid==='function'&&!auValid()){ show('로그인 후 보냄','#b45309'); return; }
+      var c=cfg(); if(!c.u||!c.k){ show('서버 주소 없음','#b91c1c'); return; }
+      var loc=refreshPurchaseMonthlySync()||{}, L=nz(loc), lk=Object.keys(L).sort(); if(!lk.length){ show('보낼 매입합계 없음','#64748b'); return; }
+      var sig=JSON.stringify([L,loc._meta&&loc._meta.basis]); if(!force&&sig===done)return;
+      var st=null; try{ st=await staleMonths(); }catch(_m){ st=null; }
+      if(st&&st.length){ done=sig; show('이 PC 매입자료가 서버와 달라 보내지 않음('+st.slice(-3).join(', ')+(st.length>3?' 외 '+(st.length-3)+'개월':'')+') · 서버 자료 받기 후 자동 전송','#b45309'); return; }
+      var srv=await serverValue(c), S=nz(srv);
       var sb=srv&&srv._meta&&srv._meta.basis, lb=loc._meta&&loc._meta.basis;
-      if(JSON.stringify(S)===JSON.stringify(L)&&sb===lb){ done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'same',last:lk[lk.length-1]}; return; }
-      var miss=sk.filter(function(k){ return !L[k]; });
-      if(miss.length||(sk.length&&lk[lk.length-1]<sk[sk.length-1])){
-        done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'older',miss:miss}; console.warn('[v192] 이 PC 매입자료가 서버보다 오래돼 월별 매입합계를 보내지 않음',miss); return; }
-      var body={action:'save',key:c.k,data:{purchaseMonthlySync:JSON.parse(JSON.stringify(loc))},clientId:c.who,
+      var diff=lk.filter(function(k){ return S[k]!==L[k]; });
+      if(!diff.length&&sb===lb){ done=sig; show('최신 · '+lk[lk.length-1]+'까지 서버와 같음 ('+hm()+' 확인)','#0f766e'); return; }
+      /* 이 PC에 값이 없는 달은 서버 값 유지 */
+      var out=JSON.parse(JSON.stringify(srv||{})); if(!out||typeof out!=='object'||Array.isArray(out))out={};
+      Object.keys(loc).forEach(function(k){ if(k==='_meta')return; if(L[k])out[k]=L[k]; else if(!(k in out))out[k]=0; });
+      out._meta=JSON.parse(JSON.stringify(loc._meta||{}));
+      show('⬆ 보내는 중…','#1d4ed8');
+      var body={action:'save',key:c.k,data:{purchaseMonthlySync:out},clientId:c.who,
         clientVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),clientBuild:'9999',clientApp:'purchase',
         requestId:'pmonth_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),fields:'__slimV1098'};
       var d=await getJson(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
       if(!d||d.ok!==true)throw new Error((d&&d.error)||'저장 실패');
-      done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'sent',last:lk[lk.length-1]};
-      console.log('[v192] 월별 매입합계 서버 전송 · 마지막 달 '+lk[lk.length-1]);
-    }catch(e){ window.__puMonthlyV190={at:new Date().toISOString(),st:'err',err:String(e&&e.message||e)}; console.warn('[v192]',e); }
+      done=sig; window.__puMonthlyV190={at:new Date().toISOString(),st:'sent',last:lk[lk.length-1],diff:diff};
+      show('✓ 전송 완료 '+hm()+' · '+lk[lk.length-1]+'까지 · 바뀐 달 '+diff.length+'개 → 매출분석은 3분 안에 반영','#0f766e');
+      console.log('[v193] 월별 매입합계 서버 전송',diff);
+    }catch(e){ window.__puMonthlyV190={at:new Date().toISOString(),st:'err',err:String(e&&e.message||e)}; show('⚠ 전송 실패 · '+String(e&&e.message||e)+' · 2분 뒤 다시 시도','#b91c1c'); console.warn('[v193]',e); }
     finally{ busy=false; }
   }
-  window.puMonthlyPushV190=run;
-  setTimeout(run,12000); setTimeout(run,40000); setInterval(run,120000);
+  window.puMonthlyPushV190=run; window.puMonthlyPushV193=run;
+  setTimeout(run,8000); setTimeout(run,25000); setTimeout(run,60000); setInterval(run,120000);
+  setInterval(function(){ var m=window.__puMonthlyV193Msg; if(m&&!document.getElementById('puMonthlyStV193'))show(m.t,m.col); },1500);
 })();
 </script>
 </body>
