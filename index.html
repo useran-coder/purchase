@@ -822,7 +822,24 @@
   .seg button.dcmpNat.on{box-shadow:inset 0 0 0 2px currentColor}
   .dcmp-howto{font-size:11.5px;line-height:1.7;color:#475569}
   .dcmp-howto b{color:#0f172a}
-.used-prod-v190{display:inline-block;max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:#334155}
+.used-prod-v190{display:inline-block;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:#0f766e;cursor:pointer;border-bottom:1px dashed #99d5cc}
+.used-prod-v190:hover{color:#115e59;border-bottom-color:#0f766e}
+#upDrawerV194{position:fixed;inset:0;z-index:9000;pointer-events:none}
+#upDrawerV194 .upd-mask{position:absolute;inset:0;background:rgba(15,23,42,.28);opacity:0;transition:opacity .2s}
+#upDrawerV194 .upd-panel{position:absolute;top:0;right:0;height:100%;width:min(620px,94vw);background:#fff;box-shadow:-8px 0 28px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
+#upDrawerV194.open{pointer-events:auto}#upDrawerV194.open .upd-mask{opacity:1}#upDrawerV194.open .upd-panel{transform:none}
+#upDrawerV194 .upd-body{overflow:auto;padding:18px 20px 28px}
+#upDrawerV194 .upd-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid #e2e8f0;padding-bottom:12px;margin-bottom:12px}
+#upDrawerV194 .upd-title{font-size:18px;font-weight:800;color:#0f172a;margin:2px 0}#upDrawerV194 .upd-title span{font-weight:600;color:#475569;font-size:15px}
+#upDrawerV194 .upd-sub{font-size:12px;color:#64748b}
+#upDrawerV194 .upd-x{border:1px solid #e2e8f0;background:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px}
+#upDrawerV194 .upd-sec{margin-top:14px}#upDrawerV194 .upd-sec-h{font-weight:800;color:#0f172a;margin-bottom:8px}#upDrawerV194 .upd-sec-h small{display:block;font-weight:500;color:#64748b;font-size:12px;margin-top:2px}
+#upDrawerV194 .upd-grp{border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;margin-bottom:8px}
+#upDrawerV194 .upd-grp-h{display:flex;align-items:center;gap:10px;margin-bottom:4px}#upDrawerV194 .upd-grp-h b{min-width:120px}
+#upDrawerV194 .upd-bar{flex:1;height:8px;background:#eef2f7;border-radius:6px;overflow:hidden}#upDrawerV194 .upd-bar i{display:block;height:100%;background:#0f766e;border-radius:6px}
+#upDrawerV194 .upd-num{font-size:12px;color:#334155;white-space:nowrap}
+#upDrawerV194 .upd-tbl{width:100%;border-collapse:collapse;font-size:12px}#upDrawerV194 .upd-tbl th,#upDrawerV194 .upd-tbl td{padding:4px 6px;border-top:1px solid #f1f5f9;text-align:right}#upDrawerV194 .upd-tbl .l{text-align:left}#upDrawerV194 .upd-tbl th{color:#64748b;font-weight:600}
+#upDrawerV194 .upd-note,#upDrawerV194 .upd-empty{margin-top:14px;font-size:12px;color:#94a3b8}
 </style>
 <style id="pu-v134-header">
 /* v134 · 헤더 정리 : 회사명 줄 제거 → 그 자리에 작은 사업부 버튼 / 검색창을 매출분석 도구 크기로 + 중앙 배치 */
@@ -1204,7 +1221,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v193 · 월별 매입합계 전송 보완';
+const VERNO='v194 · 사용제품 품명 정리·비중 막대·상세 슬라이드 창';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -5451,26 +5468,65 @@ function trendYearRows(ym){
   if(state.division!=='전체'&&anySplitConfigured())return divisionAdjustedRows(base,state.division);
   return base.filter(r=>state.division==='전체'||r.div===state.division);
 }
-/* v190 : 업체 품목 리스트 «사용제품» 칸 — 생산일지(실제 투입) 우선, 없으면 제조원가 BOM */
+/* v190 : 업체 품목 리스트 «사용제품» 칸 — 생산일지(실제 투입) 우선, 없으면 제조원가 BOM
+   v194 : 칸에는 품명만(중복 없이), 누르면 오른쪽 슬라이드 창에 제품별 상세 */
+const USED_PROD_CACHE_V194=new Map();
 function usedProductsV190(o){
   const item={code:o.code||'',name:o.name||'',spec:o.spec||''};
   const isRaw=window.bomUsageIsRawV190?window.bomUsageIsRawV190(item,{srcRows:o.srcRows||o.monthRows||[]}):false;
-  if(!isRaw)return {names:[],src:''};
+  if(!isRaw)return {names:[],src:'',item,plog:null,bom:null};
   try{plogHookV190()}catch(e){}
-  const P=window.PLOG;let names=[],src='';
-  try{ if(P&&P.ok()){ const r=P.parseRaw(item.name,item.spec,item.code); const pl=r&&P.forRaw(r.grade,r.t,r.w);
-    if(pl&&pl.list&&pl.list.length){ names=pl.list.map(p=>{const n=String(p.name||p.code||'').trim(),sp=String(p.spec||'').trim();return n&&sp?`${n} (${sp})`:n;}); src='생산일지'; } } }catch(e){}
-  if(!names.length){ const hit=window.bomUsageLookupV190&&window.bomUsageLookupV190(item);
-    if(hit&&hit.tops&&hit.tops.length){ names=hit.tops.map(t=>{const n=String(t.item||t.pn||'').trim(),sp=String(t.spec||'').trim();return n&&sp?`${n} (${sp})`:n;}); src='BOM'; } }
+  const P=window.PLOG;let plog=null,bom=null,parsed=null;
+  try{ if(P&&P.ok()){ parsed=P.parseRaw(item.name,item.spec,item.code); const pl=parsed&&P.forRaw(parsed.grade,parsed.t,parsed.w); if(pl&&pl.list&&pl.list.length)plog=pl; } }catch(e){}
+  try{ const hit=window.bomUsageLookupV190&&window.bomUsageLookupV190(item); if(hit&&hit.tops&&hit.tops.length)bom=hit; }catch(e){}
+  const src=plog?'생산일지':(bom?'BOM':'');
+  let names=plog?plog.list.map(p=>String(p.name||p.code||'').trim()):(bom?bom.tops.map(t=>String(t.item||t.pn||'').trim()):[]);
   const seen=new Set();names=names.filter(n=>n&&!seen.has(n)&&seen.add(n));
-  return {names,src};
+  return {names,src,item,plog,bom,parsed};
 }
 function usedProductsTextV190(o){const u=usedProductsV190(o);return u.names.length?u.names.slice(0,3).join(', ')+(u.names.length>3?` 외 ${u.names.length-3}종`:''):'';}
 function usedProductsCellV190(o){
   const u=usedProductsV190(o);if(!u.names.length)return '<span style="color:#cbd5e1">-</span>';
+  const k='u'+USED_PROD_CACHE_V194.size+'_'+Date.now().toString(36);USED_PROD_CACHE_V194.set(k,{o,u});
+  if(USED_PROD_CACHE_V194.size>400){const first=USED_PROD_CACHE_V194.keys().next().value;USED_PROD_CACHE_V194.delete(first);}
   const txt=u.names.slice(0,3).join(', ')+(u.names.length>3?` 외 ${u.names.length-3}종`:'');
-  return `<span class="used-prod-v190" title="${esc((u.src==='생산일지'?'생산일지 실제 사용':'제조원가 BOM')+' · '+u.names.length+'종\n'+u.names.join('\n'))}">${esc(txt)}</span>`;
+  return `<span class="used-prod-v190" data-upk="${k}" title="눌러서 사용제품 상세 보기 · ${esc(u.names.join(', '))}">${esc(txt)}</span>`;
 }
+function usedProdDrawerV194(k){
+  const c=USED_PROD_CACHE_V194.get(k);if(!c)return;
+  const {o}=c,u=usedProductsV190(o);
+  let el=document.getElementById('upDrawerV194');
+  if(!el){el=document.createElement('div');el.id='upDrawerV194';el.innerHTML='<div class="upd-mask"></div><aside class="upd-panel" role="dialog" aria-label="사용제품 상세"><div class="upd-body"></div></aside>';document.body.appendChild(el);
+    el.querySelector('.upd-mask').onclick=()=>el.classList.remove('open');
+    el.addEventListener('click',e=>{if(e.target.closest('[data-upd-close]'))el.classList.remove('open');});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')el.classList.remove('open');});}
+  const kg=v=>won(Math.round(v||0));
+  let h=`<div class="upd-head"><div><div class="upd-sub">🧩 사용제품 상세</div><div class="upd-title">${esc(o.name||'')} <span>${esc(o.spec||'')}</span></div><div class="upd-sub">${esc(o.code||'')}${o.amt!=null?' · 이번 달 매입 '+won(Math.round(o.amt))+'원':''}${o.share!=null?' · 비중 '+o.share.toFixed(1)+'%':''}</div></div><button type="button" class="upd-x" data-upd-close title="닫기">✕</button></div>`;
+  if(u.plog){
+    const pl=u.plog,tot=pl.used||pl.list.reduce((a,p)=>a+(p.used||0),0)||1;
+    // 품명별 묶음
+    const g=new Map();pl.list.forEach(p=>{const n=String(p.name||p.code||'').trim()||'(이름 없음)';const x=g.get(n)||{name:n,used:0,prod:0,n:0,last:'',items:[]};x.used+=p.used||0;x.prod+=p.prod||0;x.n+=p.n||0;if((p.last||'')>x.last)x.last=p.last||'';x.items.push(p);g.set(n,x);});
+    const groups=[...g.values()].sort((a,b)=>b.used-a.used),max=groups[0]?groups[0].used:0;
+    h+=`<div class="upd-sec"><div class="upd-sec-h">🏭 생산일지 실제 사용 <small>${esc(pl.grade||'')} ${esc(pl.t+'x'+pl.w)} · ${groups.length}개 품명 · ${pl.list.length}개 품번 · 합계 ${kg(pl.used)}kg · 최근 ${esc(pl.last||'')}</small></div>`;
+    h+=groups.map(x=>`<div class="upd-grp"><div class="upd-grp-h"><b>${esc(x.name)}</b><span class="upd-bar"><i style="width:${max?Math.max(2,x.used/max*100):0}%"></i></span><span class="upd-num">${kg(x.used)}kg · ${(x.used/tot*100).toFixed(1)}%</span></div>`
+      +`<table class="upd-tbl"><thead><tr><th class="l">품번</th><th class="l">규격</th><th>사용중량</th><th>생산수량</th><th>건수</th><th>최근</th></tr></thead><tbody>`
+      +x.items.slice().sort((a,b)=>(b.used||0)-(a.used||0)).map(p=>`<tr><td class="l">${esc(p.code||'')}</td><td class="l">${esc(p.spec||'')}</td><td>${kg(p.used)}</td><td>${kg(p.prod)}</td><td>${won(p.n||0)}</td><td>${esc(p.last||'')}</td></tr>`).join('')
+      +`</tbody></table></div>`).join('');
+    h+=`</div>`;
+  }
+  if(u.bom){
+    const b=u.bom,g=new Map();b.tops.forEach(t=>{const n=String(t.item||t.pn||'').trim();const x=g.get(n)||[];x.push(t);g.set(n,x);});
+    h+=`<div class="upd-sec"><div class="upd-sec-h">🧩 제조원가 BOM <small>BOM 품번 ${esc(b.code||'-')} · 직접 투입 ${won(b.direct||0)}곳 · 완제품 ${b.tops.length}종</small></div>`
+      +`<table class="upd-tbl"><thead><tr><th class="l">품명</th><th class="l">규격</th><th class="l">품번</th></tr></thead><tbody>`
+      +[...g.entries()].map(([n,arr])=>arr.map((t,i)=>`<tr><td class="l">${i?'':'<b>'+esc(n)+'</b>'}</td><td class="l">${esc(t.spec||'')}</td><td class="l">${esc(t.pn||'')}</td></tr>`).join('')).join('')
+      +`</tbody></table></div>`;
+  }
+  if(!u.plog&&!u.bom)h+=`<div class="upd-sec upd-empty">생산일지와 BOM 에서 사용제품을 찾지 못했습니다.</div>`;
+  if(window.PLOG&&window.PLOG.note)h+=`<div class="upd-note">${esc(window.PLOG.note())}</div>`;
+  el.querySelector('.upd-body').innerHTML=h;el.querySelector('.upd-body').scrollTop=0;
+  requestAnimationFrame(()=>el.classList.add('open'));
+}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('.used-prod-v190[data-upk]');if(!t)return;e.preventDefault();e.stopPropagation();usedProdDrawerV194(t.dataset.upk);},true);
 function plogHookV190(){ if(window.__plogHookV190||!(window.PLOG&&window.PLOG.on))return; window.__plogHookV190=1; window.__plogRevV190=window.PLOG.rev; window.PLOG.on(()=>{try{if(window.PLOG.rev===window.__plogRevV190)return;window.__plogRevV190=window.PLOG.rev;if([...document.querySelectorAll('#tbl thead th')].some(th=>th.textContent.trim().startsWith('사용제품'))&&typeof _activeViewRefresh==='function')_activeViewRefresh();}catch(e){}}); }
 function monthlyTrendVendorItems(ym,vendor){
   const yearRows=trendYearRows(ym),vendorYear=yearRows.filter(r=>r.vendor===vendor),monthRows=vendorYear.filter(r=>r.ym===ym);
@@ -5485,6 +5541,7 @@ function monthlyTrendVendorItems(ym,vendor){
     {h:'품명',l:1,k:'name',cell:o=>esc(o.name)+majorProductStar(o),raw:o=>o.name},
     {h:'규격',l:1,k:'spec',cell:o=>esc(o.spec),raw:o=>o.spec},
     {h:'사용제품',l:1,k:'usedProd',cell:o=>usedProductsCellV190(o),raw:o=>usedProductsTextV190(o)},
+    {h:'그래프',l:1,cell:(o,i,v)=>`<div class="gcell">${barCell(o.share,Math.max(...v.map(x=>x.share||0)),natureInfo(o.nat).color||'')}</div>`},
     {h:`${ym} 매입액`,k:'amt',cell:o=>won(o.amt),raw:o=>o.amt,total:v=>won(v.reduce((a,o)=>a+o.amt,0))},
     {h:'비중',k:'share',cell:o=>`<b>${o.share.toFixed(1)}%</b>`,raw:o=>o.share},
     {h:'건수',k:'n',cell:o=>won(o.n),raw:o=>o.n},
