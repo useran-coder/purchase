@@ -822,6 +822,7 @@
   .seg button.dcmpNat.on{box-shadow:inset 0 0 0 2px currentColor}
   .dcmp-howto{font-size:11.5px;line-height:1.7;color:#475569}
   .dcmp-howto b{color:#0f172a}
+.used-prod-v190{display:inline-block;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:#334155}
 </style>
 <style id="pu-v134-header">
 /* v134 · 헤더 정리 : 회사명 줄 제거 → 그 자리에 작은 사업부 버튼 / 검색창을 매출분석 도구 크기로 + 중앙 배치 */
@@ -1203,7 +1204,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v189 · 서버 저장 차단 해제(clientBuild)';
+const VERNO='v190 · 업체 리스트 막대그래프·품목 리스트 사용제품';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -5450,17 +5451,40 @@ function trendYearRows(ym){
   if(state.division!=='전체'&&anySplitConfigured())return divisionAdjustedRows(base,state.division);
   return base.filter(r=>state.division==='전체'||r.div===state.division);
 }
+/* v190 : 업체 품목 리스트 «사용제품» 칸 — 생산일지(실제 투입) 우선, 없으면 제조원가 BOM */
+function usedProductsV190(o){
+  const item={code:o.code||'',name:o.name||'',spec:o.spec||''};
+  const isRaw=window.bomUsageIsRawV190?window.bomUsageIsRawV190(item,{srcRows:o.srcRows||o.monthRows||[]}):false;
+  if(!isRaw)return {names:[],src:''};
+  try{plogHookV190()}catch(e){}
+  const P=window.PLOG;let names=[],src='';
+  try{ if(P&&P.ok()){ const r=P.parseRaw(item.name,item.spec,item.code); const pl=r&&P.forRaw(r.grade,r.t,r.w);
+    if(pl&&pl.list&&pl.list.length){ names=pl.list.map(p=>String(p.name||p.code||'').trim()); src='생산일지'; } } }catch(e){}
+  if(!names.length){ const hit=window.bomUsageLookupV190&&window.bomUsageLookupV190(item);
+    if(hit&&hit.tops&&hit.tops.length){ names=hit.tops.map(t=>String(t.item||t.pn||'').trim()); src='BOM'; } }
+  const seen=new Set();names=names.filter(n=>n&&!seen.has(n)&&seen.add(n));
+  return {names,src};
+}
+function usedProductsTextV190(o){const u=usedProductsV190(o);return u.names.length?u.names.slice(0,3).join(', ')+(u.names.length>3?` 외 ${u.names.length-3}종`:''):'';}
+function usedProductsCellV190(o){
+  const u=usedProductsV190(o);if(!u.names.length)return '<span style="color:#cbd5e1">-</span>';
+  const txt=u.names.slice(0,3).join(', ')+(u.names.length>3?` 외 ${u.names.length-3}종`:'');
+  return `<span class="used-prod-v190" title="${esc((u.src==='생산일지'?'생산일지 실제 사용':'제조원가 BOM')+' · '+u.names.length+'종\n'+u.names.join('\n'))}">${esc(txt)}</span>`;
+}
+function plogHookV190(){ if(window.__plogHookV190||!(window.PLOG&&window.PLOG.on))return; window.__plogHookV190=1; window.__plogRevV190=window.PLOG.rev; window.PLOG.on(()=>{try{if(window.PLOG.rev===window.__plogRevV190)return;window.__plogRevV190=window.PLOG.rev;if([...document.querySelectorAll('#tbl thead th')].some(th=>th.textContent.trim().startsWith('사용제품'))&&typeof _activeViewRefresh==='function')_activeViewRefresh();}catch(e){}}); }
 function monthlyTrendVendorItems(ym,vendor){
   const yearRows=trendYearRows(ym),vendorYear=yearRows.filter(r=>r.vendor===vendor),monthRows=vendorYear.filter(r=>r.ym===ym);
   const g=groupSum(monthRows,r=>productKey(r)),full=groupSum(vendorYear,r=>productKey(r));
   const tot=monthRows.reduce((a,r)=>a+amtOf(r),0);
   const arr=[...g.entries()].map(([k,o])=>{const r=o.rows[0],fr=full.get(k)||o;return {key:k,code:r.code||'',name:r.name,spec:r.spec||'',nat:r.nat||'',amt:o.amt,n:o.n,qty:o.qty,share:tot?o.amt/tot*100:0,srcRows:fr.rows||o.rows,monthRows:o.rows};}).sort((a,b)=>b.amt-a.amt);
+  arr.forEach(o=>{try{o.usedProd=usedProductsTextV190(o)}catch(e){o.usedProd=''}});
   const cols=[
     {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
     {h:'매입구분',l:1,k:'nat',cell:o=>`<span class="tag ${natureInfo(o.nat).cls||'custom'}">${esc(o.nat||UNCLASSIFIED_NATURE)}</span>`,raw:o=>o.nat},
     {h:'품번',l:1,k:'code',cell:o=>esc(o.code),raw:o=>o.code},
     {h:'품명',l:1,k:'name',cell:o=>esc(o.name)+majorProductStar(o),raw:o=>o.name},
     {h:'규격',l:1,k:'spec',cell:o=>esc(o.spec),raw:o=>o.spec},
+    {h:'사용제품',l:1,k:'usedProd',cell:o=>usedProductsCellV190(o),raw:o=>usedProductsTextV190(o)},
     {h:`${ym} 매입액`,k:'amt',cell:o=>won(o.amt),raw:o=>o.amt,total:v=>won(v.reduce((a,o)=>a+o.amt,0))},
     {h:'비중',k:'share',cell:o=>`<b>${o.share.toFixed(1)}%</b>`,raw:o=>o.share},
     {h:'건수',k:'n',cell:o=>won(o.n),raw:o=>o.n},
@@ -5468,7 +5492,7 @@ function monthlyTrendVendorItems(ym,vendor){
   render(`📦 ${vendor} · 품목 리스트`, `${ym} · 매입액 ${wonM(tot)} · ${arr.length}품목`, arr, cols, 'amt','',{
     totals:true,back:`${ym} 업체 리스트`,backAct:()=>monthlyTrendVendorList(ym),viewRefresh:()=>monthlyTrendVendorItems(ym,vendor),
     searchFields:['name','code','spec','nat'],monthKey:`trend-items-${ym.slice(0,4)}-${vendor}`,monthlyHideCode:true,
-    monthlyHideHeaders:['매입구분','비중','건수'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명','규격'],monthlyEqualMonths:true,
+    monthlyHideHeaders:['매입구분','비중','건수','사용제품'],monthlyKeepHeaders:['순위','품명','규격'],monthlyExpandHeaders:['품명','규격'],monthlyEqualMonths:true,
     tableClass:'monthly-purchase-table'
   });
   state.sortDir=-1;
@@ -5482,6 +5506,7 @@ function monthlyTrendVendorList(ym){
     {h:'순위',cell:(o,i,v)=>`<span class="rank">${v.indexOf(o)+1}</span>`},
     {h:'매입구분',l:1,k:'mainNat',cell:o=>`<span class="tag ${natureInfo(o.mainNat).cls||'custom'}">${esc(o.mainNat)}</span>`,raw:o=>o.mainNat},
     {h:'거래처',l:1,k:'vendor',cell:o=>`<span style="color:#111827;font-weight:400;text-decoration:none">${esc(o.vendor)}</span>`,raw:o=>o.vendor},
+    {h:'그래프',l:1,cell:o=>`<div class="gcell">${barCell(o.amt,arr[0]?arr[0].amt:0,natureInfo(o.mainNat).color||'')}</div>`},
     {h:`${ym} 매입액`,k:'amt',cell:o=>won(o.amt),raw:o=>o.amt,total:v=>won(v.reduce((a,o)=>a+o.amt,0))},
     {h:'비중',k:'share',cell:o=>`<b>${o.share.toFixed(1)}%</b>`,raw:o=>o.share},
     {h:'품목수',k:'items',cell:o=>won(o.items),raw:o=>o.items},
@@ -5489,7 +5514,7 @@ function monthlyTrendVendorList(ym){
   ];
   render(`🏢 ${ym} · 업체 리스트`, `매입액 많은 업체 순 · ${arr.length}개사 · 합계 ${wonM(tot)}`, arr, cols, 'amt','',{
     totals:true,back:'월별 매입추이',backAct:trendView,viewRefresh:()=>monthlyTrendVendorList(ym),searchFields:['vendor'],
-    monthKey:`trend-vendors-${ym.slice(0,4)}`,monthlyHideHeaders:['비중','품목수','건수'],monthlyKeepHeaders:['순위','매입구분','거래처'],monthlyExpandHeaders:['거래처'],monthlyEqualMonths:true,
+    monthKey:`trend-vendors-${ym.slice(0,4)}`,monthlyHideHeaders:['비중','품목수','건수','그래프'],monthlyKeepHeaders:['순위','매입구분','거래처'],monthlyExpandHeaders:['거래처'],monthlyEqualMonths:true,
     tableClass:'monthly-purchase-table',afterRender:view=>{$$('#tbl tbody tr:not(.total-row)').forEach(tr=>{const o=view[+tr.dataset.i];if(!o)return;tr.classList.add('row-selectable');tr.title='업체 행을 선택하면 품목 리스트를 봅니다';tr.onclick=e=>{if(e.target.closest('a,button,input,select,textarea,label,[contenteditable="true"]'))return;state.sortKey=null;state._search='';monthlyTrendVendorItems(ym,o.vendor);};});}
   });
   state.sortDir=-1;
@@ -5507,8 +5532,8 @@ function trendInlineItemPanel(ym,vendor){
   const yearRows=trendYearRows(ym).filter(r=>r.vendor===vendor),monthRows=yearRows.filter(r=>r.ym===ym),g=groupSum(monthRows,r=>productKey(r)),full=groupSum(yearRows,r=>productKey(r));
   const tot=monthRows.reduce((a,r)=>a+amtOf(r),0),arr=[...g.entries()].map(([k,o])=>{const r=o.rows[0],fr=full.get(k)||o;return {key:k,code:r.code||'',name:r.name,spec:r.spec||'',nat:trendDominantNat(o.rows),amt:o.amt,n:o.n,share:tot?o.amt/tot*100:0,srcRows:fr.rows||o.rows};}).sort((a,b)=>b.amt-a.amt);
   const monthly=!!state.trendInlineItemMonthly,axis=Array.from({length:12},(_,i)=>`${ym.slice(0,4)}-${String(i+1).padStart(2,'0')}`);
-  const head=monthly?`<tr><th class="l">매입구분</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th>${axis.map(m=>`<th>${+m.slice(5)}월</th>`).join('')}<th>합계</th></tr>`:`<tr><th>순위</th><th class="l">매입구분</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th>${esc(ym)} 매입액</th><th>비중</th><th>건수</th></tr>`;
-  const body=arr.map((o,i)=>{if(monthly){const by=groupSum(o.srcRows,r=>r.ym);return `<tr><td class="l"><span class="tag ${natureInfo(o.nat).cls||'custom'}">${esc(o.nat)}</span></td><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}${majorProductStar(o)}</td><td class="l">${esc(o.spec)}</td>${axis.map(m=>`<td>${by.get(m)?won(by.get(m).amt):'-'}</td>`).join('')}<td><b>${won(axis.reduce((a,m)=>a+(by.get(m)?.amt||0),0))}</b></td></tr>`;}return `<tr><td>${i+1}</td><td class="l"><span class="tag ${natureInfo(o.nat).cls||'custom'}">${esc(o.nat)}</span></td><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}${majorProductStar(o)}</td><td class="l">${esc(o.spec)}</td><td>${won(o.amt)}</td><td><b>${o.share.toFixed(1)}%</b></td><td>${won(o.n)}</td></tr>`;}).join('');
+  const head=monthly?`<tr><th class="l">매입구분</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th>${axis.map(m=>`<th>${+m.slice(5)}월</th>`).join('')}<th>합계</th></tr>`:`<tr><th>순위</th><th class="l">매입구분</th><th class="l">품번</th><th class="l">품명</th><th class="l">규격</th><th class="l">사용제품</th><th>${esc(ym)} 매입액</th><th>비중</th><th>건수</th></tr>`;
+  const body=arr.map((o,i)=>{if(monthly){const by=groupSum(o.srcRows,r=>r.ym);return `<tr><td class="l"><span class="tag ${natureInfo(o.nat).cls||'custom'}">${esc(o.nat)}</span></td><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}${majorProductStar(o)}</td><td class="l">${esc(o.spec)}</td>${axis.map(m=>`<td>${by.get(m)?won(by.get(m).amt):'-'}</td>`).join('')}<td><b>${won(axis.reduce((a,m)=>a+(by.get(m)?.amt||0),0))}</b></td></tr>`;}return `<tr><td>${i+1}</td><td class="l"><span class="tag ${natureInfo(o.nat).cls||'custom'}">${esc(o.nat)}</span></td><td class="l">${esc(o.code)}</td><td class="l">${esc(o.name)}${majorProductStar(o)}</td><td class="l">${esc(o.spec)}</td><td class="l">${usedProductsCellV190(o)}</td><td>${won(o.amt)}</td><td><b>${o.share.toFixed(1)}%</b></td><td>${won(o.n)}</td></tr>`;}).join('');
   host.innerHTML=`<div class="panel" style="margin-top:12px;border-color:#bfdbfe;background:#fbfdff"><div class="rhead" style="margin-bottom:8px"><button class="btn ghost sm" id="trendItemBack">← 업체 목록</button><span class="title" style="font-size:14px">📦 ${esc(vendor)} · 품목 리스트</span><span class="meta">${esc(ym)} · ${arr.length}품목 · ${wonM(tot)}</span><span class="spacer"></span><button class="monthly-toggle ${monthly?'on':''}" id="trendItemMonthly" type="button">📅 ${monthly?'월별 매입 접기':'월별 매입 보기'}</button></div><div class="tablewrap" style="max-height:46vh"><table><thead>${head}</thead><tbody>${body||'<tr><td colspan="20" style="text-align:center;padding:18px;color:#94a3b8">품목이 없습니다.</td></tr>'}</tbody></table></div></div>`;
   const b=$('#trendItemBack');if(b)b.onclick=()=>{state.trendInlineVendor='';state.trendInlineItemMonthly=false;trendInlineVendorPanel(ym);};
   const mt=$('#trendItemMonthly');if(mt)mt.onclick=()=>{state.trendInlineItemMonthly=!state.trendInlineItemMonthly;trendInlineItemPanel(ym,vendor);};
@@ -11636,6 +11661,8 @@ window.bomUsageBoxHtml=function(item,row){
   }
   return head+body+plogHtml(item)+'</div>';
 };
+window.bomUsageLookupV190=function(item){ try{ return lookup(item); }catch(e){ return null; } };
+window.bomUsageIsRawV190=function(item,row){ try{ return isRaw(item,row); }catch(e){ return false; } };
 /* v187 : 생산일지 «원자재 사용현황»에서 이 원자재(강종·두께·폭)를 실제로 쓴 제품 */
 function plogHtml(item){
   var P=window.PLOG; if(!P)return '';
