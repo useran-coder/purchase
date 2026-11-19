@@ -1203,7 +1203,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v188 · 탭 제목 매입분석도구';
+const VERNO='v189 · 서버 저장 차단 해제(clientBuild)';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -5563,6 +5563,10 @@ function trendView(){
 (function(){
   'use strict';
 const APP_VERSION='purchase_v47_sync_v12';
+/* v189 : 로그인(매출분석) 서버 v21(2026-10-25)부터 저장 요청에 clientBuild 가 MIN_CLIENT_BUILD(1111) 미만이거나 없으면 save 를 거부함.
+   매입분석도구는 이 값을 안 보내 10/25 이후 모든 저장이 «예전 버전 파일(버전 정보 없음)»으로 거부됨
+   → 월별 매입합계(purchaseMonthlySync)가 매출분석으로 안 넘어가 매출분석 매입선이 9월에서 멈춤. 견적기(v288)와 같은 '9999' 를 보냄 */
+const PU_CLIENT_BUILD_V189='9999';
   const BASE_KEY='purchase_gsync_base_v1', OLD_BASE_KEYS=['purchase_gsync_base_v0'];
   // v47: 화면 안내(변경 후 5초)와 실제 동작(15초)이 달라 "저장이 안 된 것 같다"는 오해가 있었습니다. 5초로 통일합니다.
   const AUTO_DELAY=5000, BUSY_RETRY=1500, MAX_AUTO_RETRY=6;
@@ -5690,7 +5694,7 @@ const APP_VERSION='purchase_v47_sync_v12';
       if(d&&d.unchanged===true&&rev)return null;
       if(d&&d.data&&typeof d.data==='object')return d.data;}catch(e){}
     return undefined;};
-  async function postPatch(c,payload,tag){const body={action:'save',key:c.key,data:gclone(payload)||{},clientId:String(state.gsync.user||'사용자'),clientVersion:APP_VERSION,requestId:(tag||'save')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)};if(!_slimOff)body.fields='__slimV1098';/* v182 : 저장 답은 보낸 항목만(매출분석 v1098 과 같은 방식) */const d=await requestJson(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},120000,4);let meta=d;if(body.fields){meta=Object.assign({},d);delete meta.revision;}/* 그 사이 다른 PC 저장분은 다음 확인 때 rev 차이로 받습니다 */return{data:responseData(d),meta:meta}}
+  async function postPatch(c,payload,tag){const body={action:'save',key:c.key,data:gclone(payload)||{},clientId:String(state.gsync.user||'사용자'),clientVersion:APP_VERSION,clientBuild:PU_CLIENT_BUILD_V189,clientApp:'purchase',requestId:(tag||'save')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)};if(!_slimOff)body.fields='__slimV1098';/* v182 : 저장 답은 보낸 항목만(매출분석 v1098 과 같은 방식) */const d=await requestJson(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},120000,4);let meta=d;if(body.fields){meta=Object.assign({},d);delete meta.revision;}/* 그 사이 다른 PC 저장분은 다음 확인 때 rev 차이로 받습니다 */return{data:responseData(d),meta:meta}}
   /* v47 동기화 수정 ②: 저장 확인(patchSatisfied)이 editLog·syncLog까지 완전 일치를 요구했습니다.
      이 두 항목은 서버가 여러 담당자의 기록을 합쳐서 돌려주므로 내가 보낸 배열과 절대 같아질 수 없고,
      결과적으로 저장이 정상 처리됐는데도 "서버 저장 응답에서 변경값이 확인되지 않았습니다" 오류가
@@ -5749,7 +5753,7 @@ const APP_VERSION='purchase_v47_sync_v12';
   /* v47 동기화 수정 ⑤: 자동저장 대기(최대 5초) 중에 탭을 닫거나 PC가 절전에 들어가면 그 변경분이
      서버로 가지 않고 사라졌습니다. 탭이 숨겨질 때 즉시 저장하고, 창이 닫힐 때는 sendBeacon으로
      마지막 변경분을 전송합니다. (같은 값을 다시 보내도 서버가 병합하므로 중복 걱정은 없습니다.) */
-  function flushBeacon(){try{if(!_gsPendingPush||!state.gsync||!state.gsync.auto)return;const u=String(state.gsync.url||'').trim(),k=String(state.gsync.key||'').trim();if(!u||!k||!navigator.sendBeacon)return;const payload=gsDelta();if(!hasPatch(payload))return;const body=JSON.stringify({action:'save',key:k,data:payload,clientId:String(state.gsync.user||'사용자'),clientVersion:APP_VERSION,requestId:'beacon_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)});navigator.sendBeacon(u,new Blob([body],{type:'text/plain;charset=utf-8'}))}catch(_){}}
+  function flushBeacon(){try{if(!_gsPendingPush||!state.gsync||!state.gsync.auto)return;const u=String(state.gsync.url||'').trim(),k=String(state.gsync.key||'').trim();if(!u||!k||!navigator.sendBeacon)return;const payload=gsDelta();if(!hasPatch(payload))return;const body=JSON.stringify({action:'save',key:k,data:payload,clientId:String(state.gsync.user||'사용자'),clientVersion:APP_VERSION,clientBuild:PU_CLIENT_BUILD_V189,clientApp:'purchase',requestId:'beacon_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)});navigator.sendBeacon(u,new Blob([body],{type:'text/plain;charset=utf-8'}))}catch(_){}}
   function onHidden(){if(_gsPendingPush&&!_gsBusy&&state.gsync&&state.gsync.auto){clearTimeout(_gsAutoT);_gsAutoT=null;_gsPushAt=0;gsSave(true).catch(()=>{})}}
   let _lifecycleBound=false;
   function bindLifecycle(){
@@ -12663,7 +12667,7 @@ svg .pch-dot:hover circle:nth-child(2),svg .pt-dot:hover circle:nth-child(2){str
   async function serverPut(name,value){
     var c=cfg(); if(!c.u||!c.k)throw new Error('동기화 URL·비밀키가 없습니다.');
     var body={action:'save',key:c.k,data:{},clientId:String((state.gsync&&state.gsync.user)||'사용자'),
-      clientVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),requestId:'full_'+name+'_'+Date.now()};
+      clientVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''),clientBuild:'9999',clientApp:'purchase',requestId:'full_'+name+'_'+Date.now()};
     body.data[name]=value;
     var r=await fetch(c.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
     var tx=await r.text(), d=null;
