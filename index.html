@@ -822,7 +822,7 @@
   .seg button.dcmpNat.on{box-shadow:inset 0 0 0 2px currentColor}
   .dcmp-howto{font-size:11.5px;line-height:1.7;color:#475569}
   .dcmp-howto b{color:#0f172a}
-.used-prod-v190{display:inline-block;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:#334155}
+.used-prod-v190{display:inline-block;max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:#334155}
 </style>
 <style id="pu-v134-header">
 /* v134 · 헤더 정리 : 회사명 줄 제거 → 그 자리에 작은 사업부 버튼 / 검색창을 매출분석 도구 크기로 + 중앙 배치 */
@@ -1204,7 +1204,7 @@
 const $ = s=>document.querySelector(s);
 const $$ = s=>document.querySelectorAll(s);
 const BUILD='2026-09-16';
-const VERNO='v190 · 업체 리스트 막대그래프·품목 리스트 사용제품';
+const VERNO='v191 · 사용제품 규격까지 표시';
 const VER=VERNO+' · '+BUILD;
 {const v=$('#appVer'); if(v){v.textContent=VER; v.title='버전 '+VERNO+' (빌드 '+BUILD+')';}}
 
@@ -5459,9 +5459,9 @@ function usedProductsV190(o){
   try{plogHookV190()}catch(e){}
   const P=window.PLOG;let names=[],src='';
   try{ if(P&&P.ok()){ const r=P.parseRaw(item.name,item.spec,item.code); const pl=r&&P.forRaw(r.grade,r.t,r.w);
-    if(pl&&pl.list&&pl.list.length){ names=pl.list.map(p=>String(p.name||p.code||'').trim()); src='생산일지'; } } }catch(e){}
+    if(pl&&pl.list&&pl.list.length){ names=pl.list.map(p=>{const n=String(p.name||p.code||'').trim(),sp=String(p.spec||'').trim();return n&&sp?`${n} (${sp})`:n;}); src='생산일지'; } } }catch(e){}
   if(!names.length){ const hit=window.bomUsageLookupV190&&window.bomUsageLookupV190(item);
-    if(hit&&hit.tops&&hit.tops.length){ names=hit.tops.map(t=>String(t.item||t.pn||'').trim()); src='BOM'; } }
+    if(hit&&hit.tops&&hit.tops.length){ names=hit.tops.map(t=>{const n=String(t.item||t.pn||'').trim(),sp=String(t.spec||'').trim();return n&&sp?`${n} (${sp})`:n;}); src='BOM'; } }
   const seen=new Set();names=names.filter(n=>n&&!seen.has(n)&&seen.add(n));
   return {names,src};
 }
